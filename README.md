@@ -28,6 +28,16 @@ python3 rust/tools/sync_regelstatus.py
 Der Pfad zu den Forge-Ressourcen wird relativ ermittelt
 (`rust/../forge-gui/res`). Mit `FORGE_RES=/pfad/zu/res` lässt er sich überschreiben.
 
+## Repository
+
+Eigenständiges Repo: https://github.com/wowseer/forge-rules-rs (Teil des Forge-Forks,
+Branch `rust-godot`, Ordner `rust/`). Aktualisierung aus dem Fork:
+`python3 rust/tools/sync_github.py --push` (aus dem Repo-Root des Forks).
+
+Die Spieldaten (Kartenskripte, Editionen, Formate) liegen im Forge-Fork unter
+`forge-gui/res`. Bei einem einzeln ausgecheckten Repo `FORGE_RES=/pfad/zu/forge-gui/res`
+setzen; ohne Daten werden die Tests mit echten Karten übersprungen.
+
 ## Dokumentation
 
 | Datei | Inhalt |
