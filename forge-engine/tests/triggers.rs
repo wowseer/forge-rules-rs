@@ -227,3 +227,50 @@ fn attackers_declared_one_target_per_attacked_player() {
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 19, "TriggeredAttackedTarget");
 }
+
+#[test]
+fn blocks_attacker_blocked_and_unblocked_triggers() {
+    let (db, mut g) = game_at(Step::BeginCombat, 10);
+    let r1 = put(&db, &mut g, "Rampager Lite", P1, Zone::Battlefield);
+    let r2 = put(&db, &mut g, "Rampager Lite", P1, Zone::Battlefield);
+    let wall = put(&db, &mut g, "Wall Watcher Lite", P2, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
+    d.submit(Choice::Attackers(vec![(r1, T2), (r2, T2)]));
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareBlockers { .. }));
+    d.submit(Choice::Blocks(vec![(wall, r1)]));
+    // Blocks (P2), AttackerBlocked + AttackerUnblocked (P1)
+    d.run_until(|g, _| g.step == Step::Main2);
+    assert_eq!(
+        d.g().player(P2).life,
+        20 + 2 - 3,
+        "Wall-Trigger, r2 ungeblockt"
+    );
+    assert_eq!(d.g().chars(r1).power, Some(5), "+2/+2 bis Zugende");
+    assert_eq!(d.g().player(P1).hand.len(), 1, "Unblocked → Karte");
+}
+
+#[test]
+fn drawn_number_life_gained_and_taps_triggers() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Second Draw Lite", P1, Zone::Battlefield);
+    put(&db, &mut g, "Life Echo Lite", P1, Zone::Battlefield);
+    put(&db, &mut g, "Tap Watcher Lite", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    // Zug 3 (P2): P2 greift an → Taps-Trigger; Zug 4: P1 zieht im Ziehschritt (1. Karte)
+    let mut g = d.g().clone();
+    g.draw(P1); // 1. Karte dieses Zuges
+    g.draw(P1); // 2. → Trigger
+    d = Driver::new(g);
+    d.pass_all();
+    // Second Draw: +3 Leben → Life Echo: Gegner −1
+    d.pass_all();
+    assert_eq!(d.g().player(P1).life, 23);
+    assert_eq!(d.g().player(P2).life, 19);
+    let mut g = d.g().clone();
+    let bear = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
+    g.tap(bear);
+    let mut d = Driver::new(g);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 18, "Taps-Trigger");
+}

@@ -67,6 +67,8 @@ pub struct Player {
     pub graveyard: Vec<CardId>,
     pub mana_pool: ManaPool,
     pub lands_played_this_turn: u32,
+    /// Gezogene Karten in diesem Zug (Trigger `Drawn` mit `Number$`).
+    pub cards_drawn_this_turn: u32,
     pub land_plays_per_turn: u32,
     pub drew_from_empty_library: bool,
     pub lost: Option<LossReason>,
@@ -561,7 +563,12 @@ impl GameState {
         let mut ch = Characteristics {
             name: face.name.clone(),
             types: face.types.clone(),
-            colors: face.color(),
+            // CR 702.114a: Devoid – farblos (charakteristik-definierend, alle Zonen)
+            colors: if compiled.keywords.contains(&crate::keyword::Keyword::Devoid) {
+                forge_types::ColorSet::default()
+            } else {
+                face.color()
+            },
             mana_cost: face.mana_cost.clone(),
             power: c
                 .base_pt
@@ -852,6 +859,7 @@ impl GameState {
                 graveyard: Vec::new(),
                 mana_pool: ManaPool::default(),
                 lands_played_this_turn: 0,
+                cards_drawn_this_turn: 0,
                 land_plays_per_turn: 1,
                 drew_from_empty_library: false,
                 lost: None,

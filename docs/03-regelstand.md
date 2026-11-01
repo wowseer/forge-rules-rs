@@ -12,8 +12,8 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
-| Keyword | 198 | 13 | 4 | 4 |
-| Trigger | 137 | 0 | 8 | 11 |
+| Keyword | 198 | 14 | 6 | 4 |
+| Trigger | 137 | 0 | 14 | 11 |
 | Replacement Effect | 35 | 0 | 1 | 5 |
 | Static Ability | 90 | 1 | 4 | 0 |
 | Effect (ApiType) | 188 | 2 | 27 | 16 |
@@ -26,14 +26,16 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **66** | **66** | **81** |
+| **Summe** | **789** | **67** | **74** | **81** |
 
 ## Keyword
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| Cycling | 🟡 teilweise | `keywords_misc::cycling_from_hand_discards_and_draws, keywords_misc::cycling_not_offered_from_battlefield_or_without_mana` | Aktivierung aus der Hand, Abwerfen als Kosten | keyword/Keyword.java (KeywordWithCost) |
 | Deathtouch | ✅ ja | `combat::deathtouch_lethal_is_one_for_damage_assignment` |  | keyword/Keyword.java (SimpleKeyword) |
 | Defender | ✅ ja | `combat::summoning_sickness_haste_defender` |  | keyword/Keyword.java (SimpleKeyword) |
+| Devoid | ✅ ja | `keywords_misc::devoid_is_colorless_in_all_zones` |  | keyword/Keyword.java (SimpleKeyword) |
 | Double agenda | ⚪ n/a |  | Conspiracy-Draft | keyword/Keyword.java (SimpleKeyword) |
 | Double Strike | ✅ ja | `combat::double_strike_deals_damage_twice` |  | keyword/Keyword.java (SimpleKeyword) |
 | Enchant | 🟡 teilweise | `auras_equipment::aura_attaches_on_resolution_and_buffs` | Aura-Zauber mit Ziel, angelegt beim Auflösen, Fizzle | keyword/Keyword.java (KeywordWithType) |
@@ -52,23 +54,29 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Space sculptor | ⚪ n/a |  | Unstable | keyword/Keyword.java (SimpleKeyword) |
 | Starting intensity | ⚪ n/a |  | Alchemy | keyword/Keyword.java (KeywordWithAmount) |
 | Trample | 🟡 teilweise | `combat::trample_assigns_excess_to_player` | Trample über Planeswalker fehlt | keyword/Keyword.java (Trample) |
+| TypeCycling | 🟡 teilweise | `keywords_misc::typecycling_searches_library_for_type` | Bibliothekssuche nach Typ | keyword/Keyword.java (KeywordWithCostAndType) |
 | Vigilance | ✅ ja | `combat::vigilance_does_not_tap` |  | keyword/Keyword.java (SimpleKeyword) |
 
-Offen (181): Absorb, Affinity, Afflict, Afterlife, Aftermath, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Changeling, Choose a Background, Cipher, Companion, Compleated, Conspire, Convoke, Craft, Crew, Cumulative upkeep, Cycling, Dash, Daybound, Decayed, Delve, Demonstrate, Dethrone, Devour, Devoid, Disguise, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exalted, Exploit, Extort, Fabricate, Fading, Fear, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Horsemanship, Impending, Improvise, Increment, Infect, Ingest, Intimidate, Kicker, Job select, Jump-start, Landwalk, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Megamorph, Miracle, Mobilize, Modular, More Than Meets the Eye, Morph, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Protection, Prototype, Provoke, Prowess, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Shadow, Skulk, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Split second, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Toxic, Training, Transfigure, Transmute, Tribute, TypeCycling, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Ward, Warp, Web-slinging, Wither, MayFlashCost, MayFlashSac
+Offen (178): Absorb, Affinity, Afflict, Afterlife, Aftermath, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Changeling, Choose a Background, Cipher, Companion, Compleated, Conspire, Convoke, Craft, Crew, Cumulative upkeep, Dash, Daybound, Decayed, Delve, Demonstrate, Dethrone, Devour, Disguise, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exalted, Exploit, Extort, Fabricate, Fading, Fear, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Horsemanship, Impending, Improvise, Increment, Infect, Ingest, Intimidate, Kicker, Job select, Jump-start, Landwalk, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Megamorph, Miracle, Mobilize, Modular, More Than Meets the Eye, Morph, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Protection, Prototype, Provoke, Prowess, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Shadow, Skulk, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Split second, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Toxic, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Ward, Warp, Web-slinging, Wither, MayFlashCost, MayFlashSac
 
 ## Trigger
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Abandoned | ⚪ n/a |  | Archenemy | trigger/TriggerAbandoned.java |
+| AttackerBlocked | 🟡 teilweise | `triggers::blocks_attacker_blocked_and_unblocked_triggers` | ValidCard, ValidBlocker/Amount | trigger/TriggerAttackerBlocked.java |
 | AttackersDeclared | 🟡 teilweise | `triggers::attackers_declared_once_with_minimum_amount` | AttackingPlayer, AttackedTarget (nur Spieler), ValidAttackers/Amount, TriggeredAttackingPlayer | trigger/TriggerAttackersDeclared.java |
 | AttackersDeclaredOneTarget | 🟡 teilweise | `triggers::attackers_declared_one_target_per_attacked_player` | je angegriffenem Spieler, TriggeredAttackedTarget | trigger/TriggerAttackersDeclared.java |
+| AttackerUnblocked | 🟡 teilweise | `triggers::blocks_attacker_blocked_and_unblocked_triggers` | ValidCard, ValidDefender | trigger/TriggerAttackerUnblocked.java |
 | Attacks | 🟡 teilweise | `triggers::attack_trigger_with_triggered_player` | Bedingungen (Alone, Attacked …) fehlen | trigger/TriggerAttacks.java |
+| Blocks | 🟡 teilweise | `triggers::blocks_attacker_blocked_and_unblocked_triggers` | ValidCard, ValidBlocked | trigger/TriggerBlocks.java |
 | ChangesZone | 🟡 teilweise | `triggers::dies_trigger_looks_back_in_time` | Grundform inkl. Rückblick (603.10a) und gleichzeitiger Tode | trigger/TriggerChangesZone.java |
 | ChaosEnsues | ⚪ n/a |  | Planechase | trigger/TriggerChaosEnsues.java |
 | ConjureAll | ⚪ n/a |  | Alchemy | trigger/TriggerConjureAll.java |
 | CrankContraption | ⚪ n/a |  | Unstable | trigger/TriggerCrankContraption.java |
 | DamageDone | 🟡 teilweise | `triggers::combat_damage_trigger` | ValidSource/ValidTarget/CombatDamage | trigger/TriggerDamageDone.java |
+| Drawn | 🟡 teilweise | `triggers::drawn_number_life_gained_and_taps_triggers` | ValidCard, ValidPlayer, Number | trigger/TriggerDrawn.java |
+| LifeGained | 🟡 teilweise | `triggers::drawn_number_life_gained_and_taps_triggers` | ValidPlayer | trigger/TriggerLifeGained.java |
 | Phase | 🟡 teilweise | `triggers::upkeep_trigger_with_sub_ability` | Phase$ als Liste einzelner Schritte | trigger/TriggerPhase.java |
 | PlanarDice | ⚪ n/a |  | Planechase | trigger/TriggerPlanarDice.java |
 | PlaneswalkedFrom | ⚪ n/a |  | Planechase | trigger/TriggerPlaneswalkedFrom.java |
@@ -78,9 +86,10 @@ Offen (181): Absorb, Affinity, Afflict, Afterlife, Aftermath, Amplify, Annihilat
 | SetInMotion | ⚪ n/a |  | Archenemy | trigger/TriggerSetInMotion.java |
 | SpellCast | 🟡 teilweise | `triggers::spell_cast_trigger_resolves_before_spell` | ValidCard/ValidActivatingPlayer | trigger/TriggerSpellAbilityCastOrCopy.java |
 | StickerPlaced | ⚪ n/a |  | Unfinity | trigger/TriggerStickerPlaced.java |
+| Taps | 🟡 teilweise | `triggers::drawn_number_life_gained_and_taps_triggers` | ValidCard, ValidPlayer | trigger/TriggerTaps.java |
 | VisitAttraction | ⚪ n/a |  | Unfinity | trigger/TriggerVisitAttraction.java |
 
-Offen (129): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlocked, AttackerBlockedOnce, AttackerBlockedByCreature, AttackerUnblocked, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTarget, BecomesTargetOnce, BlockersDeclared, Blocks, CaseSolved, Championed, ChangesController, ChangesZoneAll, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterAdded, CounterAddedOnce, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, Cycled, DamageAll, DamageDealtOnce, DamageDoneOnce, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, Discarded, DiscardedAll, Discover, Drawn, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeGained, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, Taps, TapsForMana, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, TurnFaceUp, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
+Offen (123): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlockedOnce, AttackerBlockedByCreature, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTarget, BecomesTargetOnce, BlockersDeclared, CaseSolved, Championed, ChangesController, ChangesZoneAll, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterAdded, CounterAddedOnce, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, Cycled, DamageAll, DamageDealtOnce, DamageDoneOnce, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, Discarded, DiscardedAll, Discover, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, TapsForMana, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, TurnFaceUp, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
 
 ## Replacement Effect
 

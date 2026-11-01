@@ -7,7 +7,7 @@
 
 use crate::effects::{CompileError, CompiledAbility, Effect, ManaProduce, compile};
 use crate::keyword::Keyword;
-use forge_script::{AbilityKind, CardFace, CardScript, SplitMode};
+use forge_script::{AbilityKind, CardFace, CardScript, ScriptAbility, SplitMode};
 use forge_types::{Color, CoreType};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -68,6 +68,7 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             conditions: Vec::new(),
             unless: None,
             planeswalker: false,
+            activation_zone: crate::zone::Zone::Battlefield,
         })
     })
     .collect()
@@ -97,6 +98,18 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             match equip_ability(k) {
                 Some(a) => equip.push(Arc::new(a)),
                 None => unsupported.push(format!("Keyword: {k}")),
+            }
+            continue;
+        }
+        // CR 702.29: Cycling / Typecycling (Java CardFactoryUtil: AB$ aus der Hand)
+        if let Some(script) = cycling_script(k) {
+            match ScriptAbility::from_svar(&script)
+                .and_then(Result::ok)
+                .ok_or(())
+                .and_then(|ab| compile(face, &ab).map_err(|_| ()))
+            {
+                Ok(a) => out.activated.push(Arc::new(a)),
+                Err(()) => unsupported.push(format!("Keyword: {k}")),
             }
             continue;
         }
@@ -154,6 +167,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             conditions: Vec::new(),
             unless: None,
             planeswalker: false,
+            activation_zone: crate::zone::Zone::Battlefield,
         }));
     } else if face.types.has_subtype("Aura") {
         unsupported.push("Aura ohne Enchant-Keyword".into());
@@ -428,5 +442,23 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
         conditions: Vec::new(),
         unless: None,
         planeswalker: false,
+        activation_zone: crate::zone::Zone::Battlefield,
     })
+}
+
+/// Übersetzt `Cycling:<Kosten>` / `TypeCycling:<Typ>:<Kosten>` in ein Fähigkeitsskript
+/// (wie Java `CardFactoryUtil.addSpellAbility`).
+fn cycling_script(k: &str) -> Option<String> {
+    if let Some(cost) = k.strip_prefix("Cycling:") {
+        return Some(format!(
+            "AB$ Draw | Cost$ {cost} Discard<1/CARDNAME> | ActivationZone$ Hand | NumCards$ 1 | SpellDescription$ Cycling {cost}"
+        ));
+    }
+    let rest = k.strip_prefix("TypeCycling:")?;
+    let mut parts = rest.split(':');
+    let ty = parts.next()?;
+    let cost = parts.next()?;
+    Some(format!(
+        "AB$ ChangeZone | Cost$ {cost} Discard<1/CARDNAME> | ActivationZone$ Hand | Origin$ Library | Destination$ Hand | ChangeType$ {ty} | SpellDescription$ {ty}cycling {cost}"
+    ))
 }

@@ -23,6 +23,8 @@ pub enum CostPart {
     PayLife(u32),
     /// `Discard<n/Typ>` (`Hand` = ganze Hand ist nicht unterstützt)
     Discard { amount: u32, valid: ValidSpec },
+    /// `Discard<1/CARDNAME>`: diese Karte abwerfen (Cycling u. ä., aus der Hand)
+    DiscardSelf,
     /// `AddCounter<n/TYP>`: Marken auf die Quelle legen (z. B. Loyalität +n, CR 606.4)
     AddCounter { amount: u32, kind: String },
     /// `SubCounter<n/TYP>`: Marken von der Quelle entfernen (CR 118.3, 606.4)
@@ -55,6 +57,7 @@ impl fmt::Display for Cost {
                 CostPart::Sacrifice { amount, valid } => format!("Sac<{amount}/{valid:?}>"),
                 CostPart::PayLife(n) => format!("PayLife<{n}>"),
                 CostPart::Discard { amount, valid } => format!("Discard<{amount}/{valid:?}>"),
+                CostPart::DiscardSelf => "Discard<1/CARDNAME>".into(),
                 CostPart::AddCounter { amount, kind } => format!("AddCounter<{amount}/{kind}>"),
                 CostPart::RemoveCounter { amount, kind } => format!("SubCounter<{amount}/{kind}>"),
             });
@@ -149,6 +152,9 @@ impl Cost {
                                 amount: amount(n, &tok)?,
                                 kind: k.trim().to_string(),
                             },
+                            ("Discard", [n, "CARDNAME", ..]) if n.trim() == "1" => {
+                                CostPart::DiscardSelf
+                            }
                             ("Discard", [n, v, ..]) if *v != "Hand" && *v != "Random" => {
                                 CostPart::Discard {
                                     amount: amount(n, &tok)?,

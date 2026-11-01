@@ -25,6 +25,8 @@ pub enum Keyword {
     Indestructible,
     Hexproof,
     Shroud,
+    /// CR 702.114: farblos (Farb-CDA, wirkt in allen Zonen; in `chars()` umgesetzt)
+    Devoid,
     /// Nicht (oder noch nicht) typisiertes Keyword, Originaltext.
     Other(String),
 }
@@ -47,6 +49,7 @@ impl Keyword {
             "Indestructible" => Keyword::Indestructible,
             "Hexproof" => Keyword::Hexproof,
             "Shroud" => Keyword::Shroud,
+            "Devoid" => Keyword::Devoid,
             other => Keyword::Other(other.to_string()),
         }
     }

@@ -275,7 +275,7 @@ impl GameState {
             Effect::Tap { what } => {
                 let ts = self.resolve_defined(*what, targets, ctx);
                 for c in self.cards_of(&ts) {
-                    self.card_mut(c).tapped = true;
+                    self.tap(c);
                 }
             }
             Effect::Untap { what } => {
@@ -1142,7 +1142,7 @@ impl GameState {
             return false;
         };
         for (c, _i, color) in plan {
-            self.card_mut(c).tapped = true;
+            self.tap(c);
             self.player_mut(p).mana_pool.add(color, false);
         }
         let mut pool = self.player(p).mana_pool.clone();

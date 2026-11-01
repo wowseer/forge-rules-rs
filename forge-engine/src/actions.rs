@@ -184,6 +184,13 @@ impl GameState {
             player: p,
             card: new,
         });
+        self.player_mut(p).cards_drawn_this_turn += 1;
+        let number = self.player(p).cards_drawn_this_turn;
+        self.fire(crate::triggers::TriggerEvent::Drawn {
+            card: new,
+            player: p,
+            number,
+        });
         Some(new)
     }
 
@@ -208,6 +215,21 @@ impl GameState {
             player: p,
             delta: n,
         });
+        self.fire(crate::triggers::TriggerEvent::LifeGained {
+            player: p,
+            amount: n as u32,
+        });
+    }
+
+    /// Tappt eine bleibende Karte; „wird getappt“-Trigger (CR 701.26a). Ins
+    /// Spiel kommen getappt zählt nicht und läuft nicht hierüber.
+    pub fn tap(&mut self, c: CardId) -> bool {
+        if self.card(c).tapped {
+            return false;
+        }
+        self.card_mut(c).tapped = true;
+        self.fire(crate::triggers::TriggerEvent::Taps { card: c });
+        true
     }
 
     pub fn lose_life(&mut self, p: PlayerId, n: i32) {
@@ -301,7 +323,7 @@ impl GameState {
             o.regen_shields -= 1;
             o.damage = 0;
             o.deathtouch_damage = false;
-            o.tapped = true;
+            self.tap(c);
             if let Some(cb) = self.combat.as_mut() {
                 cb.attackers.retain(|a| a.card != c);
                 cb.blocks.retain(|(b, a)| *b != c && *a != c);

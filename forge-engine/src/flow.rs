@@ -98,6 +98,7 @@ impl GameState {
         self.step = Step::Untap;
         for pl in &mut self.players {
             pl.lands_played_this_turn = 0;
+            pl.cards_drawn_this_turn = 0;
         }
         self.push_event(Event::TurnBegan {
             turn: number,

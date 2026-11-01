@@ -360,6 +360,8 @@ pub struct CompiledAbility {
     pub unless: Option<UnlessSpec>,
     /// `Planeswalker$ True`: Loyalitätsfähigkeit (CR 606).
     pub planeswalker: bool,
+    /// `ActivationZone$`: wo die Fähigkeit aktiviert werden kann (Standard Battlefield).
+    pub activation_zone: crate::zone::Zone,
 }
 
 impl CompiledAbility {
@@ -539,6 +541,8 @@ impl<'a> Ctx<'a> {
                     Defined::TriggeredCardController
                 }
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
+                "TriggeredBlocker" | "TriggeredBlockerLKICopy" => Defined::TriggeredCard,
+                "TriggeredDefendingPlayer" => Defined::TriggeredPlayer,
                 "TriggeredTarget" | "TriggeredTargetLKICopy" | "TriggeredAttackedTarget" => {
                     Defined::TriggeredTarget
                 }
@@ -1289,6 +1293,12 @@ fn compile_depth(
         .get("Planeswalker")
         .is_some_and(|v| v.eq_ignore_ascii_case("true"));
     c.get("Ultimate");
+    let activation_zone = match c.get("ActivationZone") {
+        None | Some("Battlefield") => crate::zone::Zone::Battlefield,
+        Some("Hand") => crate::zone::Zone::Hand,
+        Some("Graveyard") => crate::zone::Zone::Graveyard,
+        Some(v) => return Err(c.unsupported("ActivationZone", v)),
+    };
 
     let (conditions, cond_keys) =
         crate::expr::parse_conditions(face, &ab.params, crate::expr::CondStyle::Effect)?;
@@ -1323,6 +1333,7 @@ fn compile_depth(
         conditions,
         unless,
         planeswalker,
+        activation_zone,
     })
 }
 

@@ -216,3 +216,12 @@ Trigger;AttackersDeclaredOneTarget;teilweise;triggers::attackers_declared_one_ta
 Effect (ApiType);DelayedTrigger;teilweise;delayed_triggers::flicker_returns_at_next_end_step_following_the_card, delayed_triggers::delayed_trigger_fires_once_at_your_next_upkeep, delayed_triggers::this_turn_delayed_trigger_expires_at_cleanup;alle Trigger-Modi, einmaliges Auslösen (CR 603.7c), ThisTurn, NextTurn, RememberObjects + DelayTriggerRemembered[LKI]; DelayedTriggerDefinedPlayer, UpcomingTurn, RememberNumber fehlen
 Cost;AddCounter;teilweise;planeswalkers::enters_with_loyalty_and_activates_once_per_turn_at_sorcery_speed;Marken auf die Quelle (n fest); andere Permanents/X fehlen
 Cost;SubCounter;teilweise;planeswalkers::minus_ability_to_zero_loyalty_goes_to_graveyard;Marken von der Quelle (n fest); X und andere Objekte fehlen
+Keyword;Cycling;teilweise;keywords_misc::cycling_from_hand_discards_and_draws, keywords_misc::cycling_not_offered_from_battlefield_or_without_mana;Aktivierung aus der Hand, Abwerfen als Kosten; Trigger Cycled fehlt
+Keyword;TypeCycling;teilweise;keywords_misc::typecycling_searches_library_for_type;Bibliothekssuche nach Typ; Trigger Cycled fehlt
+Keyword;Devoid;ja;keywords_misc::devoid_is_colorless_in_all_zones;
+Trigger;Blocks;teilweise;triggers::blocks_attacker_blocked_and_unblocked_triggers;ValidCard, ValidBlocked
+Trigger;AttackerBlocked;teilweise;triggers::blocks_attacker_blocked_and_unblocked_triggers;ValidCard, ValidBlocker/Amount
+Trigger;AttackerUnblocked;teilweise;triggers::blocks_attacker_blocked_and_unblocked_triggers;ValidCard, ValidDefender
+Trigger;Drawn;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidCard, ValidPlayer, Number; FirstCardInDrawStep, ForReveal fehlen
+Trigger;LifeGained;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidPlayer; FirstTime, ValidSource, LifeAmount fehlen
+Trigger;Taps;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidCard, ValidPlayer; ValidCause, Attacker, FirstTime fehlen

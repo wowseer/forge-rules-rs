@@ -49,6 +49,7 @@ impl GameState {
             }
             CostPart::PayLife(n) => self.player(p).life >= *n as i32,
             CostPart::AddCounter { .. } => src.zone == Some(Zone::Battlefield),
+            CostPart::DiscardSelf => src.zone == Some(Zone::Hand) && src.owner == p,
             CostPart::RemoveCounter { amount, kind } => {
                 src.zone == Some(Zone::Battlefield) && src.counter(kind) >= *amount
             }
@@ -219,8 +220,34 @@ impl GameState {
                 acts.push(Action::Cast(c));
             }
         }
+        // Fähigkeiten aus Hand/Friedhof (`ActivationZone$`, z. B. Cycling)
+        let pl = self.player(p);
+        let off_battlefield: Vec<CardId> =
+            pl.hand.iter().chain(pl.graveyard.iter()).copied().collect();
+        for c in off_battlefield {
+            let zone = self.card(c).zone;
+            for (i, ab) in self.card(c).compiled().activated.iter().enumerate() {
+                if Some(ab.activation_zone) != zone {
+                    continue;
+                }
+                let cost_ok = ab.cost.as_ref().is_none_or(|cost| {
+                    self.can_pay_nonmana(cost, c, p)
+                        && cost
+                            .mana
+                            .as_ref()
+                            .is_none_or(|m| m.mana_value() <= self.potential_mana(p))
+                });
+                let timing_ok = !ab.sorcery_speed || self.sorcery_timing(p);
+                if cost_ok && timing_ok && self.has_targets_for(ab, c, p) {
+                    acts.push(Action::Activate(c, i));
+                }
+            }
+        }
         for c in self.battlefield_of(p).collect::<Vec<_>>() {
             for (i, ab) in self.card(c).compiled().activated.iter().enumerate() {
+                if ab.activation_zone != Zone::Battlefield {
+                    continue;
+                }
                 let cost_ok = ab.cost.as_ref().is_none_or(|cost| {
                     self.can_pay_nonmana(cost, c, p)
                         && cost
@@ -439,13 +466,18 @@ impl GameState {
         }
         for part in &cost.parts {
             match part {
-                CostPart::Tap => self.card_mut(source).tapped = true,
+                CostPart::Tap => {
+                    self.tap(source);
+                }
                 CostPart::Untap => self.card_mut(source).tapped = false,
                 CostPart::SacrificeSelf => {
                     self.sacrifice(source);
                 }
                 CostPart::PayLife(n) => self.lose_life(p, *n as i32),
                 CostPart::AddCounter { amount, kind } => self.add_counters(source, kind, *amount),
+                CostPart::DiscardSelf => {
+                    self.move_card(source, Zone::Graveyard, true);
+                }
                 CostPart::RemoveCounter { amount, kind } => {
                     let o = self.card_mut(source);
                     let left = o.counter(kind).saturating_sub(*amount);

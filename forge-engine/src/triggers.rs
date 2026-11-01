@@ -58,6 +58,35 @@ pub enum TriggerKind {
         /// `Mode$ AttackersDeclaredOneTarget`: je angegriffenem Ziel einmal.
         one_target: bool,
     },
+    /// `Mode$ Blocks` – eine Kreatur blockt (CR 509.4).
+    Blocks {
+        valid_card: Option<ValidSpec>,
+        valid_blocked: Option<ValidSpec>,
+    },
+    /// `Mode$ AttackerBlocked` – ein Angreifer wird geblockt.
+    AttackerBlocked {
+        valid_card: Option<ValidSpec>,
+        valid_blockers: Option<(ValidSpec, crate::expr::Compare)>,
+    },
+    /// `Mode$ AttackerUnblocked` – ein Angreifer bleibt ungeblockt.
+    AttackerUnblocked {
+        valid_card: Option<ValidSpec>,
+        valid_defender: Option<ValidSpec>,
+    },
+    /// `Mode$ Drawn` – eine Karte wurde gezogen (CR 121).
+    Drawn {
+        valid_card: Option<ValidSpec>,
+        valid_player: Option<ValidSpec>,
+        /// `Number$`: die n-te gezogene Karte dieses Spielers in diesem Zug.
+        number: Option<u32>,
+    },
+    /// `Mode$ LifeGained` – ein Spieler erhielt Leben.
+    LifeGained { valid_player: Option<ValidSpec> },
+    /// `Mode$ Taps` – eine bleibende Karte wird getappt.
+    Taps {
+        valid_card: Option<ValidSpec>,
+        valid_player: Option<ValidSpec>,
+    },
     /// `Mode$ Sacrificed` – eine bleibende Karte wurde geopfert (CR 701.21).
     Sacrificed {
         valid_card: Option<ValidSpec>,
@@ -151,6 +180,32 @@ pub enum TriggerEvent {
         attackers: Vec<(CardId, Target)>,
         /// Variante je Ziel (alle `attackers` greifen dasselbe Ziel an).
         one_target: bool,
+    },
+    Blocks {
+        blocker: CardId,
+        attackers: Vec<CardId>,
+    },
+    AttackerBlocked {
+        attacker: CardId,
+        blockers: Vec<CardId>,
+        defender: PlayerId,
+    },
+    AttackerUnblocked {
+        attacker: CardId,
+        defender: PlayerId,
+        target: Target,
+    },
+    Drawn {
+        card: CardId,
+        player: PlayerId,
+        number: u32,
+    },
+    LifeGained {
+        player: PlayerId,
+        amount: u32,
+    },
+    Taps {
+        card: CardId,
     },
     /// `old` ist das geopferte Objekt (LKI), `player` wer geopfert hat.
     Sacrificed {
@@ -290,6 +345,50 @@ pub fn compile_trigger(
                 one_target: t.mode == "AttackersDeclaredOneTarget",
             }
         }
+        "Blocks" => TriggerKind::Blocks {
+            valid_card: valid("ValidCard", &mut used)?,
+            valid_blocked: valid("ValidBlocked", &mut used)?,
+        },
+        "AttackerBlocked" => {
+            used.push("ValidBlockerAmount");
+            let valid_blockers = match valid("ValidBlocker", &mut used)? {
+                Some(v) => Some((
+                    v,
+                    crate::expr::Compare::parse(
+                        face,
+                        p.get("ValidBlockerAmount").unwrap_or("GE1"),
+                    )?,
+                )),
+                None => None,
+            };
+            TriggerKind::AttackerBlocked {
+                valid_card: valid("ValidCard", &mut used)?,
+                valid_blockers,
+            }
+        }
+        "AttackerUnblocked" => TriggerKind::AttackerUnblocked {
+            valid_card: valid("ValidCard", &mut used)?,
+            valid_defender: valid("ValidDefender", &mut used)?,
+        },
+        "Drawn" => {
+            used.push("Number");
+            let number = match p.get("Number") {
+                Some(n) => Some(n.trim().parse().map_err(|_| unsupported("Number", n))?),
+                None => None,
+            };
+            TriggerKind::Drawn {
+                valid_card: valid("ValidCard", &mut used)?,
+                valid_player: valid("ValidPlayer", &mut used)?,
+                number,
+            }
+        }
+        "LifeGained" => TriggerKind::LifeGained {
+            valid_player: valid("ValidPlayer", &mut used)?,
+        },
+        "Taps" => TriggerKind::Taps {
+            valid_card: valid("ValidCard", &mut used)?,
+            valid_player: valid("ValidPlayer", &mut used)?,
+        },
         "Sacrificed" => TriggerKind::Sacrificed {
             valid_card: valid("ValidCard", &mut used)?,
             valid_player: valid("ValidPlayer", &mut used)?,
@@ -542,6 +641,160 @@ impl GameState {
                 })
             }
             (
+                TriggerKind::Blocks {
+                    valid_card,
+                    valid_blocked,
+                },
+                TriggerEvent::Blocks { blocker, attackers },
+            ) => {
+                if !self.opt_card(valid_card, *blocker, source, controller) {
+                    return None;
+                }
+                if let Some(v) = valid_blocked
+                    && !attackers
+                        .iter()
+                        .any(|a| self.card_matches(*a, v, source, controller))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*blocker),
+                    card_lki: Some(*blocker),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::AttackerBlocked {
+                    valid_card,
+                    valid_blockers,
+                },
+                TriggerEvent::AttackerBlocked {
+                    attacker,
+                    blockers,
+                    defender,
+                },
+            ) => {
+                if !self.opt_card(valid_card, *attacker, source, controller) {
+                    return None;
+                }
+                if let Some((v, cmp)) = valid_blockers {
+                    let n = blockers
+                        .iter()
+                        .filter(|b| self.card_matches(**b, v, source, controller))
+                        .count() as i32;
+                    let ectx = crate::expr::EvalCtx {
+                        source,
+                        controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                    };
+                    if !cmp.holds(n, self.eval(&cmp.rhs, &ectx)) {
+                        return None;
+                    }
+                }
+                Some(TriggerInfo {
+                    card: Some(*attacker),
+                    card_lki: Some(*attacker),
+                    player: Some(*defender),
+                    attacking_player: Some(self.card(*attacker).controller),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::AttackerUnblocked {
+                    valid_card,
+                    valid_defender,
+                },
+                TriggerEvent::AttackerUnblocked {
+                    attacker,
+                    defender,
+                    target,
+                },
+            ) => {
+                if !self.opt_card(valid_card, *attacker, source, controller) {
+                    return None;
+                }
+                if let Some(v) = valid_defender {
+                    let ok = match target {
+                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Card(c) => self.card_matches(*c, v, source, controller),
+                    };
+                    if !ok {
+                        return None;
+                    }
+                }
+                Some(TriggerInfo {
+                    card: Some(*attacker),
+                    card_lki: Some(*attacker),
+                    player: Some(*defender),
+                    target: Some(*target),
+                    attacking_player: Some(self.card(*attacker).controller),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::Drawn {
+                    valid_card,
+                    valid_player,
+                    number: want,
+                },
+                TriggerEvent::Drawn {
+                    card,
+                    player,
+                    number,
+                },
+            ) => {
+                if want.is_some_and(|w| w != *number)
+                    || !self.opt_card(valid_card, *card, source, controller)
+                    || valid_player
+                        .as_ref()
+                        .is_some_and(|v| !self.player_matches(*player, v, controller))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*card),
+                    card_lki: Some(*card),
+                    player: Some(*player),
+                    ..Default::default()
+                })
+            }
+            (TriggerKind::LifeGained { valid_player }, TriggerEvent::LifeGained { player, .. }) => {
+                if valid_player
+                    .as_ref()
+                    .is_some_and(|v| !self.player_matches(*player, v, controller))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    player: Some(*player),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::Taps {
+                    valid_card,
+                    valid_player,
+                },
+                TriggerEvent::Taps { card },
+            ) => {
+                let ctrl = self.card(*card).controller;
+                if !self.opt_card(valid_card, *card, source, controller)
+                    || valid_player
+                        .as_ref()
+                        .is_some_and(|v| !self.player_matches(ctrl, v, controller))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*card),
+                    card_lki: Some(*card),
+                    player: Some(ctrl),
+                    ..Default::default()
+                })
+            }
+            (
                 TriggerKind::Sacrificed {
                     valid_card,
                     valid_player,
@@ -616,6 +869,20 @@ impl GameState {
             }
             _ => None,
         }
+    }
+
+    /// Optionaler Kartenfilter; `Self` passt auch, wenn die Quelle selbst betroffen ist.
+    fn opt_card(
+        &self,
+        v: &Option<ValidSpec>,
+        card: CardId,
+        source: CardId,
+        controller: PlayerId,
+    ) -> bool {
+        v.as_ref().is_none_or(|v| {
+            self.card_matches(card, v, source, controller)
+                || (card == source && self.card_matches(card, v, card, controller))
+        })
     }
 
     /// Meldet ein Ereignis; passende Trigger werden vorgemerkt.

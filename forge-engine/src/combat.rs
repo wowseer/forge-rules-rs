@@ -185,7 +185,7 @@ impl GameState {
         for (c, _) in &chosen {
             // CR 508.1f
             if !self.has_keyword(*c, &Keyword::Vigilance) {
-                self.card_mut(*c).tapped = true;
+                self.tap(*c);
             }
         }
         for i in &infos {
@@ -274,6 +274,45 @@ impl GameState {
             }
         }
         combat.blocks = all_blocks.clone();
+        let infos = combat.attackers.clone();
+        // CR 509.2–509.5: Blocks-, AttackerBlocked- und AttackerUnblocked-Trigger
+        let mut blockers: Vec<CardId> = Vec::new();
+        for (b, _) in &all_blocks {
+            if !blockers.contains(b) {
+                blockers.push(*b);
+            }
+        }
+        for b in blockers {
+            let attackers = all_blocks
+                .iter()
+                .filter(|(x, _)| *x == b)
+                .map(|(_, a)| *a)
+                .collect();
+            self.fire(crate::triggers::TriggerEvent::Blocks {
+                blocker: b,
+                attackers,
+            });
+        }
+        for i in &infos {
+            let blockers: Vec<CardId> = all_blocks
+                .iter()
+                .filter(|(_, a)| *a == i.card)
+                .map(|(b, _)| *b)
+                .collect();
+            if i.blocked {
+                self.fire(crate::triggers::TriggerEvent::AttackerBlocked {
+                    attacker: i.card,
+                    blockers,
+                    defender: i.defender,
+                });
+            } else {
+                self.fire(crate::triggers::TriggerEvent::AttackerUnblocked {
+                    attacker: i.card,
+                    defender: i.defender,
+                    target: i.target,
+                });
+            }
+        }
         self.push_event(Event::BlockersDeclared(all_blocks));
         Ok(())
     }
