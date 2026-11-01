@@ -71,6 +71,7 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             unless: None,
             planeswalker: false,
             activation_zone: crate::zone::Zone::Battlefield,
+            cycling: false,
         })
     })
     .collect()
@@ -115,6 +116,25 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             ));
             let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(
                 "Mode$ BecomesTarget | ValidSource$ SpellAbility.OppCtrl | ValidTarget$ Card.Self | TriggerZones$ Battlefield | Execute$ WardCounter | TriggerDescription$ Ward",
+            ));
+            match st
+                .map_err(|_| ())
+                .and_then(|st| crate::triggers::compile_trigger(&f, &st).map_err(|_| ()))
+            {
+                Ok(t) => out.triggers.push(Arc::new(t)),
+                Err(()) => unsupported.push(format!("Keyword: {k}")),
+            }
+            continue;
+        }
+        // CR 702.108: Prowess (Java: SpellCast-Trigger mit Pump)
+        if k == "Prowess" {
+            let mut f = face.clone();
+            f.svars.push((
+                "ProwessPump".into(),
+                "DB$ Pump | Defined$ Self | NumAtt$ +1 | NumDef$ +1".into(),
+            ));
+            let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(
+                "Mode$ SpellCast | ValidCard$ Card.nonCreature | ValidActivatingPlayer$ You | TriggerZones$ Battlefield | Execute$ ProwessPump | TriggerDescription$ Prowess",
             ));
             match st
                 .map_err(|_| ())
@@ -192,6 +212,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             unless: None,
             planeswalker: false,
             activation_zone: crate::zone::Zone::Battlefield,
+            cycling: false,
         }));
     } else if face.types.has_subtype("Aura") {
         unsupported.push("Aura ohne Enchant-Keyword".into());
@@ -474,6 +495,7 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
         unless: None,
         planeswalker: false,
         activation_zone: crate::zone::Zone::Battlefield,
+        cycling: false,
     })
 }
 
@@ -482,7 +504,7 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
 fn cycling_script(k: &str) -> Option<String> {
     if let Some(cost) = k.strip_prefix("Cycling:") {
         return Some(format!(
-            "AB$ Draw | Cost$ {cost} Discard<1/CARDNAME> | ActivationZone$ Hand | NumCards$ 1 | SpellDescription$ Cycling {cost}"
+            "AB$ Draw | Cost$ {cost} Discard<1/CARDNAME> | ActivationZone$ Hand | IsCycling$ True | NumCards$ 1 | SpellDescription$ Cycling {cost}"
         ));
     }
     let rest = k.strip_prefix("TypeCycling:")?;
@@ -490,6 +512,6 @@ fn cycling_script(k: &str) -> Option<String> {
     let ty = parts.next()?;
     let cost = parts.next()?;
     Some(format!(
-        "AB$ ChangeZone | Cost$ {cost} Discard<1/CARDNAME> | ActivationZone$ Hand | Origin$ Library | Destination$ Hand | ChangeType$ {ty} | SpellDescription$ {ty}cycling {cost}"
+        "AB$ ChangeZone | Cost$ {cost} Discard<1/CARDNAME> | ActivationZone$ Hand | IsCycling$ True | Origin$ Library | Destination$ Hand | ChangeType$ {ty} | SpellDescription$ {ty}cycling {cost}"
     ))
 }

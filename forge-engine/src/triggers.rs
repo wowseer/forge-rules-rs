@@ -58,6 +58,18 @@ pub enum TriggerKind {
         /// `Mode$ AttackersDeclaredOneTarget`: je angegriffenem Ziel einmal.
         one_target: bool,
     },
+    /// `Mode$ Cycled` – eine Karte wurde umgewandelt (Cycling, CR 702.29).
+    Cycled {
+        valid_card: Option<ValidSpec>,
+        valid_player: Option<ValidSpec>,
+    },
+    /// `Mode$ Discarded` – eine Karte wurde abgeworfen (CR 701.9).
+    Discarded { valid_card: Option<ValidSpec> },
+    /// `Mode$ AttackerBlockedByCreature` – je Paar aus Angreifer und Blocker.
+    AttackerBlockedByCreature {
+        valid_card: Option<ValidSpec>,
+        valid_blocker: Option<ValidSpec>,
+    },
     /// `Mode$ BecomesTarget` – ein Objekt/Spieler wird Ziel eines Zaubers/einer Fähigkeit.
     BecomesTarget {
         valid_target: Option<ValidSpec>,
@@ -183,6 +195,8 @@ pub struct TriggerInfo {
     pub cards: Vec<CardId>,
     /// Auslösendes Stapelobjekt (`TriggeredSourceSA`).
     pub stack_item: Option<u32>,
+    /// Blocker (`TriggeredBlocker`), wenn `card` der Angreifer ist.
+    pub blocker: Option<CardId>,
 }
 
 /// Verzögerter Trigger (CR 603.7), angelegt vom Effekt `DelayedTrigger`.
@@ -234,6 +248,21 @@ pub enum TriggerEvent {
         attackers: Vec<(CardId, Target)>,
         /// Variante je Ziel (alle `attackers` greifen dasselbe Ziel an).
         one_target: bool,
+    },
+    /// `card` ist das Objekt in der Hand vor dem Abwerfen (LKI).
+    Cycled {
+        card: CardId,
+        player: PlayerId,
+    },
+    Discarded {
+        old: CardId,
+        new: CardId,
+        player: PlayerId,
+    },
+    AttackerBlockedByCreature {
+        attacker: CardId,
+        blocker: CardId,
+        defender: PlayerId,
     },
     BecomesTarget {
         target: Target,
@@ -416,6 +445,17 @@ pub fn compile_trigger(
                 one_target: t.mode == "AttackersDeclaredOneTarget",
             }
         }
+        "Cycled" => TriggerKind::Cycled {
+            valid_card: valid("ValidCard", &mut used)?,
+            valid_player: valid("ValidPlayer", &mut used)?,
+        },
+        "Discarded" => TriggerKind::Discarded {
+            valid_card: valid("ValidCard", &mut used)?,
+        },
+        "AttackerBlockedByCreature" => TriggerKind::AttackerBlockedByCreature {
+            valid_card: valid("ValidCard", &mut used)?,
+            valid_blocker: valid("ValidBlocker", &mut used)?,
+        },
         "BecomesTarget" => {
             used.push("ValidSource");
             let valid_source = match p.get("ValidSource") {
@@ -580,6 +620,15 @@ pub fn compile_trigger(
             active_zones = d.clone();
         }
         let _ = valid_card;
+    }
+    // „Wenn du ~ umwandelst/abwirfst“: die Karte ist dabei in der Hand.
+    if matches!(
+        kind,
+        TriggerKind::Cycled { .. } | TriggerKind::Discarded { .. }
+    ) && p.get("ValidCard").is_some_and(|v| v.contains("Self"))
+        && !p.has("TriggerZones")
+    {
+        active_zones = vec![Zone::Hand];
     }
 
     Ok(CompiledTrigger {
@@ -756,6 +805,66 @@ impl GameState {
                     target: one_target
                         .then(|| attackers.first().map(|(_, t)| *t))
                         .flatten(),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::Cycled {
+                    valid_card,
+                    valid_player,
+                },
+                TriggerEvent::Cycled { card, player },
+            ) => {
+                if !self.opt_card(valid_card, *card, source, controller)
+                    || valid_player
+                        .as_ref()
+                        .is_some_and(|v| !self.player_matches(*player, v, controller))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(self.current_object(*card)),
+                    card_lki: Some(*card),
+                    player: Some(*player),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::Discarded { valid_card },
+                TriggerEvent::Discarded { old, new, player },
+            ) => {
+                if !self.opt_card(valid_card, *old, source, controller) {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*new),
+                    card_lki: Some(*old),
+                    player: Some(*player),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::AttackerBlockedByCreature {
+                    valid_card,
+                    valid_blocker,
+                },
+                TriggerEvent::AttackerBlockedByCreature {
+                    attacker,
+                    blocker,
+                    defender,
+                },
+            ) => {
+                if !self.opt_card(valid_card, *attacker, source, controller)
+                    || !self.opt_card(valid_blocker, *blocker, source, controller)
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*attacker),
+                    card_lki: Some(*attacker),
+                    blocker: Some(*blocker),
+                    player: Some(*defender),
+                    attacking_player: Some(self.card(*attacker).controller),
                     ..Default::default()
                 })
             }
@@ -1178,6 +1287,18 @@ impl GameState {
             }
             _ => None,
         };
+        // „Wenn du ~ umwandelst/abwirfst“: Rückblick auf das Objekt in der Hand.
+        if let TriggerEvent::Cycled { card: old, .. } | TriggerEvent::Discarded { old, .. } = &ev
+            && self.card(*old).zone.is_none()
+            && self
+                .card(*old)
+                .compiled()
+                .triggers
+                .iter()
+                .any(|t| t.active_zones.contains(&Zone::Hand))
+        {
+            sources.push((*old, Zone::Hand));
+        }
         if let Some(olds) = left_battlefield {
             let mut lki: Vec<CardId> = self.lki_battlefield.clone().unwrap_or_default();
             lki.extend(olds);

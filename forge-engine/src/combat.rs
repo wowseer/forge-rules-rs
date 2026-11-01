@@ -299,6 +299,13 @@ impl GameState {
                 .filter(|(_, a)| *a == i.card)
                 .map(|(b, _)| *b)
                 .collect();
+            for b in &blockers {
+                self.fire(crate::triggers::TriggerEvent::AttackerBlockedByCreature {
+                    attacker: i.card,
+                    blocker: *b,
+                    defender: i.defender,
+                });
+            }
             if i.blocked {
                 self.fire(crate::triggers::TriggerEvent::AttackerBlocked {
                     attacker: i.card,

@@ -25,6 +25,8 @@ pub enum CostPart {
     Discard { amount: u32, valid: ValidSpec },
     /// `Discard<1/CARDNAME>`: diese Karte abwerfen (Cycling u. ä., aus der Hand)
     DiscardSelf,
+    /// `ExileFromGrave<1/CARDNAME>`: diese Karte aus dem Friedhof exilieren
+    ExileSelfFromGraveyard,
     /// `AddCounter<n/TYP>`: Marken auf die Quelle legen (z. B. Loyalität +n, CR 606.4)
     AddCounter { amount: u32, kind: String },
     /// `SubCounter<n/TYP>`: Marken von der Quelle entfernen (CR 118.3, 606.4)
@@ -58,6 +60,7 @@ impl fmt::Display for Cost {
                 CostPart::PayLife(n) => format!("PayLife<{n}>"),
                 CostPart::Discard { amount, valid } => format!("Discard<{amount}/{valid:?}>"),
                 CostPart::DiscardSelf => "Discard<1/CARDNAME>".into(),
+                CostPart::ExileSelfFromGraveyard => "ExileFromGrave<1/CARDNAME>".into(),
                 CostPart::AddCounter { amount, kind } => format!("AddCounter<{amount}/{kind}>"),
                 CostPart::RemoveCounter { amount, kind } => format!("SubCounter<{amount}/{kind}>"),
             });
@@ -152,6 +155,9 @@ impl Cost {
                                 amount: amount(n, &tok)?,
                                 kind: k.trim().to_string(),
                             },
+                            ("ExileFromGrave", [n, "CARDNAME", ..]) if n.trim() == "1" => {
+                                CostPart::ExileSelfFromGraveyard
+                            }
                             ("Discard", [n, "CARDNAME", ..]) if n.trim() == "1" => {
                                 CostPart::DiscardSelf
                             }

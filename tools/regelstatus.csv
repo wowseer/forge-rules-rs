@@ -234,3 +234,10 @@ Effect (ApiType);RepeatEach;teilweise;expressions::repeat_each_player_with_remem
 Trigger;ChangesZoneAll;teilweise;triggers::changes_zone_all_triggers_once_per_simultaneous_event;Bündel je Effekt, SBA-Durchgang und Kostenzahlung; Origin, Destination, ValidCards (LKI), ValidAmount, TriggeredCards; ValidCause, ActivationLimit fehlen
 Trigger;BecomesTarget;teilweise;triggers::becomes_target_only_by_own_spells, triggers::ward_counters_unless_paid;ValidTarget, ValidSource (Spell/Ability/SpellAbility + YouCtrl/OppCtrl), TriggeredSourceSA; FirstTime, Valiant fehlen
 Keyword;Ward;teilweise;triggers::ward_counters_unless_paid;Ward:<Kosten> mit Mana/PayLife/Discard/Sac; Ward mit X und Kostenwahl fehlen
+Keyword;Prowess;ja;keywords_misc::prowess_pumps_on_noncreature_spell;
+Trigger;Cycled;teilweise;keywords_misc::cycled_and_discarded_triggers;ValidCard (auch Self aus der Hand), ValidPlayer; FirstTime fehlt
+Trigger;Discarded;teilweise;keywords_misc::cycled_and_discarded_triggers;ValidCard; ValidCause, TriggerController fehlen
+Trigger;AttackerBlockedByCreature;teilweise;triggers::attacker_blocked_by_creature_names_the_blocker;ValidCard, ValidBlocker, TriggeredBlocker
+Effect (ApiType);Fight;teilweise;mass_discard_counter::fight_uses_parent_target_and_put_counter_all;Kämpfer aus Zielen/Defined wie Java, CR 701.14b; Optional fehlt
+Effect (ApiType);PutCounterAll;teilweise;mass_discard_counter::fight_uses_parent_target_and_put_counter_all;ValidCards, CounterType, CounterNum; Ersatzeffekte für Marken fehlen
+Cost;Exile;teilweise;keywords_misc::exile_from_graveyard_cost_activates_from_graveyard;nur ExileFromGrave<1/CARDNAME>

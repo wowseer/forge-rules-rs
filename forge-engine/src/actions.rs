@@ -485,6 +485,18 @@ impl GameState {
         true
     }
 
+    /// CR 701.9: Abwerfen (aus der Hand in den Friedhof); Trigger `Discarded`.
+    pub fn discard(&mut self, c: CardId) -> CardId {
+        let player = self.card(c).owner;
+        let new = self.move_card(c, Zone::Graveyard, true);
+        self.fire(crate::triggers::TriggerEvent::Discarded {
+            old: c,
+            new,
+            player,
+        });
+        new
+    }
+
     /// Auf den Friedhof legen ohne „zerstören“ (SBA 704.5f).
     pub fn put_into_graveyard(&mut self, c: CardId) {
         self.move_card(c, Zone::Graveyard, true);

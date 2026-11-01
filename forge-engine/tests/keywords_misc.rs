@@ -74,3 +74,51 @@ fn devoid_is_colorless_in_all_zones() {
     assert!(g.chars(b).colors.is_colorless());
     assert_eq!(g.chars(b).mana_cost.as_ref().unwrap().mana_value(), 2);
 }
+
+#[test]
+fn prowess_pumps_on_noncreature_spell() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Mountain", P1, Zone::Battlefield);
+    let monk = put(&db, &mut g, "Prowess Monk Lite", P1, Zone::Battlefield);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(bolt, &[forge_engine::decision::Target::Player(P2)]);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().chars(monk).power, Some(2));
+    assert_eq!(d.g().chars(monk).toughness, Some(3));
+}
+
+#[test]
+fn cycled_and_discarded_triggers() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Plains", P1, Zone::Battlefield);
+    put(&db, &mut g, "Discard Punisher Lite", P1, Zone::Battlefield);
+    let c = put(&db, &mut g, "Cycle Reward Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.act(Action::Activate(c, 0));
+    d.finish_casting(&[]);
+    // Cycled (aus der Hand, Rückblick) + Discarded (Verzauberung): P1 ordnet sie
+    assert!(
+        matches!(d.decision(), Decision::OrderTriggers { descriptions, .. } if descriptions.len() == 2),
+        "{:?}",
+        d.decision()
+    );
+    d.run_until(|g, _| g.stack.is_empty());
+    assert_eq!(d.g().player(P1).life, 23);
+    assert_eq!(d.g().player(P2).life, 19);
+    assert_eq!(d.g().player(P1).hand.len(), 1);
+}
+
+#[test]
+fn exile_from_graveyard_cost_activates_from_graveyard() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Mountain", P1, Zone::Battlefield);
+    let s = put(&db, &mut g, "Grave Spark Lite", P1, Zone::Graveyard);
+    let mut d = Driver::new(g);
+    d.act(Action::Activate(s, 0));
+    d.finish_casting(&[forge_engine::decision::Target::Player(P2)]);
+    assert_eq!(count(d.g(), "Grave Spark Lite", Zone::Exile), 1);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 18);
+}

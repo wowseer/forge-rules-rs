@@ -136,6 +136,20 @@ impl GameState {
                         .collect()
                 })
                 .unwrap_or_default(),
+            Defined::TriggeredBlocker => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.blocker.or(t.card))
+                .map(Target::Card)
+                .into_iter()
+                .collect(),
+            Defined::ParentTarget => {
+                if self.parent_targets.is_empty() {
+                    targets.to_vec()
+                } else {
+                    self.parent_targets.clone()
+                }
+            }
             Defined::TriggeredCards => ctx
                 .trig
                 .as_ref()
@@ -508,7 +522,7 @@ impl GameState {
                         }
                     };
                     for c in chosen {
-                        self.move_card(c, Zone::Graveyard, true);
+                        self.discard(c);
                     }
                 }
             }
@@ -613,6 +627,62 @@ impl GameState {
                 }
                 if *damage_map {
                     self.end_damage_batch();
+                }
+            }
+            Effect::Fight { defined } => {
+                // Java: erster Kämpfer = erstes Ziel; Defined$ liefert den ersten
+                // (bzw. beide, wenn es keine Ziele gibt).
+                let tgts = Self::cards_of_any(targets);
+                let mut f1 = tgts.first().copied();
+                let mut f2 = None;
+                if let Some(d) = defined {
+                    let def: Vec<CardId> =
+                        Self::cards_of_any(&self.resolve_defined(*d, targets, ctx))
+                            .into_iter()
+                            .filter(|c| {
+                                self.card(*c).zone == Some(Zone::Battlefield)
+                                    && self.is_creature(*c)
+                            })
+                            .collect();
+                    if def.len() > 1 && f1.is_none() {
+                        f1 = Some(def[0]);
+                        f2 = Some(def[1]);
+                    } else if let Some(first) = def.first() {
+                        f2 = f1;
+                        f1 = Some(*first);
+                    }
+                } else if tgts.len() > 1 {
+                    f2 = Some(tgts[1]);
+                }
+                // CR 701.14b: beide müssen noch Kreaturen im Spiel sein
+                if let (Some(a), Some(b)) = (f1, f2)
+                    && a != b
+                    && [a, b].iter().all(|c| {
+                        self.card(*c).zone == Some(Zone::Battlefield) && self.is_creature(*c)
+                    })
+                {
+                    let pa = self.chars(a).power.unwrap_or(0).max(0) as u32;
+                    let pb = self.chars(b).power.unwrap_or(0).max(0) as u32;
+                    self.begin_damage_batch();
+                    self.deal_damage(a, Target::Card(b), pa);
+                    self.deal_damage(b, Target::Card(a), pb);
+                    self.end_damage_batch();
+                }
+            }
+            Effect::PutCounterAll {
+                valid,
+                counter,
+                amount,
+            } => {
+                let n = self.amount(amount, ctx, targets).max(0) as u32;
+                let cards: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .copied()
+                    .filter(|c| self.card_matches(*c, valid, ctx.source, ctx.controller))
+                    .collect();
+                for c in cards {
+                    self.add_counters(c, counter, n);
                 }
             }
             Effect::GainControl {
@@ -1172,6 +1242,8 @@ impl GameState {
         let mut inherited: &[Target] = inherited;
         for (i, a) in ab.chain().into_iter().enumerate() {
             let own = targets.get(i).map(Vec::as_slice).unwrap_or(&[]);
+            // Ziele der Elternfähigkeit (für `Defined$ ParentTarget`)
+            self.parent_targets = inherited.to_vec();
             let t = if a.target.is_some() {
                 inherited = own;
                 own

@@ -433,6 +433,8 @@ pub struct GameState {
     pub zone_batch_depth: u32,
     /// Kontrolleffekte in Zeitstempelreihenfolge (jüngster zuletzt).
     pub control_effects: Vec<ControlEffect>,
+    /// Ziele der Elternfähigkeit während des Auflösens (`Defined$ ParentTarget`).
+    pub parent_targets: Vec<crate::decision::Target>,
     /// Gleichzeitig zugefügter Schaden (Quelle, Ziel, Menge, Kampf) für
     /// `DamageDoneOnce`; `None` = jeder Schaden ist ein eigenes Ereignis.
     pub damage_batch: Option<Vec<(CardId, crate::decision::Target, u32, bool)>>,
@@ -884,6 +886,7 @@ impl GameState {
             lki_battlefield: None,
             delayed_triggers: Vec::new(),
             control_effects: Vec::new(),
+            parent_targets: Vec::new(),
             zone_batch: None,
             zone_batch_depth: 0,
             damage_batch: None,

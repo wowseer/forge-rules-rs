@@ -48,6 +48,10 @@ pub enum Defined {
     DelayTriggerRemembered,
     /// … bzw. wie gemerkt (`DelayTriggerRememberedLKI`).
     DelayTriggerRememberedLki,
+    /// Blocker aus dem Trigger-Kontext (bei `Blocks` das Trigger-Objekt selbst).
+    TriggeredBlocker,
+    /// Ziele der Elternfähigkeit, auch wenn diese Fähigkeit eigene Ziele hat.
+    ParentTarget,
     /// Alle betroffenen Objekte eines Sammel-Triggers (`TriggeredCards`).
     TriggeredCards,
     /// Angreifender Spieler aus dem Trigger-Kontext.
@@ -236,6 +240,17 @@ pub enum Effect {
         /// `DamageMap$`: Schaden aller Durchläufe gleichzeitig.
         damage_map: bool,
     },
+    /// Zwei Kreaturen kämpfen (`Fight`, CR 701.14): Java `FightEffect.getFighters`.
+    Fight {
+        /// `Defined$` (erster Kämpfer bzw. beide), sonst nur Ziele.
+        defined: Option<Defined>,
+    },
+    /// Marken auf alle passenden bleibenden Karten (`PutCounterAll`).
+    PutCounterAll {
+        valid: ValidSpec,
+        counter: String,
+        amount: Amount,
+    },
     /// Kontrolle übernehmen (`GainControl`, CR 613.1b).
     GainControl {
         what: Defined,
@@ -411,6 +426,8 @@ pub struct CompiledAbility {
     pub planeswalker: bool,
     /// `ActivationZone$`: wo die Fähigkeit aktiviert werden kann (Standard Battlefield).
     pub activation_zone: crate::zone::Zone,
+    /// Cycling-Fähigkeit (für den Trigger `Cycled`).
+    pub cycling: bool,
 }
 
 impl CompiledAbility {
@@ -562,9 +579,8 @@ impl<'a> Ctx<'a> {
             Some(v) => Ok(match v {
                 "You" => Defined::You,
                 "Self" => Defined::SelfCard,
-                "Targeted" | "TargetedPlayer" | "TargetedCard" | "ParentTarget" => {
-                    Defined::Targeted
-                }
+                "ParentTarget" => Defined::ParentTarget,
+                "Targeted" | "TargetedPlayer" | "TargetedCard" => Defined::Targeted,
                 "TargetedController" => Defined::TargetedController,
                 "Player" => Defined::EachPlayer,
                 "Player.Opponent" | "Opponent" => Defined::EachOpponent,
@@ -576,7 +592,7 @@ impl<'a> Ctx<'a> {
                     Defined::TriggeredCardController
                 }
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
-                "TriggeredBlocker" | "TriggeredBlockerLKICopy" => Defined::TriggeredCard,
+                "TriggeredBlocker" | "TriggeredBlockerLKICopy" => Defined::TriggeredBlocker,
                 "TriggeredCards" | "TriggeredCardsLKICopy" => Defined::TriggeredCards,
                 "TriggeredDefendingPlayer" | "TriggeredSourceSAController" => {
                     Defined::TriggeredPlayer
@@ -1106,6 +1122,31 @@ fn compile_depth(
                 damage_map,
             }
         }
+        "Fight" => Effect::Fight {
+            defined: match c.ab.params.get("Defined") {
+                Some(_) => Some(c.defined(Defined::SelfCard)?),
+                None => None,
+            },
+        },
+        "PutCounterAll" => {
+            let valid =
+                ValidSpec::parse(c.get("ValidCards").ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "ValidCards",
+                })?)?;
+            let counter = c
+                .get("CounterType")
+                .ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "CounterType",
+                })?
+                .to_string();
+            Effect::PutCounterAll {
+                valid,
+                counter,
+                amount: c.amount("CounterNum", Some(1))?,
+            }
+        }
         "GainControl" => {
             let (mut eot, mut next, mut leaves, mut lose) = (false, false, false, false);
             if let Some(v) = c.get("LoseControl") {
@@ -1436,6 +1477,7 @@ fn compile_depth(
         .get("Planeswalker")
         .is_some_and(|v| v.eq_ignore_ascii_case("true"));
     c.get("Ultimate");
+    let cycling = c.get("IsCycling").is_some();
     let activation_zone = match c.get("ActivationZone") {
         None | Some("Battlefield") => crate::zone::Zone::Battlefield,
         Some("Hand") => crate::zone::Zone::Hand,
@@ -1477,6 +1519,7 @@ fn compile_depth(
         unless,
         planeswalker,
         activation_zone,
+        cycling,
     })
 }
 

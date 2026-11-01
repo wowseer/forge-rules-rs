@@ -356,3 +356,17 @@ fn becomes_target_only_by_own_spells() {
     d.pass_all();
     assert_eq!(d.g().card(hero).counter("P1P1"), 1);
 }
+
+#[test]
+fn attacker_blocked_by_creature_names_the_blocker() {
+    let (db, mut g) = game_at(Step::BeginCombat, 10);
+    let thorn = put(&db, &mut g, "Thorn Lite", P1, Zone::Battlefield);
+    let wall = put(&db, &mut g, "Wall of Stone", P2, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
+    d.submit(Choice::Attackers(vec![(thorn, T2)]));
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareBlockers { .. }));
+    d.submit(Choice::Blocks(vec![(wall, thorn)]));
+    d.run_until(|g, _| g.step == Step::Main2);
+    assert_eq!(count(d.g(), "Wall of Stone", Zone::Graveyard), 1);
+}

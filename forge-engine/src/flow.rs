@@ -201,7 +201,7 @@ impl GameState {
                         _ => hand[..n as usize].to_vec(),
                     };
                     for c in chosen {
-                        self.move_card(c, Zone::Graveyard, true);
+                        self.discard(c);
                     }
                 }
                 // CR 514.2: Schaden entfernen, „bis Ende des Zuges“ endet

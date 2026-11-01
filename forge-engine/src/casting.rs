@@ -50,6 +50,7 @@ impl GameState {
             CostPart::PayLife(n) => self.player(p).life >= *n as i32,
             CostPart::AddCounter { .. } => src.zone == Some(Zone::Battlefield),
             CostPart::DiscardSelf => src.zone == Some(Zone::Hand) && src.owner == p,
+            CostPart::ExileSelfFromGraveyard => src.zone == Some(Zone::Graveyard) && src.owner == p,
             CostPart::RemoveCounter { amount, kind } => {
                 src.zone == Some(Zone::Battlefield) && src.counter(kind) >= *amount
             }
@@ -443,6 +444,12 @@ impl GameState {
             let turn = self.turn;
             self.card_mut(source).loyalty_used_turn = Some(turn);
         }
+        if ab.cycling {
+            self.fire(crate::triggers::TriggerEvent::Cycled {
+                card: source,
+                player: p,
+            });
+        }
         self.stack.push(StackItem {
             id,
             kind: StackKind::Ability,
@@ -515,7 +522,7 @@ impl GameState {
                 CostPart::PayLife(n) => self.lose_life(p, *n as i32),
                 CostPart::AddCounter { amount, kind } => self.add_counters(source, kind, *amount),
                 CostPart::DiscardSelf => {
-                    self.move_card(source, Zone::Graveyard, true);
+                    self.discard(source);
                 }
                 CostPart::RemoveCounter { amount, kind } => {
                     let o = self.card_mut(source);
@@ -560,8 +567,11 @@ impl GameState {
                         _ => return Err(Interrupt::Cancelled),
                     };
                     for c in chosen {
-                        self.move_card(c, Zone::Graveyard, true);
+                        self.discard(c);
                     }
+                }
+                CostPart::ExileSelfFromGraveyard => {
+                    self.move_card(source, Zone::Exile, true);
                 }
             }
         }

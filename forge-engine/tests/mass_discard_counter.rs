@@ -215,3 +215,26 @@ fn creature_counter_only_targets_creature_spells() {
         o => panic!("{o:?}"),
     }
 }
+
+#[test]
+fn fight_uses_parent_target_and_put_counter_all() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 1);
+    put(&db, &mut g, "Plains", P1, Zone::Battlefield);
+    let prey = put(&db, &mut g, "Prey Lite", P1, Zone::Hand);
+    let insp = put(&db, &mut g, "Inspire Lite", P1, Zone::Hand);
+    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    let giant = put(&db, &mut g, "Hill Giant", P2, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(insp, &[]);
+    d.pass_all();
+    assert_eq!(d.g().chars(bear).power, Some(3), "+1/+1-Marke");
+    assert_eq!(d.g().chars(giant).power, Some(3), "nur eigene Kreaturen");
+    d.act(Action::Cast(prey));
+    d.submit(Choice::Targets(vec![Target::Card(bear)]));
+    d.finish_casting(&[Target::Card(giant)]);
+    d.pass_all();
+    // Bär 4/3 kämpft gegen Riese 3/3: beide sterben
+    assert_eq!(count(d.g(), "Hill Giant", Zone::Graveyard), 1);
+    assert_eq!(count(d.g(), "Grizzly Bears", Zone::Graveyard), 1);
+}
