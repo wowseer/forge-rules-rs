@@ -1356,6 +1356,15 @@ impl GameState {
         let StackKind::Spell { card } = item.kind else {
             return;
         };
+        // CR 715.3d: aufgelöster Abenteuer-Zauber geht ins Exil, „auf Abenteuer“.
+        if !fizzled
+            && self.card(card).face == 1
+            && self.card(card).def.script.split_mode == forge_script::SplitMode::Adventure
+        {
+            let new = self.move_card(card, Zone::Exile, true);
+            self.card_mut(new).on_adventure = true;
+            return;
+        }
         let is_permanent = self.chars(card).types.is_permanent();
         if is_permanent && !fizzled {
             // CR 608.3a: unter Kontrolle des Zauberspruch-Controllers

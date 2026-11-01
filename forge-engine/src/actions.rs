@@ -40,6 +40,7 @@ impl GameState {
             effect: None,
             attached_to: None,
             regen_shields: 0,
+            on_adventure: false,
             loyalty_used_turn: None,
             prevent_next: 0,
         });
@@ -100,7 +101,16 @@ impl GameState {
         self.cards.push(CardObj {
             id: new_id,
             def: old.def.clone(),
-            face: 0,
+            // Gewählte Seite bleibt auf dem Stapel und – bei modalen doppelseitigen
+            // Karten – auf dem Battlefield (CR 712.8, 712.14); sonst Vorderseite.
+            face: if to == Zone::Stack
+                || (to == Zone::Battlefield
+                    && old.def.script.split_mode == forge_script::SplitMode::Modal)
+            {
+                old.face
+            } else {
+                0
+            },
             owner: old.owner,
             controller,
             zone: Some(to),
@@ -124,6 +134,7 @@ impl GameState {
             effect: None,
             attached_to: None,
             regen_shields: 0,
+            on_adventure: false,
             loyalty_used_turn: None,
             prevent_next: 0,
         });

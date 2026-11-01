@@ -174,50 +174,75 @@ impl GameState {
         Ok(Arc::new(built))
     }
 
+    /// Kann `p` die Karte `c` (mit ihrer aktuellen Seite) jetzt wirken?
+    /// Zeitpunkt, Ziele und grob die Bezahlbarkeit.
+    fn castable_now(&self, p: PlayerId, c: CardId) -> bool {
+        let card = self.card(c);
+        let ch = self.chars(c);
+        let instant_speed =
+            ch.types.has_core(forge_types::CoreType::Instant) || ch.has(&Keyword::Flash);
+        if !(instant_speed || self.sorcery_timing(p)) {
+            return false;
+        }
+        if let Some(spell) = &card.compiled().spell
+            && !self.has_targets_for(spell, c, p)
+        {
+            return false;
+        }
+        if ch.mana_cost.as_ref().is_some_and(|m| m.no_cost) {
+            return false; // CR 118.6: ohne Manakosten nicht normal wirkbar
+        }
+        let mv = ch
+            .mana_cost
+            .as_ref()
+            .map(|m| self.adjusted_spell_cost(p, c, m).mana_value())
+            .unwrap_or(0);
+        // Phyrexianische Symbole können mit Leben bezahlt werden (CR 119.4).
+        let phy = ch
+            .mana_cost
+            .as_ref()
+            .map(|m| m.shards.iter().filter(|s| s.phyrexian).count() as u32)
+            .unwrap_or(0);
+        let payable_with_life = phy.min((self.player(p).life.max(0) as u32) / 2);
+        mv.saturating_sub(payable_with_life) <= self.potential_mana(p)
+    }
+
     /// Alle legalen Prioritätsaktionen von `p` (CR 117.1).
     pub fn legal_actions(&self, p: PlayerId) -> Vec<Action> {
         let _cache = crate::state::CharsCache::enter();
         let mut acts = vec![Action::Pass];
         let pl = self.player(p);
+        let land_ok = self.sorcery_timing(p) && pl.lands_played_this_turn < pl.land_plays_per_turn;
         for &c in &pl.hand {
             let card = self.card(c);
             if !card.def.is_supported() {
                 continue;
             }
-            let ch = self.chars(c);
-            if ch.types.is_land() {
+            if self.chars(c).types.is_land() {
                 // CR 305.2
-                if self.sorcery_timing(p) && pl.lands_played_this_turn < pl.land_plays_per_turn {
+                if land_ok {
                     acts.push(Action::PlayLand(c));
                 }
-                continue;
+            } else if self.castable_now(p, c) {
+                acts.push(Action::Cast(c));
             }
-            let instant_speed =
-                ch.types.has_core(forge_types::CoreType::Instant) || ch.has(&Keyword::Flash);
-            if !(instant_speed || self.sorcery_timing(p)) {
-                continue;
+            // Andere Seite (Adventure, modale doppelseitige Karte)
+            if let Some(face) = card.def.alt_cast_face() {
+                let mut g = self.clone();
+                g.card_mut(c).face = face;
+                if g.chars(c).types.is_land() {
+                    if land_ok {
+                        acts.push(Action::PlayLandAlt(c, face));
+                    }
+                } else if g.castable_now(p, c) {
+                    acts.push(Action::CastAlt(c, face));
+                }
             }
-            if let Some(spell) = &card.compiled().spell
-                && !self.has_targets_for(spell, c, p)
-            {
-                continue;
-            }
-            let mv = ch
-                .mana_cost
-                .as_ref()
-                .map(|m| self.adjusted_spell_cost(p, c, m).mana_value())
-                .unwrap_or(0);
-            if ch.mana_cost.as_ref().is_some_and(|m| m.no_cost) {
-                continue; // CR 118.6: ohne Manakosten nicht normal wirkbar
-            }
-            // Phyrexianische Symbole können mit Leben bezahlt werden (CR 119.4).
-            let phy = ch
-                .mana_cost
-                .as_ref()
-                .map(|m| m.shards.iter().filter(|s| s.phyrexian).count() as u32)
-                .unwrap_or(0);
-            let payable_with_life = phy.min((self.player(p).life.max(0) as u32) / 2);
-            if mv.saturating_sub(payable_with_life) <= self.potential_mana(p) {
+        }
+        // CR 715.4: Karten „auf Abenteuer“ dürfen aus dem Exil als Kreatur gewirkt werden.
+        for &c in &self.exile {
+            let card = self.card(c);
+            if card.on_adventure && card.owner == p && self.castable_now(p, c) {
                 acts.push(Action::Cast(c));
             }
         }
@@ -284,6 +309,15 @@ impl GameState {
                 Ok(())
             }
             Action::Cast(c) => self.cast_spell(p, c, ch),
+            Action::CastAlt(c, face) => {
+                // Die Seite bleibt beim Wechsel auf den Stapel erhalten.
+                self.card_mut(c).face = face;
+                self.cast_spell(p, c, ch)
+            }
+            Action::PlayLandAlt(c, face) => {
+                self.card_mut(c).face = face;
+                self.perform_action(p, Action::PlayLand(c), ch)
+            }
             Action::Activate(c, i) => {
                 let ab = self.card(c).compiled().activated[i].clone();
                 if ab.is_mana_ability() {

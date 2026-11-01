@@ -274,7 +274,10 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
 impl CardDefinition {
     pub fn compile(script: CardScript) -> CardDefinition {
         let mut unsupported = Vec::new();
-        if script.split_mode != SplitMode::None {
+        if !matches!(
+            script.split_mode,
+            SplitMode::None | SplitMode::Adventure | SplitMode::Modal
+        ) {
             unsupported.push(format!("mehrseitige Karte ({:?})", script.split_mode));
         }
         if script.is_out_of_scope_type() {
@@ -332,6 +335,16 @@ impl CardDefinition {
 
     pub fn face(&self, idx: usize) -> &CardFace {
         self.script.faces[idx].as_ref().expect("Seite existiert")
+    }
+
+    /// Index der alternativ wirkbaren Seite (Adventure, modale doppelseitige Karte).
+    pub fn alt_cast_face(&self) -> Option<usize> {
+        matches!(
+            self.script.split_mode,
+            SplitMode::Adventure | SplitMode::Modal
+        )
+        .then_some(1)
+        .filter(|i| self.faces.get(*i).is_some_and(Option::is_some))
     }
 
     pub fn compiled(&self, idx: usize) -> &CompiledFace {

@@ -138,6 +138,8 @@ pub struct CardObj {
     pub effect: Option<EffectInfo>,
     /// Aura/Ausrüstung: an welches Objekt angelegt (CR 301.5, 303.4).
     pub attached_to: Option<CardId>,
+    /// CR 715.4: „auf Abenteuer“ im Exil (als Kreatur wirkbar).
+    pub on_adventure: bool,
     /// Regenerationsschilde bis Zugende (CR 701.15).
     pub regen_shields: u32,
     /// Verhinderungsschild: die nächsten N Schaden in diesem Zug (CR 615.7).

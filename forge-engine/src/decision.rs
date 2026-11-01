@@ -22,6 +22,10 @@ pub enum Action {
     Pass,
     PlayLand(CardId),
     Cast(CardId),
+    /// Andere Seite wirken (Adventure, modale doppelseitige Karte; CR 715.3, 712.11).
+    CastAlt(CardId, usize),
+    /// Andere Seite als Land spielen (modale doppelseitige Karte, CR 712.12).
+    PlayLandAlt(CardId, usize),
     /// Aktivierte Fähigkeit: Karte + Index in `CompiledFace::activated`.
     Activate(CardId, usize),
 }
