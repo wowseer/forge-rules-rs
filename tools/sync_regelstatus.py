@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Überträgt rust/tools/regelstatus.csv in die Fortschritts-Tabellen und die Doku.
 
-- Forge_Rules_Engine.xlsx (Sheet „Rules“, Spalte G) und Forge_Rules/Forge_*.xlsx (Spalte F):
+- Forge_Rules/Forge_Rules_Engine.xlsx (Sheet „Rules“, Spalte G) und Forge_Rules/Forge_*.xlsx (Spalte F):
   ja → TRUE, n/a → Text "n/a", sonst FALSE.
 - Summary-/Fortschrittsformeln zählen "n/a"-Zeilen nicht mehr mit.
 - Erzeugt rust/docs/03-regelstand.md.
@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CSV = ROOT / "rust/tools/regelstatus.csv"
 DOC = ROOT / "rust/docs/03-regelstand.md"
-ENGINE = ROOT / "Forge_Rules_Engine.xlsx"
+ENGINE = ROOT / "Forge_Rules" / "Forge_Rules_Engine.xlsx"
 CATEGORY_FILES = {
     "Keyword": "Forge_Keyword.xlsx",
     "Trigger": "Forge_Trigger.xlsx",
