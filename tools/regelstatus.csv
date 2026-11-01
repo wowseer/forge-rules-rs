@@ -119,3 +119,4 @@ Effect (ApiType);DestroyAll;teilweise;mass_discard_counter::wrath_destroys_all_s
 Effect (ApiType);DamageAll;teilweise;mass_discard_counter::damage_all_creatures_and_players;ValidCards/ValidPlayers; DamageSource fehlt
 Effect (ApiType);Discard;teilweise;mass_discard_counter::duress_caster_chooses_noncreature_nonland;TgtChoose, Hand, Random, RevealYouChoose, DiscardValid; RememberDiscarded fehlt
 Effect (ApiType);Counter;teilweise;mass_discard_counter::mana_leak_pay_or_countered;Zauber neutralisieren, UnlessCost (Zahl, automatische Zahlung); Fähigkeiten neutralisieren, Destination fehlen
+Effect (ApiType);Effect;teilweise;effects_objects::effect_grants_hexproof_to_remembered_until_end_of_turn;Effektobjekt in Command Zone mit Statics/Triggern/Ersatzeffekten, RememberObjects (Targeted/Self/Triggered…), Duration (Zugende, Permanent, UntilYourNextTurn, UntilTheEndOfYourNextTurn); RememberObjects Remembered, EffectOwner, weitere Dauern fehlen

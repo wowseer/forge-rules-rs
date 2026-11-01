@@ -124,6 +124,28 @@ pub struct CardObj {
     pub base_pt: Option<(i32, i32)>,
     /// Für X bezahlter Wert (auf dem Stapel, und als bleibende Karte danach).
     pub cast_x: u32,
+    /// Gemerkte Objekte (`RememberObjects$`, `Card.IsRemembered`).
+    pub remembered: Vec<CardId>,
+    /// Nur bei Effektobjekten (`Effect`): wann sie enden.
+    pub effect: Option<EffectInfo>,
+}
+
+/// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectDuration {
+    /// Standard: bis Zugende (Cleanup, CR 514.2)
+    EndOfTurn,
+    Permanent,
+    /// bis zum Beginn deines nächsten Zuges
+    UntilYourNextTurn,
+    /// bis zum Ende deines nächsten Zuges
+    UntilTheEndOfYourNextTurn,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EffectInfo {
+    pub duration: EffectDuration,
+    pub created_turn: u32,
 }
 
 impl CardObj {

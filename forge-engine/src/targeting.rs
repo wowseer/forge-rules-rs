@@ -58,6 +58,7 @@ impl GameState {
             Prop::PlayerOpponent => false,
             Prop::Not(inner) => !self.prop_matches(id, ch, inner, source, you),
             Prop::OppOwn => c.owner != you,
+            Prop::IsRemembered => self.card(source).remembered.contains(&id),
             Prop::Stat { stat, op, value } => {
                 let v = match stat {
                     crate::valid::Stat::Power => ch.power,

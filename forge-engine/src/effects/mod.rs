@@ -161,6 +161,13 @@ pub enum Effect {
     Counter {
         unless_cost: Option<forge_types::ManaCost>,
     },
+    /// Effektobjekt in der Command Zone erzeugen (`Effect`): trägt eigene
+    /// Statics/Trigger/Ersatzeffekte, merkt sich Objekte, endet nach `duration`.
+    CreateEffect {
+        def: EffectDef,
+        duration: crate::state::EffectDuration,
+        remember: Option<Defined>,
+    },
     /// Platzhalter für modale Fähigkeiten; wird vor dem Stapeln durch die
     /// gewählten Modi ersetzt (`GameState::choose_modes`).
     Charm(CharmSpec),
@@ -173,6 +180,18 @@ pub enum Effect {
         shuffle: bool,
     },
 }
+
+/// Synthetische Definition eines Effektobjekts; Gleichheit = dieselbe Definition.
+#[derive(Debug, Clone)]
+pub struct EffectDef(pub Arc<crate::definition::CardDefinition>);
+
+impl PartialEq for EffectDef {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for EffectDef {}
 
 /// Wer wählt beim Abwerfen?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -516,6 +535,114 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
     })
 }
 
+fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, CompileError> {
+    use crate::state::EffectDuration;
+    let list = |c: &mut Ctx, key: &'static str| -> Vec<String> {
+        c.get(key)
+            .map(|v| {
+                v.split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let statics_n = list(c, "StaticAbilities");
+    let triggers_n = list(c, "Triggers");
+    let repl_n = list(c, "ReplacementEffects");
+    let mut compiled = crate::definition::CompiledFace {
+        keywords: Vec::new(),
+        spell: None,
+        activated: Vec::new(),
+        triggers: Vec::new(),
+        statics: Vec::new(),
+        replacements: Vec::new(),
+        etb_counters: Vec::new(),
+    };
+    let svar = |n: &str| {
+        face.svar(n)
+            .ok_or_else(|| CompileError::MissingSvar(n.to_string()))
+    };
+    for n in &statics_n {
+        let st = forge_script::ScriptStatic::parse(forge_script::ParamMap::parse(svar(n)?))
+            .map_err(|_| CompileError::MissingSvar(n.clone()))?;
+        let mut cs = crate::statics::compile_static(face, &st)?;
+        // Effektobjekte wirken aus der Command Zone.
+        let crate::statics::CompiledStatic::Continuous(c) = &mut cs;
+        c.effect_zones = vec![crate::zone::Zone::Command];
+        compiled.statics.push(Arc::new(cs));
+    }
+    for n in &triggers_n {
+        let t = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(svar(n)?))
+            .map_err(|_| CompileError::MissingSvar(n.clone()))?;
+        let mut ct = crate::triggers::compile_trigger(face, &t)?;
+        // Effektobjekte liegen in der Command Zone.
+        ct.active_zones = vec![crate::zone::Zone::Command];
+        compiled.triggers.push(Arc::new(ct));
+    }
+    for n in &repl_n {
+        let r = forge_script::ScriptReplacement::parse(forge_script::ParamMap::parse(svar(n)?))
+            .map_err(|_| CompileError::MissingSvar(n.clone()))?;
+        compiled
+            .replacements
+            .push(Arc::new(crate::replacements::compile_replacement(
+                face, &r,
+            )?));
+    }
+    let duration = match c.get("Duration") {
+        None => EffectDuration::EndOfTurn,
+        Some("Permanent") => EffectDuration::Permanent,
+        Some("UntilYourNextTurn") => EffectDuration::UntilYourNextTurn,
+        Some("UntilTheEndOfYourNextTurn") => EffectDuration::UntilTheEndOfYourNextTurn,
+        Some(v) => return Err(c.unsupported("Duration", v)),
+    };
+    let remember = match c.ab.params.get("RememberObjects") {
+        Some(_) => Some(c.defined_key("RememberObjects", Defined::SelfCard)?),
+        None => None,
+    };
+    // Bei Verlassen der Zone ändert sich die ID (CR 400.7) – gemerkte Objekte
+    // passen dann ohnehin nicht mehr; daher genügt das hier als Vereinfachung.
+    for k in [
+        "ExileOnMoved",
+        "ForgetOnMoved",
+        "Name",
+        "Image",
+        "EffectOwner",
+    ] {
+        if k == "EffectOwner" && c.ab.params.has(k) {
+            return Err(c.unsupported(k, c.ab.params.get(k).unwrap_or("")));
+        }
+        c.get(k);
+    }
+    let name = c.ab.params.get("Name").unwrap_or("Effekt").to_string();
+    let effect_face = CardFace {
+        name,
+        ..CardFace::default()
+    };
+    let script = forge_script::CardScript {
+        split_mode: forge_script::SplitMode::None,
+        faces: vec![Some(effect_face)],
+        variants: Vec::new(),
+        meld_with: None,
+        partner_with: None,
+        hand_life_modifier: None,
+        tokens: Vec::new(),
+        ai_hints: Vec::new(),
+        deck_hints: Vec::new(),
+        copy_face_from: Vec::new(),
+    };
+    let def = crate::definition::CardDefinition {
+        script,
+        faces: vec![Some(compiled)],
+        unsupported: Vec::new(),
+    };
+    Ok(Effect::CreateEffect {
+        def: EffectDef(Arc::new(def)),
+        duration,
+        remember,
+    })
+}
+
 /// Übersetzt eine Fähigkeit samt `SubAbility$`-Kette.
 pub fn compile(face: &CardFace, ab: &ScriptAbility) -> Result<CompiledAbility, CompileError> {
     compile_depth(face, ab, 0)
@@ -740,6 +867,7 @@ fn compile_depth(
             }
             Effect::Counter { unless_cost }
         }
+        "Effect" => compile_effect_object(&mut c, face)?,
         "Token" => {
             let scripts_s = c.get("TokenScript").ok_or(CompileError::MissingParam {
                 api: api.into(),

@@ -81,9 +81,32 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 - Vereinfachung: Mehrere Umleitungen → Zeitstempel statt Wahl des Betroffenen (CR 616.1).
 - 4 neue Tests (135), 300 Zufallspartien; Zielpool 19,8 % → **21,1 %**.
 
+### Nachtrag: PumpAll, DestroyAll, DamageAll, Discard, Counter
+
+- Massen-Effekte gleichzeitig; DestroyAll mit Rückblick für „stirbt“-Trigger.
+- Discard: `TgtChoose`, `Hand`, `Random`, `RevealYouChoose`, `DiscardValid`.
+- Counter: Zauber auf dem Stapel als Ziele (`TargetType$ Spell` → Zone Stack);
+  `UnlessCost$ <Zahl>` – der Controller entscheidet, bezahlt wird aus Pool bzw.
+  automatisch über einfache Quellen (Vereinfachung: keine manuelle Quellenwahl).
+- 8 neue Tests (143 gesamt); Zielpool 21,1 % → **23,7 %**.
+
+### Nachtrag: Effect (Effektobjekte)
+
+- `Effect` erzeugt ein synthetisches Objekt in der Command Zone mit eigenen Statics,
+  Triggern und Ersatzeffekten (aktiv in der Command Zone), merkt sich Objekte
+  (`RememberObjects$`, Filter `IsRemembered`) und endet nach `Duration$`
+  (Zugende/Cleanup, `Permanent`, `UntilYourNextTurn`, `UntilTheEndOfYourNextTurn`).
+- 4 neue Tests (147), 1.000 + 300 Zufallspartien ohne Absturz.
+- Zielpool nur +5 Karten (23,7 %): Effect-Karten scheitern jetzt fast nur noch an
+  weiteren Static-Arten (`CantBlockBy`, `CantBlock`, `CantAttack`, `MustAttack`) und
+  `RememberObjects$ Remembered`. Effect ist damit Infrastruktur für diese Bausteine.
+
 ### Nächste Schritte
 
-1. **Effect** (367), **PumpAll** (313), **Discard** (288),
+1. **Auren und Ausrüstung** (`AffectedDefined$ Enchanted/Equipped`: 833 + 551 Vorkommen),
+   **ReduceCost** (483), **CantBlockBy/CantBlock/CantAttack/MustAttack** (≈ 700),
+   **Animate** (257), **Dig** (202), **Regenerate**, **Scry**, **Mill**.
+2. (alt) **Effect** (367), **PumpAll** (313), **Discard** (288),
    **Counter** (284), **Animate**, **ReduceCost**, **Dig**, **DamageAll**.
 2. **Replacement-Effekte** (`Moved`: 394, ETB getappt usw.).
 3. **Auren und Ausrüstung**: `Enchant`, `Attach`, `Equip`, `AffectedDefined$ Enchanted/Equipped`,

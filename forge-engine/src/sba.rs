@@ -207,7 +207,7 @@ impl GameState {
         Ok(performed)
     }
 
-    fn cease_to_exist(&mut self, id: CardId) {
+    pub(crate) fn cease_to_exist(&mut self, id: CardId) {
         let c = self.card(id);
         let (zone, owner) = (c.zone, c.owner);
         if let Some(z) = zone {

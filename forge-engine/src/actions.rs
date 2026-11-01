@@ -34,6 +34,8 @@ impl GameState {
             moved_to: None,
             base_pt: None,
             cast_x: 0,
+            remembered: Vec::new(),
+            effect: None,
         });
         self.zone_list_mut(zone, owner).push(id);
         id
@@ -110,6 +112,8 @@ impl GameState {
             } else {
                 0
             },
+            remembered: Vec::new(),
+            effect: None,
         });
         {
             let o = self.card_mut(id);

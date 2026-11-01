@@ -62,6 +62,8 @@ pub enum Prop {
     Not(Box<Prop>),
     /// Gegner besitzt die Karte
     OppOwn,
+    /// Von der Quelle gemerkt (`IsRemembered`)
+    IsRemembered,
     /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
     Stat {
         stat: Stat,
@@ -148,6 +150,9 @@ fn is_type_word(w: &str) -> bool {
 fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     if let Some(rest) = p.strip_prefix('!') {
         return Ok(Prop::Not(Box::new(parse_prop(rest)?)));
+    }
+    if p == "IsRemembered" {
+        return Ok(Prop::IsRemembered);
     }
     if p == "OppOwn" {
         return Ok(Prop::OppOwn);

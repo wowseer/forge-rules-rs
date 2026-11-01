@@ -450,6 +450,34 @@ impl GameState {
                     self.move_card(card, Zone::Graveyard, true);
                 }
             }
+            Effect::CreateEffect {
+                def,
+                duration,
+                remember,
+            } => {
+                let id = self.create_card(def.0.clone(), ctx.controller, Zone::Command, false);
+                let remembered: Vec<CardId> = match remember {
+                    Some(d) => self
+                        .resolve_defined(*d, targets, ctx)
+                        .into_iter()
+                        .filter_map(|t| {
+                            if let Target::Card(c) = t {
+                                Some(c)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                    None => Vec::new(),
+                };
+                let turn = self.turn;
+                let o = self.card_mut(id);
+                o.remembered = remembered;
+                o.effect = Some(crate::state::EffectInfo {
+                    duration: *duration,
+                    created_turn: turn,
+                });
+            }
             // Modale Fähigkeiten werden vor dem Stapeln aufgelöst (choose_modes);
             // ein Charm ohne gewählte Modi tut nichts.
             Effect::Charm(_) => {}

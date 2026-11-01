@@ -128,6 +128,12 @@ impl GameState {
         let mut gets_priority = self.step.has_priority();
         match self.step {
             Step::Untap => {
+                // „bis zu deinem nächsten Zug“ endet mit Zugbeginn
+                self.end_effect_objects(|info, ap_is_owner, turn| {
+                    info.duration == crate::state::EffectDuration::UntilYourNextTurn
+                        && ap_is_owner
+                        && turn > info.created_turn
+                });
                 // CR 302.6: Kontrolle seit Zugbeginn
                 for c in self.battlefield_of(ap).collect::<Vec<_>>() {
                     let o = self.card_mut(c);
@@ -205,6 +211,13 @@ impl GameState {
                 }
                 self.effects
                     .retain(|e| e.duration != Duration::UntilEndOfTurn);
+                self.end_effect_objects(|info, ap_is_owner, turn| match info.duration {
+                    crate::state::EffectDuration::EndOfTurn => true,
+                    crate::state::EffectDuration::UntilTheEndOfYourNextTurn => {
+                        ap_is_owner && turn > info.created_turn
+                    }
+                    _ => false,
+                });
                 // CR 514.3a: SBA/Trigger → doch Priorität und neuer Cleanup
                 let sba = self.check_state_based_actions(ch)?;
                 if sba || !self.pending_triggers.is_empty() {
@@ -299,6 +312,31 @@ impl GameState {
                 let n = self.turn + 1;
                 self.start_turn(next, n);
             }
+        }
+    }
+}
+
+impl GameState {
+    /// Entfernt Effektobjekte, deren Dauer endet (`ends(info, gehört dem aktiven Spieler, Zug)`).
+    pub(crate) fn end_effect_objects(
+        &mut self,
+        ends: impl Fn(&crate::state::EffectInfo, bool, u32) -> bool,
+    ) {
+        let ap = self.active;
+        let turn = self.turn;
+        let done: Vec<crate::ids::CardId> = self
+            .command
+            .iter()
+            .copied()
+            .filter(|c| {
+                let o = self.card(*c);
+                o.effect
+                    .as_ref()
+                    .is_some_and(|i| ends(i, o.owner == ap, turn))
+            })
+            .collect();
+        for c in done {
+            self.cease_to_exist(c);
         }
     }
 }
