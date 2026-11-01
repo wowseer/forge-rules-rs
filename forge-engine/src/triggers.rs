@@ -58,6 +58,13 @@ pub enum TriggerKind {
         /// `Mode$ AttackersDeclaredOneTarget`: je angegriffenem Ziel einmal.
         one_target: bool,
     },
+    /// `Mode$ DamageDoneOnce` – ein Empfänger erhielt gleichzeitig Schaden.
+    DamageDoneOnce {
+        valid_target: Option<ValidSpec>,
+        valid_source: Option<ValidSpec>,
+        combat: Option<bool>,
+        amount: Option<crate::expr::Compare>,
+    },
     /// `Mode$ Blocks` – eine Kreatur blockt (CR 509.4).
     Blocks {
         valid_card: Option<ValidSpec>,
@@ -180,6 +187,12 @@ pub enum TriggerEvent {
         attackers: Vec<(CardId, Target)>,
         /// Variante je Ziel (alle `attackers` greifen dasselbe Ziel an).
         one_target: bool,
+    },
+    /// Gleichzeitiger Schaden an einen Empfänger (Quellen mit Mengen).
+    DamageDoneOnce {
+        target: Target,
+        sources: Vec<(CardId, u32)>,
+        combat: bool,
     },
     Blocks {
         blocker: CardId,
@@ -343,6 +356,22 @@ pub fn compile_trigger(
                 attacked_target: valid("AttackedTarget", &mut used)?,
                 valid_attackers,
                 one_target: t.mode == "AttackersDeclaredOneTarget",
+            }
+        }
+        "DamageDoneOnce" => {
+            used.extend(["CombatDamage", "DamageAmount"]);
+            let combat = p
+                .get("CombatDamage")
+                .map(|v| v.eq_ignore_ascii_case("true"));
+            let amount = match p.get("DamageAmount") {
+                Some(a) => Some(crate::expr::Compare::parse(face, a)?),
+                None => None,
+            };
+            TriggerKind::DamageDoneOnce {
+                valid_target: valid("ValidTarget", &mut used)?,
+                valid_source: valid("ValidSource", &mut used)?,
+                combat,
+                amount,
             }
         }
         "Blocks" => TriggerKind::Blocks {
@@ -637,6 +666,63 @@ impl GameState {
                     target: one_target
                         .then(|| attackers.first().map(|(_, t)| *t))
                         .flatten(),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::DamageDoneOnce {
+                    valid_target,
+                    valid_source,
+                    combat,
+                    amount,
+                },
+                TriggerEvent::DamageDoneOnce {
+                    target,
+                    sources,
+                    combat: is_combat,
+                },
+            ) => {
+                if combat.is_some_and(|c| c != *is_combat) {
+                    return None;
+                }
+                if let Some(v) = valid_target {
+                    let ok = match target {
+                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Card(c) => self.opt_card(&Some(v.clone()), *c, source, controller),
+                    };
+                    if !ok {
+                        return None;
+                    }
+                }
+                let total: u32 = sources
+                    .iter()
+                    .filter(|(s, _)| self.opt_card(valid_source, *s, source, controller))
+                    .map(|(_, n)| *n)
+                    .sum();
+                if valid_source.is_some() && total == 0 {
+                    return None;
+                }
+                if let Some(cmp) = amount {
+                    let ectx = crate::expr::EvalCtx {
+                        source,
+                        controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                    };
+                    if !cmp.holds(total as i32, self.eval(&cmp.rhs, &ectx)) {
+                        return None;
+                    }
+                }
+                let first = sources.first().map(|(s, _)| *s);
+                Some(TriggerInfo {
+                    target: Some(*target),
+                    player: match target {
+                        Target::Player(p) => Some(*p),
+                        Target::Card(c) => Some(self.card(*c).controller),
+                    },
+                    source: first,
+                    attacking_player: first.map(|s| self.card(s).controller),
                     ..Default::default()
                 })
             }

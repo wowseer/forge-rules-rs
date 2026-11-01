@@ -161,6 +161,8 @@ pub enum Condition {
         cmp: Compare,
         /// `RememberedLKI`: gemerkte Objekte wie gemerkt statt aktuell.
         lki: bool,
+        /// `ConditionDefined$ Targeted`: die Ziele der Fähigkeit statt der gemerkten.
+        targeted: bool,
     },
 }
 
@@ -408,7 +410,7 @@ pub fn parse_conditions(
     };
     if let Some(d) = defined {
         // Java: ohne ConditionPresent$ wird ConditionDefined$ nicht geprüft.
-        if !matches!(d, "Remembered" | "RememberedLKI") {
+        if !matches!(d, "Remembered" | "RememberedLKI" | "Targeted") {
             return Err(bad("ConditionDefined", d));
         }
         if params.has(k_zone) || params.has(k_player) {
@@ -419,6 +421,7 @@ pub fn parse_conditions(
                 spec: ValidSpec::parse(p).map_err(CompileError::Valid)?,
                 cmp: Compare::parse(face, params.get(k_cmp).unwrap_or("GE1"))?,
                 lki: d == "RememberedLKI",
+                targeted: d == "Targeted",
             });
         }
     } else if let Some(p) = params.get(k_present) {
@@ -733,7 +736,27 @@ impl GameState {
             }
             Condition::Hellbent(b) => self.player(you).hand.is_empty() == *b,
             Condition::FatefulHour(b) => (self.player(you).life <= 5) == *b,
-            Condition::RememberedPresent { spec, cmp, lki } => {
+            Condition::RememberedPresent {
+                spec,
+                cmp,
+                lki,
+                targeted,
+            } => {
+                if *targeted {
+                    let n = ctx
+                        .targets
+                        .iter()
+                        .filter(|t| match t {
+                            crate::decision::Target::Card(c) => {
+                                self.card_matches(*c, spec, ctx.source, you)
+                            }
+                            crate::decision::Target::Player(p) => {
+                                self.player_matches(*p, spec, you)
+                            }
+                        })
+                        .count() as i32;
+                    return cmp.holds(n, self.eval(&cmp.rhs, ctx));
+                }
                 let objs = if *lki {
                     self.card(ctx.source).remembered.clone()
                 } else {

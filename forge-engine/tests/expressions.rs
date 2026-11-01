@@ -192,3 +192,17 @@ fn triggered_card_power_uses_last_known_information() {
     d.pass_all();
     assert_eq!(d.g().player(P1).life, 23);
 }
+
+#[test]
+fn condition_defined_targeted_checks_the_target() {
+    for (victim, draws) in [("Goblin Piker", 1usize), ("Grizzly Bears", 0)] {
+        let (db, mut g) = game_at(Step::Main1, 10);
+        put(&db, &mut g, "Swamp", P1, Zone::Battlefield);
+        let k = put(&db, &mut g, "Kill Bonus Lite", P1, Zone::Hand);
+        let v = put(&db, &mut g, victim, P2, Zone::Battlefield);
+        let mut d = Driver::new(g);
+        d.cast(k, &[Target::Card(v)]);
+        d.pass_all();
+        assert_eq!(d.g().player(P1).hand.len(), draws, "{victim}");
+    }
+}

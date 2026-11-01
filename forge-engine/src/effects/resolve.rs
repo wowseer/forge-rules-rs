@@ -190,9 +190,11 @@ impl GameState {
         match eff {
             Effect::DealDamage { amount, to } => {
                 let n = self.amount(amount, ctx, targets).max(0) as u32;
+                self.begin_damage_batch();
                 for t in self.resolve_defined(*to, targets, ctx) {
                     self.deal_damage(ctx.source, t, n);
                 }
+                self.end_damage_batch();
             }
             Effect::Draw { amount, who } => {
                 let n = self.amount(amount, ctx, targets).max(0) as u32;
@@ -409,9 +411,11 @@ impl GameState {
                             .map(Target::Player),
                     );
                 }
+                self.begin_damage_batch();
                 for r in recipients {
                     self.deal_damage(ctx.source, r, n);
                 }
+                self.end_damage_batch();
             }
             Effect::Discard {
                 who,
@@ -626,6 +630,33 @@ impl GameState {
                 });
             }
             Effect::AuraSpell => {}
+            Effect::Surveil { who, num } => {
+                let n = self.amount(num, ctx, targets).max(0) as usize;
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let lib = &self.player(p).library;
+                    let k = n.min(lib.len());
+                    if k == 0 {
+                        continue;
+                    }
+                    let cards: Vec<CardId> = lib.iter().rev().take(k).copied().collect();
+                    let (top, grave) = match ch.ask(Decision::Scry {
+                        player: p,
+                        cards: cards.clone(),
+                        graveyard: true,
+                    })? {
+                        Choice::Arrange { top, bottom } => (top, bottom),
+                        _ => (cards.clone(), Vec::new()),
+                    };
+                    let lib = &mut self.player_mut(p).library;
+                    lib.retain(|c| !cards.contains(c));
+                    for c in top.iter().rev() {
+                        lib.push(*c);
+                    }
+                    for c in grave {
+                        self.move_card(c, Zone::Graveyard, true);
+                    }
+                }
+            }
             Effect::Scry { who, num } => {
                 let n = self.amount(num, ctx, targets).max(0) as usize;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
@@ -639,6 +670,7 @@ impl GameState {
                     let (top, bottom) = match ch.ask(Decision::Scry {
                         player: p,
                         cards: cards.clone(),
+                        graveyard: false,
                     })? {
                         Choice::Arrange { top, bottom } => (top, bottom),
                         _ => (cards.clone(), Vec::new()),

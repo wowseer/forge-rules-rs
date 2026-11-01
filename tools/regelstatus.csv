@@ -225,3 +225,5 @@ Trigger;AttackerUnblocked;teilweise;triggers::blocks_attacker_blocked_and_unbloc
 Trigger;Drawn;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidCard, ValidPlayer, Number; FirstCardInDrawStep, ForReveal fehlen
 Trigger;LifeGained;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidPlayer; FirstTime, ValidSource, LifeAmount fehlen
 Trigger;Taps;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidCard, ValidPlayer; ValidCause, Attacker, FirstTime fehlen
+Effect (ApiType);Surveil;teilweise;library_regen_animate::surveil_puts_chosen_cards_into_graveyard;Amount, Defined; Trigger Surveil fehlt
+Trigger;DamageDoneOnce;teilweise;triggers::damage_done_once_triggers_once_per_recipient;einmal je Empfänger bei gleichzeitigem Schaden (Kampf, DealDamage, DamageAll); ValidTarget, ValidSource, CombatDamage, DamageAmount; FirstTime fehlt

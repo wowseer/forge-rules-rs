@@ -274,3 +274,17 @@ fn drawn_number_life_gained_and_taps_triggers() {
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 18, "Taps-Trigger");
 }
+
+#[test]
+fn damage_done_once_triggers_once_per_recipient() {
+    let (db, mut g) = game_at(Step::BeginCombat, 10);
+    put(&db, &mut g, "Combat Watcher Lite", P1, Zone::Battlefield);
+    let a = put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
+    let b = put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
+    d.submit(Choice::Attackers(vec![(a, T2), (b, T2)]));
+    d.run_until(|g, _| g.step == Step::Main2);
+    assert_eq!(d.g().player(P2).life, 16);
+    assert_eq!(d.g().player(P1).hand.len(), 1, "einmal, nicht je Angreifer");
+}

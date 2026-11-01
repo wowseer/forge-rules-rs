@@ -169,3 +169,32 @@ fn animate_land_until_end_of_turn() {
     d.run_until(|g, _| g.turn == 3);
     assert!(!d.g().chars(land).types.is_creature());
 }
+
+#[test]
+fn surveil_puts_chosen_cards_into_graveyard() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Island", P1, Zone::Battlefield);
+    let s = put(&db, &mut g, "Surveil Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(s, &[]);
+    d.pass_all();
+    let cards = match d.decision() {
+        Decision::Scry {
+            cards,
+            graveyard: true,
+            ..
+        } => cards.clone(),
+        o => panic!("{o:?}"),
+    };
+    assert_eq!(cards.len(), 2);
+    d.submit(Choice::Arrange {
+        top: vec![cards[1]],
+        bottom: vec![cards[0]],
+    });
+    assert_eq!(
+        d.g().player(P1).graveyard.len(),
+        2,
+        "Surveil-Karte + Zauber"
+    );
+    assert_eq!(d.g().player(P1).library.len(), 9);
+}

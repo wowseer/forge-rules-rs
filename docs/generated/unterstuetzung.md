@@ -5,42 +5,39 @@ Automatisch erzeugt von `cargo run --release -p forge-engine --bin support-repor
 Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigkeiten, Trigger, Statics, Replacements, Kosten, Filter) vom Effekt-Compiler übersetzt wird. Ob die Umsetzung mit Java übereinstimmt, sichern erst die Differential-Tests ab.
 
 - Karten im Zielpool: 32336 (zusätzlich ohne Skript in cardsfolder: 551; Sonderformat-Typen ausgeschlossen: 369)
-- davon unterstützt: **10590** (32.7 %)
+- davon unterstützt: **10781** (33.3 %)
 
 ## Je Format
 
 | Format | Karten | unterstützt | % |
 |---|---:|---:|---:|
-| Commander | 32190 | 10569 | 32.8 |
-| Legacy | 32014 | 10506 | 32.8 |
-| Modern | 22711 | 8030 | 35.4 |
-| Pauper | 10833 | 5386 | 49.7 |
-| Pioneer | 15080 | 5143 | 34.1 |
-| Standard | 5163 | 1460 | 28.3 |
-| Vintage | 32084 | 10527 | 32.8 |
+| Commander | 32190 | 10760 | 33.4 |
+| Legacy | 32014 | 10690 | 33.4 |
+| Modern | 22711 | 8204 | 36.1 |
+| Pauper | 10833 | 5480 | 50.6 |
+| Pioneer | 15080 | 5296 | 35.1 |
+| Standard | 5163 | 1545 | 29.9 |
+| Vintage | 32084 | 10711 | 33.4 |
 
 ## Einziger fehlender Baustein (schnellster Gewinn)
 
 | fehlt | Karten |
 |---|---:|
 | Replacement: DamageDone (Effekt nicht unterstützt: Replacement DamageDone) | 119 |
-| Trigger: DamageDoneOnce (Effekt nicht unterstützt: Trigger DamageDoneOnce) | 102 |
 | Effekt nicht unterstützt: RepeatEach | 93 |
 | Effekt nicht unterstützt: GainControl | 87 |
 | Effekt nicht unterstützt: Replacement DamageDone | 87 |
 | Effekt nicht unterstützt: PreventDamage | 83 |
 | Static: AlternativeCost (Effekt nicht unterstützt: Static AlternativeCost) | 83 |
 | Trigger: BecomesTarget (Effekt nicht unterstützt: Trigger BecomesTarget) | 72 |
+| Trigger: ChangesZoneAll (Effekt nicht unterstützt: Trigger ChangesZoneAll) | 70 |
 | Mana: Amount$ X nicht unterstützt | 68 |
-| Trigger: ChangesZoneAll (Effekt nicht unterstützt: Trigger ChangesZoneAll) | 67 |
-| Effekt nicht unterstützt: ChooseCard | 66 |
+| Effekt nicht unterstützt: ChooseCard | 67 |
+| Effekt nicht unterstützt: CopyPermanent | 66 |
 | mehrseitige Karte (Adventure) | 66 |
-| Ausdruck: ConditionDefined$ Targeted nicht unterstützt | 65 |
-| Effekt nicht unterstützt: CopyPermanent | 65 |
 | DealDamage: NumDmg$ X nicht unterstützt | 64 |
-| Static Continuous: MayPlay$ True nicht unterstützt | 63 |
-| Effekt nicht unterstützt: Surveil | 62 |
-| Keyword: Convoke | 62 |
+| Static Continuous: MayPlay$ True nicht unterstützt | 64 |
+| Keyword: Convoke | 63 |
 | Trigger: Cycled (Effekt nicht unterstützt: Trigger Cycled) | 61 |
 | Effekt nicht unterstützt: PeekAndReveal | 56 |
 | Effekt nicht unterstützt: ChooseType | 54 |
@@ -48,41 +45,44 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 | Trigger: Discarded (Effekt nicht unterstützt: Trigger Discarded) | 53 |
 | Draw: NumCards$ X nicht unterstützt | 52 |
 | Effekt nicht unterstützt: ChooseSource | 51 |
-| Kostenteil nicht unterstützt: ExileFromGrave<1/CARDNAME> | 49 |
+| Kostenteil nicht unterstützt: ExileFromGrave<1/CARDNAME> | 51 |
 | Trigger: SpellCast (Trigger SpellCast: TargetsValid$ Card.Self nicht unterstützt) | 49 |
 | Effekt nicht unterstützt: PutCounterAll | 48 |
 | Effekt nicht unterstützt: Fight | 47 |
-| Trigger: ChangesZone (Effekt nicht unterstützt: Surveil) | 47 |
 | Effekt nicht unterstützt: AnimateAll | 45 |
 | Keyword: ETBReplacement:Copy:DBCopy:Optional | 44 |
+| Replacement: Untap (Effekt nicht unterstützt: Replacement Untap) | 44 |
 | Effekt nicht unterstützt: RollDice | 42 |
-| Replacement: Untap (Effekt nicht unterstützt: Replacement Untap) | 42 |
-| Keyword: Prowess | 41 |
+| Keyword: Prowess | 42 |
 | Kostenteil nicht unterstützt: Exile<1/CARDNAME> | 41 |
 | Static: Continuous (Filter nicht unterstützt: IsCommander) | 40 |
 | Static: ReduceCost (Static ReduceCost: Amount$ X nicht unterstützt) | 40 |
+| Trigger: ChangesZone (Effekt nicht unterstützt: ImmediateTrigger) | 40 |
 | Trigger: TapsForMana (Effekt nicht unterstützt: Trigger TapsForMana) | 40 |
 | Effekt nicht unterstützt: DigUntil | 39 |
+| Filter nicht unterstützt: cmcEQX | 39 |
 | Pump: ActivationLimit$ 1 nicht unterstützt | 39 |
-| Trigger: ChangesZone (Effekt nicht unterstützt: ImmediateTrigger) | 39 |
 | ChangeZone: RememberChanged$ True nicht unterstützt | 38 |
-| Filter nicht unterstützt: cmcEQX | 38 |
-| Filter nicht unterstützt: cmcLEX | 36 |
+| Filter nicht unterstützt: cmcLEX | 37 |
 | Replacement: Counter (Effekt nicht unterstützt: Replacement Counter) | 36 |
 | Effekt nicht unterstützt: Proliferate | 35 |
 | Trigger: Attacks (Trigger Attacks: Alone$ True nicht unterstützt) | 35 |
 | Trigger: SpellCast (Trigger SpellCast: ActivatorThisTurnCast$ EQ2 nicht unterstützt) | 35 |
+| Effekt nicht unterstützt: Investigate | 34 |
 | Keyword: Landwalk:Swamp | 34 |
 | Static: Continuous (Static Continuous: AddPower$ X nicht unterstützt) | 34 |
-| Effekt nicht unterstützt: Investigate | 33 |
+| GainLife: LifeAmount$ X nicht unterstützt | 33 |
 | Effekt nicht unterstützt: DamageResolve | 32 |
 | Effekt nicht unterstützt: NameCard | 32 |
 | Effekt nicht unterstützt: Protection | 32 |
-| GainLife: LifeAmount$ X nicht unterstützt | 32 |
 | PutCounter: Pflichtparameter CounterType$ fehlt | 32 |
+| Trigger: ChangesZone (ChangeZone: Duration$ UntilHostLeavesPlay nicht unterstützt) | 32 |
+| Effekt nicht unterstützt: ChooseColor | 31 |
 | Effekt nicht unterstützt: RevealHand | 31 |
 | Keyword: Crew:2 | 31 |
 | Trigger: ChangesZone (Attach: Attach$ ohne ValidTgts nicht unterstützt) | 31 |
+| Trigger: ChangesZone (Effekt nicht unterstützt: PutCounterAll) | 31 |
+| Trigger: DamageDealtOnce (Effekt nicht unterstützt: Trigger DamageDealtOnce) | 31 |
 
 ## Häufigste fehlende Bausteine insgesamt
 
@@ -91,7 +91,6 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 | mehrseitige Karte (DoubleFaced) | 389 |
 | Aura ohne Enchant-Keyword | 209 |
 | Replacement: DamageDone (Effekt nicht unterstützt: Replacement DamageDone) | 201 |
-| Trigger: DamageDoneOnce (Effekt nicht unterstützt: Trigger DamageDoneOnce) | 190 |
 | Replacement: Untap (Effekt nicht unterstützt: Replacement Untap) | 155 |
 | Static: AlternativeCost (Effekt nicht unterstützt: Static AlternativeCost) | 143 |
 | mehrseitige Karte (Adventure) | 139 |
@@ -102,33 +101,30 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 | Effekt nicht unterstützt: Replacement DamageDone | 115 |
 | Static Continuous: MayPlay$ True nicht unterstützt | 115 |
 | Trigger: ChangesZoneAll (Effekt nicht unterstützt: Trigger ChangesZoneAll) | 114 |
-| Effekt nicht unterstützt: CopyPermanent | 111 |
+| Effekt nicht unterstützt: CopyPermanent | 112 |
 | Trigger: BecomesTarget (Effekt nicht unterstützt: Trigger BecomesTarget) | 111 |
 | Replacement: Counter (Effekt nicht unterstützt: Replacement Counter) | 105 |
 | Keyword: Convoke | 104 |
 | Effekt nicht unterstützt: PreventDamage | 99 |
 | mehrseitige Karte (Modal) | 99 |
-| Effekt nicht unterstützt: Surveil | 97 |
 | Keyword: Ward:2 | 97 |
 | Mana: Amount$ X nicht unterstützt | 97 |
 | Keyword: Prowess | 95 |
+| Effekt nicht unterstützt: ChooseCard | 90 |
 | DealDamage: NumDmg$ X nicht unterstützt | 89 |
-| Effekt nicht unterstützt: ChooseCard | 89 |
 | Effekt nicht unterstützt: SetState | 89 |
 | Static: CantBeCast (Effekt nicht unterstützt: Static CantBeCast) | 87 |
 | PutCounter: Pflichtparameter CounterType$ fehlt | 82 |
 | Static: Continuous (Static Continuous: Affected$ You nicht unterstützt) | 82 |
 | Effekt nicht unterstützt: PutCounterAll | 81 |
-| Trigger: ChangesZone (Effekt nicht unterstützt: Surveil) | 75 |
 | Trigger: Cycled (Effekt nicht unterstützt: Trigger Cycled) | 75 |
-| Ausdruck: ConditionDefined$ Targeted nicht unterstützt | 72 |
 | Static: Continuous (Static Continuous: AddPower$ X nicht unterstützt) | 72 |
 | Trigger: Discarded (Effekt nicht unterstützt: Trigger Discarded) | 72 |
 | Draw: NumCards$ X nicht unterstützt | 71 |
 | Static: ReduceCost (Static ReduceCost: Amount$ X nicht unterstützt) | 71 |
 | Keyword: Crew:2 | 70 |
 | Keyword: ETBReplacement:Other:ChooseColor | 69 |
-| Trigger: ChangesZone (ChangeZone: Duration$ UntilHostLeavesPlay nicht unterstützt) | 68 |
+| Trigger: ChangesZone (ChangeZone: Duration$ UntilHostLeavesPlay nicht unterstützt) | 69 |
 | mehrseitige Karte (Prepare) | 67 |
 | Effekt nicht unterstützt: AnimateAll | 66 |
 | Effekt nicht unterstützt: ChooseType | 66 |
@@ -146,9 +142,9 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 | Effekt nicht unterstützt: Play | 60 |
 | variable Stärke/Widerstandskraft (*) ohne CDA | 60 |
 | Keyword: Partner | 59 |
+| Trigger: ChangesZone (Effekt nicht unterstützt: ImmediateTrigger) | 59 |
 | Trigger: TapsForMana (Effekt nicht unterstützt: Trigger TapsForMana) | 59 |
 | Trigger: Always (Effekt nicht unterstützt: Trigger Always) | 58 |
-| Trigger: ChangesZone (Effekt nicht unterstützt: ImmediateTrigger) | 58 |
 | Effekt nicht unterstützt: DigUntil | 57 |
 | Trigger: ChangesZone (Trigger ChangesZone: Static$ True nicht unterstützt) | 57 |
 | Effekt nicht unterstützt: CopySpellAbility | 56 |
@@ -172,12 +168,12 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 | Keyword: Enchant:Player | 46 |
 | Pump: ActivationLimit$ 1 nicht unterstützt | 46 |
 | Effekt nicht unterstützt: Proliferate | 45 |
+| Filter nicht unterstützt: cmcLEX | 45 |
+| GainLife: LifeAmount$ X nicht unterstützt | 45 |
 | Keyword: Infect | 45 |
 | Keyword: You may choose not to untap CARDNAME during your untap step. | 45 |
 | Trigger: CounterAddedOnce (Effekt nicht unterstützt: Trigger CounterAddedOnce) | 45 |
 | Effekt nicht unterstützt: Protection | 44 |
-| Filter nicht unterstützt: cmcLEX | 44 |
-| GainLife: LifeAmount$ X nicht unterstützt | 44 |
 | Static: Continuous (Filter nicht unterstützt: IsCommander) | 44 |
 | Trigger: ChangesZone (Static Continuous: MayPlay$ True nicht unterstützt) | 44 |
 | Effekt nicht unterstützt: UntapAll | 43 |
@@ -186,16 +182,21 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 | Effekt nicht unterstützt: GenericChoice | 42 |
 | Keyword: Protection from red | 42 |
 | DealDamage: DamageSource$ ParentTarget nicht unterstützt | 41 |
+| Effekt nicht unterstützt: Investigate | 41 |
 | Keyword: Landwalk:Swamp | 41 |
 | Keyword: Start your engines | 41 |
+| Static: Continuous (Static Continuous: GainControl$ You nicht unterstützt) | 41 |
+| Static: MinMaxBlocker (Effekt nicht unterstützt: Static MinMaxBlocker) | 41 |
+| Token: TokenAmount$ X nicht unterstützt | 41 |
 
-## Unterstützte Karten (10590)
+## Unterstützte Karten (10781)
 
 <details><summary>Liste</summary>
 
 - +2 Mace
 - A.I.M. Bot
 - A.I.M. Labs
+- A.I.M. Synthoids
 - Aang and Katara
 - Aang's Defense
 - Aang, A Lot to Learn
@@ -537,6 +538,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Apothecary Stomper
 - Appa, Aang's Companion
 - Appa, the Vigilant
+- Appendage Amalgam
 - Appetite for the Unnatural
 - Applied Biomancy
 - April O'Neil, Human Element
@@ -846,6 +848,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Bane's Invoker
 - Banehound
 - Banewasp Affliction
+- Banishing Betrayal
 - Banishment Decree
 - Bankrupt in Blood
 - Banners Raised
@@ -878,6 +881,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Barrenton Cragtreads
 - Barret, Avalanche Leader
 - Barrier Breach
+- Barrier of Bones
 - Barrin's Codex
 - Barrin, Master Wizard
 - Barrow Naughty
@@ -1044,6 +1048,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Blackblade Reforged
 - Blackcleave Cliffs
 - Blacklance Paragon
+- Blacksmith's Skill
 - Blade Banish
 - Blade Historian
 - Blade Sliver
@@ -1068,6 +1073,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Blaster Mage
 - Blasting Station
 - Blaze
+- Blaze Commando
 - Blazemire Verge
 - Blazing Hellhound
 - Blazing Specter
@@ -1079,6 +1085,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Blessed Orator
 - Blessed Spirits
 - Blessed Wine
+- Blessing of Belzenlok
 - Blight
 - Blight Grenade
 - Blight Keeper
@@ -1297,6 +1304,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Bottle Golems
 - Bottomless Pit
 - Boughside Wanderers
+- Boulderborn Dragon
 - Bounce Off
 - Bound in Silence
 - Boundary Lands Ranger
@@ -1384,6 +1392,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Brood Monitor
 - Brood Weaver
 - Brood of Cockroaches
+- Broodheart Engine
 - Broodhunter Wurm
 - Broodmate Dragon
 - Broodwarden
@@ -1404,6 +1413,8 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Bucky Barnes, Eager Ally
 - Bugenhagen, Wise Elder
 - Builder's Blessing
+- Built to Last
+- Built to Smash
 - Bull Aurochs
 - Bull Cerodon
 - Bull Rush
@@ -1456,6 +1467,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Cackling Fiend
 - Cackling Imp
 - Cackling Witch
+- Cacophodon
 - Cadaver Imp
 - Cadira, Caller of the Small
 - Caelorna, Coral Tyrant
@@ -1612,6 +1624,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Centaur Vinecrasher
 - Centaur's Herald
 - Cephalid Broker
+- Cephalid Inkmage
 - Cephalid Inkshrouder
 - Cephalid Looter
 - Cephalid Pathmage
@@ -1620,6 +1633,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Cephalid Vandal
 - Cephalopod Sentry
 - Cerebral Confiscation
+- Cerebral Download
 - Ceremonial Groundbreaker
 - Ceremonial Guard
 - Ceremonious Rejection
@@ -1641,6 +1655,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Champion of the Perished
 - Champion's Helm
 - Chandler
+- Chandra's Defeat
 - Chandra's Emberling
 - Chandra's Magmutt
 - Chandra, Novice Pyromancer
@@ -1738,6 +1753,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Citanul Druid
 - City Pigeon
 - City of Brass
+- Citywatch Sphinx
 - Citywide Bust
 - Civic Gardener
 - Civic Guildmage
@@ -1810,6 +1826,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Clutch of Undeath
 - Coal Golem
 - Coalborn Entity
+- Coastal Bulwark
 - Coastal Drake
 - Coastal Hornclaw
 - Coastal Peak
@@ -1857,6 +1874,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Combine Chrysalis
 - Coming In Hot
 - Command the Storm
+- Commercial District
 - Commissar Severina Raine
 - Common Bond
 - Common Crook
@@ -1886,6 +1904,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Concordia Pegasus
 - Condemn
 - Conductor of Cacophony
+- Conduit Pylons
 - Confidence from Strength
 - Confounding Riddle
 - Confusticate and Bebother
@@ -1894,12 +1913,15 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Conifer Wurm
 - Conjurer's Bauble
 - Conscripted Infantry
+- Consider
 - Consider the Prime Directive
+- Consign to Dream
 - Consign to the Pit
 - Constricting Tendrils
 - Consulate Skygate
 - Consult the Necrosages
 - Consume the Meek
+- Consuming Ashes
 - Consuming Bonfire
 - Consuming Corruption
 - Consuming Sinkhole
@@ -1908,6 +1930,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Contaminated Aquifer
 - Contaminated Landscape
 - Contemplation
+- Contingency Plan
 - Contraband Kingpin
 - Contract Killing
 - Contradict
@@ -1938,6 +1961,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Corpse Traders
 - Corpsehatch
 - Corridor Monitor
+- Corroding Dragonstorm
 - Corrosive Gale
 - Corrupt Court Official
 - Corrupt Eunuchs
@@ -2051,8 +2075,10 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Cruel Fate
 - Cruel Finality
 - Cruel Revival
+- Cruel Truths
 - Cruel Tutor
 - Cruel Ultimatum
+- Cruel Witness
 - Crumble
 - Crumbling Necropolis
 - Crumbling Vestige
@@ -2067,6 +2093,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Cryoclasm
 - Cryogen Relic
 - Cryogenic Stasis
+- Cryoshatter
 - Crypt Creeper
 - Crypt Feaster
 - Crypt Ripper
@@ -2096,6 +2123,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Cunning Lethemancer
 - Cunning Maneuver
 - Cunning Sparkmage
+- Curate
 - Curio Vendor
 - Curiosity
 - Curious Altisaur
@@ -2230,6 +2258,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Daybreak Combatants
 - Daysquad Marshal
 - Dazzling Angel
+- Dazzling Lights
 - Dazzling Ramparts
 - Dead Weight
 - Dead of Winter
@@ -2244,6 +2273,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Deadly Plot
 - Deadly Recluse
 - Deadly Riposte
+- Deadly Visit
 - Deadly Wanderings
 - Deadshot Minotaur
 - Deafening Clarion
@@ -2269,6 +2299,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Deathbellow Raider
 - Deathbloom Gardener
 - Deathbloom Thallid
+- Deathbringer Liege
 - Deathbringer Thoctar
 - Deathcap Cultivator
 - Deathcap Glade
@@ -2322,6 +2353,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Defile
 - Definitely Not a Turtle
 - Deft Duelist
+- Defy Death
 - Dega Disciple
 - Deity of Scars
 - Delete
@@ -2357,6 +2389,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Deranged Outcast
 - Deranged Whelp
 - Descent into Avernus
+- Desculpting Blast
 - Desecrated Earth
 - Desecration Demon
 - Desecration Plague
@@ -2431,6 +2464,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Dimir Cutpurse
 - Dimir Guildgate
 - Dimir Guildmage
+- Dimir Informant
 - Dimir Keyrune
 - Dimir Locket
 - Dimir Signet
@@ -2455,6 +2489,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Diregraf Captain
 - Diregraf Colossus
 - Diregraf Ghoul
+- Diresight
 - Dirty Wererat
 - Discerning Peddler
 - Disciple of Kangee
@@ -2513,15 +2548,18 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Doc Ock, Sinister Scientist
 - Dockside Extortionist
 - Doctor Doom
+- Dogged Detective
 - Dogged Hunter
 - Dogged Pursuit
 - Dogpile
+- Don't Make a Sound
 - Don't Move
 - Donatello's Science Lesson
 - Donatello, Rad Scientist
 - Donatello, Turtle Techie
 - Donatello, Way with Machines
 - Doom Blade
+- Doom Whisperer
 - Doom's Servo-Guards
 - Doomed Artisan
 - Doomed Dissenter
@@ -2566,6 +2604,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Dragon's Eye Sentry
 - Dragon's Hoard
 - Dragon's Presence
+- Dragon's Rage Channeler
 - Dragonback Assault
 - Dragonborn Looter
 - Dragonlair Spider
@@ -2617,6 +2656,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Dreamborn Muse
 - Dreamcaller Siren
 - Dreamcatcher
+- Dreamdew Entrancer
 - Dreamroot Cascade
 - Dreamscape Artist
 - Dreamspoiler Witches
@@ -2637,6 +2677,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Drogskol Cavalry
 - Drogskol Reaver
 - Drogskol Shieldmate
+- Dromad Purebred
 - Dromar's Attendant
 - Dromar's Charm
 - Dromoka Dunecaster
@@ -2738,6 +2779,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Eager Cadet
 - Eager Glyphmage
 - Eager Trufflesnout
+- Eagle of Deliverance
 - Eagle of the Great Shelf
 - Eagle of the Watch
 - Eagles of the North
@@ -2761,6 +2803,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - East-Mark Cavalier
 - Eastern Paladin
 - Easy Prey
+- Eat to Extinction
 - Eater of Hope
 - Eater of the Dead
 - Ebon Dragon
@@ -2813,6 +2856,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Electrostatic Field
 - Electrostatic Infantry
 - Elegant Entourage
+- Elegant Parlor
 - Elemental Bond
 - Elemental Masterpiece
 - Elemental Summoning
@@ -3004,12 +3048,14 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Eternal Taskmaster
 - Eternal Warrior
 - Eternal Witness
+- Ethereal Absolution
 - Ethereal Armor
 - Ethereal Guidance
 - Etherium Astrolabe
 - Etherium Sculptor
 - Etherium Spinner
 - Ethersworn Adjudicator
+- Etherwrought Page
 - Eumidian Hatchery
 - Eumidian Terrabotanist
 - Eutropia the Twice-Favored
@@ -3067,6 +3113,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Exsanguinator Cavalry
 - Extinguish
 - Extinguish All Hope
+- Extinguish the Light
 - Extract from Darkness
 - Exuberant Firestoker
 - Exuberant Fuseling
@@ -3074,6 +3121,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Exultant Cultist
 - Exultant Skymarcher
 - Eye Collector
+- Eye of Jace
 - Eye of Malcator
 - Eye of Nowhere
 - Eye of Ramos
@@ -3099,6 +3147,8 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Facevaulter
 - Fade from Memory
 - Fade into Antiquity
+- Fading Hope
+- Faerie Bladecrafter
 - Faerie Conclave
 - Faerie Duelist
 - Faerie Formation
@@ -3112,11 +3162,14 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Faerie Swarm
 - Faerie Tauntings
 - Faerie Vandal
+- Failed Conversion
+- Failed Fording
 - Failed Inspection
 - Faithbearer Paladin
 - Faithful Pikemaster
 - Faithful Watchdog
 - Falcon, Joaquin Torres
+- Falcon, Winged Wonder
 - Falkenrath Celebrants
 - Falkenrath Exterminator
 - Falkenrath Forebear
@@ -3148,6 +3201,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Fancy Footwork
 - Fang Guardian
 - Fang of Shigeki
+- Fangkeeper's Familiar
 - Fangren Hunter
 - Fangren Marauder
 - Fangren Pathcutter
@@ -3176,13 +3230,17 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Favorable Winds
 - Favored of Iroas
 - Fear of Death
+- Fear of Immobility
 - Fear of Lost Teeth
+- Fear of Surveillance
 - Fearless Fledgling
 - Fearless Halberdier
 - Feast of the Unicorn
 - Feast or Famine
 - Feather of Flight
 - Featherbrained Filcher
+- Federation Outpost
+- Federation Probe
 - Feebleness
 - Feed the Serpent
 - Feed the Swarm
@@ -3249,6 +3307,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Field Marshal
 - Field of Reality
 - Field of Souls
+- Fields of Strife
 - Fierce Empath
 - Fierce Witchstalker
 - Fiery Cannonade
@@ -3268,6 +3327,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Filigree Attendant
 - Filigree Crawler
 - Filigree Familiar
+- Filigree Fracture
 - Filigree Sages
 - Fill with Fright
 - Filter Out
@@ -3344,6 +3404,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Flaming Sword
 - Flanking Troops
 - Flare
+- Flare of Faith
 - Flaring Cinder
 - Flash Counter
 - Flash Flood
@@ -3476,9 +3537,11 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Fortress Crab
 - Fortress Cyclops
 - Fortuitous Find
+- Forum of Amity
 - Foul Familiar
 - Foul Imp
 - Foul Orchard
+- Foul Watcher
 - Foul-Tongue Shriek
 - Foundry Champion
 - Foundry Inspector
@@ -3517,6 +3580,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Friendly Teddy
 - Frightful Delusion
 - Frilled Cave-Wurm
+- Frilled Deathspitter
 - Frilled Mystic
 - Frilled Sea Serpent
 - Frog Butler
@@ -3559,6 +3623,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Fungal Infection
 - Fungal Shambler
 - Fungus Elemental
+- Fungusaur
 - Furious Assault
 - Furious Bellow
 - Furious Forebear
@@ -3655,6 +3720,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - General Kudro of Drannith
 - General Leo Cristophe
 - General Thunderbolt Ross
+- General's Enforcer
 - Generous Ent
 - Generous Gift
 - Generous Stray
@@ -3737,6 +3803,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Gibbering Hyenas
 - Gideon's Avenger
 - Gideon's Company
+- Gideon's Defeat
 - Gideon's Lawkeeper
 - Gideon's Phalanx
 - Gideon's Reproach
@@ -3763,6 +3830,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Giltgrove Stalker
 - Gimli of the Glittering Caves
 - Gimli's Axe
+- Gimli's Fury
 - Gimli, Counter of Kills
 - Gin'tak Charge
 - Gingerbread Cabin
@@ -4046,6 +4114,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Gray Ogre
 - Graypelt Hunter
 - Graypelt Refuge
+- Grazilaxx, Illithid Scholar
 - Grazing Gladehart
 - Grazing Whiptail
 - Great Defender
@@ -4066,6 +4135,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Greedy Freebooter
 - Greel's Caress
 - Greel, Mind Raker
+- Green Dragon
 - Green Scarab
 - Greenhilt Trainee
 - Greenhouse Propagator
@@ -4083,11 +4153,13 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Griffin Rider
 - Griffin Sentinel
 - Grim Backwoods
+- Grim Bauble
 - Grim Bounty
 - Grim Captain's Call
 - Grim Discovery
 - Grim Draugr
 - Grim Feast
+- Grim Flayer
 - Grim Flowering
 - Grim Guardian
 - Grim Physician
@@ -4276,10 +4348,12 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Hawkeye, Clint Barton
 - Haywire Mite
 - Hazardous Blast
+- Hazardroot Herbalist
 - Hazel's Nocturne
 - Hazezon Tamar
 - Hazoret the Fervent
 - Hazoret's Monument
+- He's Dead, Jim
 - Head of Security
 - Head of the Homestead
 - Headless Horseman
@@ -4314,6 +4388,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Heavy Mattock
 - Heckling Fiends
 - Hecteyes
+- Hedge Maze
 - Hedge Troll
 - Hedgewitch's Mask
 - Hedron Archive
@@ -4375,7 +4450,9 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Hex
 - Hexplate Golem
 - Hibernation
+- Hidden Blade
 - Hidden Footblade
+- Hidden Grotto
 - Hidden Horror
 - Hidden Lair
 - Hideous End
@@ -4383,6 +4460,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Hieroglyphic Illumination
 - Hierophant's Chalice
 - High Market
+- High Priest of Penance
 - High Seas
 - High Stride
 - High-Rise Sawjack
@@ -4494,6 +4572,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Hot Dog Cart
 - Hotfoot Gnome
 - Hound of the Farbogs
+- Hour of Defeat
 - Hour of Promise
 - Hour of Revelation
 - Hover Barrier
@@ -4597,6 +4676,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Igneous Pouncer
 - Ignite the Beacon
 - Ignition Team
+- Il Mheg Pixie
 - Ill-Gotten Inheritance
 - Illegitimate Business
 - Illness in the Ranks
@@ -4626,12 +4706,14 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Impending Disaster
 - Impending Doom
 - Imperial Aerosaur
+- Imperial Ceratops
 - Imperial Edict
 - Imperial Lancer
 - Imperial Oath
 - Imperial Outrider
 - Imperial Recruiter
 - Imperial Seal
+- Imperious Inkmage
 - Imperious Perfect
 - Impetuous Sunchaser
 - Implement of Combustion
@@ -4688,6 +4770,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Infiltrate
 - Infuriate
 - Infuse
+- Ingenious Leonin
 - Inheritance
 - Initiate's Companion
 - Inkfathom Infiltrator
@@ -4745,6 +4828,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Intrusive Packbeast
 - Inundate
 - Invasion Reinforcements
+- Invasion Tactics
 - Invasive Species
 - Inventor's Apprentice
 - Invigorated Rampage
@@ -4984,6 +5068,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Kazandu Nectarpot
 - Kazandu Refuge
 - Kazandu Stomper
+- Kazarov, Sengir Pureblood
 - Kederekt Creeper
 - Kederekt Parasite
 - Keen Glidemaster
@@ -4995,6 +5080,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Keening Banshee
 - Keep Out
 - Keep Watch
+- Keeper of Fables
 - Keeper of the Cadence
 - Keepers of the Faith
 - Kefnet the Mindful
@@ -5030,6 +5116,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Kill! Maim! Burn!
 - Killer Bees
 - Killer Whale
+- Killian's Confidence
 - Kiln Fiend
 - Kiln Walker
 - Kin-Tree Severance
@@ -5058,6 +5145,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Kiri-Onna
 - Kirri, Talented Sprout
 - Kirtar's Desire
+- Kishla Village
 - Kismet
 - Kiss of Death
 - Kiss of the Amesha
@@ -5345,6 +5433,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Lightning-Rig Crew
 - Lightshield Parry
 - Liliana Vess
+- Liliana's Defeat
 - Liliana's Elite
 - Liliana's Mastery
 - Liliana's Reaver
@@ -5433,6 +5522,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Lord of the Unreal
 - Lore Broker
 - Lore Seeker
+- Lore, Positronic Provocateur
 - Lorehold Campus
 - Lorehold Command
 - Lorescale Coatl
@@ -5482,19 +5572,23 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Lumra, Bellow of the Woods
 - Lunar Frenzy
 - Lunar Mystic
+- Lunatic Pandora
 - Lurching Rotbeast
 - Lurking Lizards
 - Lurking Nightstalker
 - Lush Oasis
+- Lush Portico
 - Lust for War
 - Lux Cannon
 - Luxknight Breacher
 - Luxurious Libation
 - Lychguard
+- Lydia Frye
 - Lyla, Holographic Assistant
 - Lyra Dawnbringer
 - Lys Alana Bowmaster
 - Lys Alana Huntmaster
+- Lys Alana Informant
 - Lys Alana Scarblade
 - Lórien Revealed
 - M.O.D.O.K., Evil Intellect
@@ -5678,6 +5772,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Master Piandao
 - Master Splicer
 - Master Trinketeer
+- Master of Death
 - Master of Etherium
 - Master of the Feast
 - Master the Way
@@ -5740,6 +5835,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Mentor of the Meek
 - Mephitic Draught
 - Mephitic Ooze
+- Mephitic Vapors
 - Mercenary Knight
 - Merchant Scroll
 - Merchant of Many Hats
@@ -5785,6 +5881,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Meteor Golem
 - Meteor Sword
 - Meteorite
+- Meticulous Archive
 - Meticulous Commons
 - Metropolis Sprite
 - Miasmic Mummy
@@ -5821,6 +5918,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Mimic
 - Minamo, School at Water's Edge
 - Mind Drain
+- Mind Drill Assailant
 - Mind Knives
 - Mind Ravel
 - Mind Rot
@@ -5843,6 +5941,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Mindstab Thrull
 - Mindstatic
 - Mindwarper
+- Mindwhisker
 - Mindwrack Harpy
 - Mindwrack Liege
 - Mine Bearer
@@ -5912,6 +6011,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Mob Justice
 - Mobilization
 - Mocking Sprite
+- Mockingbird, Bobbi Morse
 - Mogg Bombers
 - Mogg Fanatic
 - Mogg Raider
@@ -5991,6 +6091,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Morale
 - Morbid Bloom
 - Morbid Plunder
+- Morcant's Eyes
 - Morcant's Loyalist
 - Mordenkainen's Polymorph
 - Morgue Thrull
@@ -6066,6 +6167,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Murmuring Volume
 - Muscle Sliver
 - Muse Drake
+- Muse's Encouragement
 - Mushroom Watchdogs
 - Mutagenic Growth
 - Mutant Chain Reaction
@@ -6109,6 +6211,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Nadir Kraken
 - Nael, Avizoa Aeronaut
 - Naga Eternal
+- Naga Oracle
 - Nahiri's Machinations
 - Nahiri's Stoneblades
 - Naiad of Hidden Coves
@@ -6173,6 +6276,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Needlepeak Spider
 - Needleshot Gourna
 - Needlethorn Drake
+- Needletooth Raptor
 - Nefashu
 - Negate
 - Neheb, the Worthy
@@ -6208,6 +6312,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Neurok Replica
 - Neurok Stealthsuit
 - Neutralize
+- Neutralize the Guards
 - Neutralizing Blast
 - Neva, Stalked by Nightmares
 - Neverwinter Dryad
@@ -6246,6 +6351,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Nightsky Mimic
 - Nightstalker Engine
 - Nightveil Predator
+- Nightveil Sprite
 - Nightwhorl Hermit
 - Nightwing Shade
 - Nikko-Onna
@@ -6271,6 +6377,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Nip Gwyllion
 - Nirkana Assassin
 - Nishoba Brawler
+- Nissa's Defeat
 - Nissa's Renewal
 - Nissa's Triumph
 - Nissa, Nature's Artisan
@@ -6304,6 +6411,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Norwood Ranger
 - Norwood Warrior
 - Not on My Watch
+- Notion Rain
 - Notorious Assassin
 - Nourish
 - Nova Cleric
@@ -6420,6 +6528,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Omen of the Sea
 - Omen of the Sun
 - Omenspeaker
+- Ominous Asylum
 - Ominous Parcel
 - Ominous Seas
 - Omnath, Locus of Rage
@@ -6530,6 +6639,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Overeager Apprentice
 - Overflowing Basin
 - Overflowing Insight
+- Overgrown Armasaur
 - Overgrown Estate
 - Overgrown Farmland
 - Overkill
@@ -6573,6 +6683,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Papercraft Decoy
 - Paradigm Shift
 - Paradise Druid
+- Paradox Gardens
 - Paragon of Eternal Wilds
 - Paragon of Fierce Defiance
 - Paragon of Gathering Mists
@@ -6643,6 +6754,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Perilous Myr
 - Perilous Research
 - Perilous Shadow
+- Perilous Voyage
 - Perils of the Past
 - Perimeter Captain
 - Perimeter Patrol
@@ -6914,6 +7026,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Project Deathlok Soldier
 - Promising Vein
 - Proper Burial
+- Prophesied End
 - Prophet of Distortion
 - Prophet of the Peak
 - Prophet of the Scarab
@@ -6945,6 +7058,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Psychic Membrane
 - Psychic Symbiont
 - Psychic Venom
+- Psychic Whorl
 - Psychomancer
 - Psychosis Crawler
 - Psychotic Fury
@@ -6986,6 +7100,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Pyre Hound
 - Pyre Spawn
 - Pyre Zombie
+- Pyrewild Shaman
 - Pyrite Spellbomb
 - Pyroceratops
 - Pyroclasm
@@ -7004,6 +7119,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Quaketusk Boar
 - Quandrix Campus
 - Quandrix Cultivator
+- Quark's Bar
 - Quarrel's End
 - Quarry Beetle
 - Queen's Bay Soldier
@@ -7145,16 +7261,19 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Ranger's Guile
 - Ranger's Longbow
 - Ranger's Path
+- Ranging Raptors
 - Rank Rat
 - Rank and File
 - Rankle's Prank
 - Rankle, Master of Pranks
 - Ransack the Lab
 - Rapacious Dragon
+- Rapacious Guest
 - Raph's Bravado
 - Raphael, Tough Turtle
 - Rapid Hybridization
 - Raptor Companion
+- Raptor Hatchling
 - Rapturous Moment
 - Rashida Scalebane
 - Rashka the Slayer
@@ -7166,6 +7285,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Rathi Fiend
 - Rathi Trapper
 - Rats of Rath
+- Raucous Theater
 - Raugrin Crystal
 - Raugrin Triome
 - Ravaged Highlands
@@ -7181,6 +7301,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Ravenous Baloth
 - Ravenous Bloodseeker
 - Ravenous Chupacabra
+- Ravenous Daggertooth
 - Ravenous Giant
 - Ravenous Harpy
 - Ravenous Intruder
@@ -7325,6 +7446,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Rend Flesh
 - Rend Spirit
 - Render Speechless
+- Rending Flame
 - Rending Vines
 - Renegade Demon
 - Renegade Firebrand
@@ -7466,6 +7588,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Rip Apart
 - Rip-Clan Crasher
 - Ripchain Razorkin
+- Ripjaw Raptor
 - Ripscale Predator
 - Riptide Chimera
 - Riptide Crab
@@ -7487,7 +7610,9 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Rishadan Port
 - Rising Populace
 - Rising of the Day
+- Risky Research
 - Risky Shortcut
+- Rite of Passage
 - Rite of the Dragoncaller
 - Rith's Attendant
 - Ritual of Rejuvenation
@@ -7529,6 +7654,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Rockslide Sorcerer
 - Rocky Tar Pit
 - Rod of Ruin
+- Rogue Artificial Intelligence
 - Rogue Elephant
 - Rogue Refiner
 - Rogue's Gloves
@@ -7543,6 +7669,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Romulus
 - Ronom Unicorn
 - Roofstalker Wight
+- Rooftop Bypass
 - Root Maze
 - Root Spider
 - Rootbound Crag
@@ -7610,6 +7737,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Rumbling Sentry
 - Rumbling Slum
 - Rummaging Goblin
+- Rummaging Wizard
 - Run Afoul
 - Run Aground
 - Run Amok
@@ -7617,6 +7745,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Runaway Trash-Bot
 - Rune-Cervin Rider
 - Rune-Scarred Demon
+- Rune-Sealed Wall
 - Runeboggle
 - Runebound Wolf
 - Runechanter's Pike
@@ -7629,6 +7758,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Rush of Battle
 - Rush of Blood
 - Rush of Vitality
+- Rush the Room
 - Rushwood Elemental
 - Rushwood Herbalist
 - Russet Wolves
@@ -7731,6 +7861,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Sanguine Statuette
 - Sanguine Syphoner
 - Sanitarium Skeleton
+- Sanitation Automaton
 - Sanity Gnawers
 - Sapphire Medallion
 - Saprazzan Bailiff
@@ -7761,6 +7892,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Savage Hunger
 - Savage Land Dinosaur
 - Savage Lands
+- Savage Mansion
 - Savage Surge
 - Savage Thallid
 - Savage Twister
@@ -7814,6 +7946,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Scavenger Folk
 - Scavenger Grounds
 - Scavenging Harpy
+- Scavenging Ooze
 - Scavenging Scarab
 - Scepter of Dominance
 - Scepter of Fugue
@@ -7951,6 +8084,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Seeds of Strength
 - Seedship Agrarian
 - Seedship Broodtender
+- Seedship Impact
 - Seek the Horizon
 - Seek the Wilds
 - Seeker
@@ -8077,6 +8211,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Shadowcloak Vampire
 - Shadowfeed
 - Shadows' Verdict
+- Shadowy Backstreet
 - Shake the Foundations
 - Shaleskin Bruiser
 - Shaman of Spring
@@ -8108,6 +8243,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Shattered Dreams
 - Shattered Landscape
 - Shattered Sanctum
+- Shattered Wings
 - Shattering Blow
 - Shatterskull Giant
 - Shatterskull Recruit
@@ -8174,6 +8310,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Shoot Down
 - Shopkeeper's Bane
 - Shore Keeper
+- Shore Lurker
 - Shore Up
 - Shorecomber Crab
 - Shorecrasher Mimic
@@ -8224,7 +8361,9 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Siege Veteran
 - Siege-Gang Commander
 - Siegecraft
+- Siegehorn Ceratops
 - Siegfried, Famed Swordsman
+- Sierra, Nuka's Biggest Fan
 - Sif's Spearmaster
 - Sift
 - Sifter of Skulls
@@ -8269,6 +8408,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Silverbeak Griffin
 - Silverbluff Bridge
 - Silverchase Fox
+- Silverclad Ferocidons
 - Silverclaw Griffin
 - Silvercoat Lion
 - Silvergill Douser
@@ -8298,7 +8438,10 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Sinew Sliver
 - Singe
 - Singing Tree
+- Sinister Hideout
 - Sinister Monolith
+- Sinister Sabotage
+- Sinister Starfish
 - Sinister Strength
 - Sinkhole
 - Sinuous Benthisaur
@@ -8489,11 +8632,13 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Snapping Creeper
 - Snapping Drake
 - Snapping Gnarlid
+- Snapping Sailback
 - Snapping Voidcraw
 - Snapsail Glider
 - Snare Thopter
 - Snare the Skies
 - Snarespinner
+- Snarling Gorehound
 - Snarling Warg
 - Sneaking Guide
 - Sneaky Homunculus
@@ -8558,6 +8703,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Soul Manipulation
 - Soul Net
 - Soul Read
+- Soul Rend
 - Soul Salvage
 - Soul Shred
 - Soul Stair Expedition
@@ -8620,6 +8766,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Spearbreaker Behemoth
 - Species Gorger
 - Spectacle Mage
+- Spectacle Summit
 - Spectacular Spider-Man
 - Spectacular Tactics
 - Specter of the Fens
@@ -8641,6 +8788,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Spelleater Wolverine
 - Spellgorger Barbarian
 - Spellgorger Weird
+- Spellgyre
 - Spellheart Chimera
 - Spellkeeper Weird
 - Spellseeker
@@ -8659,6 +8807,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Spider-Girl, Legacy Hero
 - Spider-Gwen, Free Spirit
 - Spider-Ham, Peter Porker
+- Spider-Man 2099, Miguel O'Hara
 - Spider-Man, Hometown Hero
 - Spider-Man, Peter Parker
 - Spider-Suit
@@ -8810,10 +8959,13 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Stampeding Serow
 - Stampeding Wildebeests
 - Stand Firm
+- Stand United
 - Standing Stones
 - Standing Troops
 - Star of Extinction
+- Starfall
 - Starfield Mystic
+- Starfighter Pilot
 - Starfleet Crew
 - Stargaze
 - Stark Industries
@@ -8868,6 +9020,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Step Through
 - Steppe Lynx
 - Sterling Grove
+- Sterling Hound
 - Sterling Keykeeper
 - Sterling Supplier
 - Stern Constable
@@ -8980,6 +9133,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Strength of Unity
 - Stress Dream
 - Strider Harness
+- Strider, Ranger of the North
 - Striking Sliver
 - Strip Mine
 - Striped Bears
@@ -9014,6 +9168,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Subterranean Scout
 - Subterranean Tremors
 - Subtle Strike
+- Suburban Sanctuary
 - Subversion
 - Succumb to Temptation
 - Succumb to the Cold
@@ -9033,6 +9188,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Sulfur Vent
 - Sulfurous Mire
 - Sulfurous Springs
+- Sultai Ascendancy
 - Sultai Banner
 - Sultai Flayer
 - Sultai Monument
@@ -9051,6 +9207,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Sun-Blessed Peak
 - Sun-Collared Raptor
 - Sun-Crested Pterodon
+- Sun-Crowned Hunters
 - Sun-Spider, Nimble Webber
 - Sunastian Falconer
 - Sunbaked Canyon
@@ -9112,6 +9269,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Surrak and Goreclaw
 - Surrakar Banisher
 - Surtland Frostpyre
+- Surveillance Room
 - Survey the Wreckage
 - Survival of the Fittest
 - Survivors' Bond
@@ -9201,6 +9359,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Tablet of Epityr
 - Tahngarth's Rage
 - Taiga
+- Taigam's Scheming
 - Tainted Aether
 - Tainted Field
 - Tainted Isle
@@ -9277,6 +9436,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Tattermunge Maniac
 - Tatyova, Benthic Druid
 - Tatyova, Steward of Tides
+- Tawnos's Tinkering
 - Tawnos's Wand
 - Taxi Driver
 - Tazeem Raptor
@@ -9387,6 +9547,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Thassa's Devourer
 - Thaumatog
 - Thaumaturge's Familiar
+- Thawbringer
 - Thawing Glaciers
 - The Art of Tea
 - The Autonomous Furnace
@@ -9419,6 +9580,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - The Surgical Bay
 - The Swarmweaver
 - The Terror of Serpent's Pass
+- The Thing, Ben Grimm
 - The Unbeatable Squirrel Girl
 - The Underworld Cookbook
 - The Unspeakable
@@ -9435,6 +9597,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Thieving Magpie
 - Thieving Otter
 - Thing from the Deep
+- Think Tank
 - Thinking Cap
 - Third Path Iconoclast
 - Third Path Savant
@@ -9448,6 +9611,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Thopter Engineer
 - Thopter Foundry
 - Thopter Mechanic
+- Thopter Spy Network
 - Thopter Squadron
 - Thorin, Company's Leader
 - Thorin, King of Durin's Folk
@@ -9466,6 +9630,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Thornwood Falls
 - Those Who Serve
 - Thought Courier
+- Thought Erasure
 - Thought Harvester
 - Thought Scour
 - Thoughtbind
@@ -9517,6 +9682,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Thunderclap Wyvern
 - Thundercloud Shaman
 - Thundering Ceratok
+- Thundering Falls
 - Thundering Giant
 - Thundering Rebuke
 - Thundering Spineback
@@ -9527,6 +9693,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Thunderscape Apprentice
 - Thunderscape Familiar
 - Thunderscape Master
+- Thwip!
 - Théoden, King of Rohan
 - Tiana, Ship's Caretaker
 - Tibalt's Rager
@@ -9573,6 +9740,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Tireless Missionaries
 - Tireless Tribe
 - Titan Forge
+- Titan's Grave
 - Titan's Strength
 - Titania's Chosen
 - Titania, Protector of Argoth
@@ -9583,6 +9751,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Tithebearer Giant
 - Tivadar's Crusade
 - Tobias Andrion
+- Tocasia's Dig Site
 - Toil to Renown
 - Tolarian Scholar
 - Tolarian Sentinel
@@ -9601,6 +9770,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Tooth of Ramos
 - Topiary Panther
 - Topiary Stomper
+- Topple the Statue
 - Tor Giant
 - Tor Wauki
 - Torch Courier
@@ -9736,6 +9906,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Tribute to the Wild
 - Triceraton Commander
 - Tricks of the Trade
+- Tricorder
 - Trigon of Corruption
 - Trigon of Mending
 - Trigon of Rage
@@ -9784,6 +9955,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Tundra
 - Tundra Wall
 - Tundra Wolves
+- Tune Up
 - Tune the Narrative
 - Tunnel
 - Tunnel Rats
@@ -9861,6 +10033,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Umbral Expanse
 - Umbral Juke
 - Umezawa's Charm
+- Unauthorized Exit
 - Unbender Tine
 - Unburden
 - Unburied Earthcarver
@@ -9879,9 +10052,11 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Undercity Dire Rat
 - Undercity Necrolisk
 - Undercity Scavenger
+- Undercity Sewers
 - Undercity's Embrace
 - Underdark Basilisk
 - Underfoot Underdogs
+- Underground Mortuary
 - Underground River
 - Underground Sea
 - Undergrowth Leopard
@@ -9897,6 +10072,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Undying Rage
 - Unearth
 - Unexpected Windfall
+- Unexplained Disappearance
 - Unfathomable Truths
 - Unflinching Courage
 - Unforgiving Aim
@@ -9912,6 +10088,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Union of the Third Path
 - United Battlefront
 - Universal Solvent
+- University Campus
 - Unknown Shores
 - Unleash Shell
 - Unlikely Aid
@@ -9929,10 +10106,12 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Unseal the Necropolis
 - Unspeakable Symbol
 - Unstable Obelisk
+- Unsubtle Mockery
 - Unsummon
 - Untamed Hunger
 - Untamed Might
 - Untamed Wilds
+- Unwelcome Sprite
 - Unworthy Dead
 - Unyaro Bee Sting
 - Unyaro Bees
@@ -9971,6 +10150,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Utter End
 - Utvara Hellkite
 - Utvara Scalper
+- Uurg, Spawn of Turg
 - Vaevictis Asmadi
 - Vagrant Plowbeasts
 - Valakut Invoker
@@ -10009,6 +10189,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Vampire Warlord
 - Vampire of the Dire Moon
 - Vampire's Kiss
+- Vampire's Zeal
 - Vampires' Vengeance
 - Vampiric Feast
 - Vampiric Fury
@@ -10062,6 +10243,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Vengeful Bloodwitch
 - Vengeful Dead
 - Vengeful Firebrand
+- Vengeful Pharaoh
 - Vengeful Tracker
 - Venom Sliver
 - Venom's Hunger
@@ -10386,6 +10568,8 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Warteye Witch
 - Wartime Protestors
 - Wary Okapi
+- Wary Thespian
+- Wary Watchdog
 - Wasitora, Nekoru Queen
 - Wasp Lancer
 - Wasp of the Bitter End
@@ -10396,6 +10580,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Wastes
 - Wastewood Verge
 - Watcher Sliver
+- Watcher in the Mist
 - Watcher of the Spheres
 - Watcher of the Wayside
 - Watchful Automaton
@@ -10477,6 +10662,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Whirlwind
 - Whirlwind of Thought
 - Whisk Away
+- Whisper Agent
 - Whisper, Blood Liturgist
 - Whisperer of the Wilds
 - Whispergear Sneak
@@ -10518,6 +10704,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Wilderness Elemental
 - Wilderness Hypnotist
 - Wildfire
+- Wildfire Elemental
 - Wildfire Wickerfolk
 - Wildheart Invoker
 - Wildsize
@@ -10567,6 +10754,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Wingmantle Chaplain
 - Wings of Aesthir
 - Wings of Hope
+- Wings of the Cosmos
 - Wingshield Agent
 - Wingspan Stride
 - Winter Eladrin
@@ -10659,6 +10847,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Wrath of God
 - Wreath of Geists
 - Wreck Remover
+- Wreckage Wickerfolk
 - Wrecking Ball
 - Wrecking Ball Arm
 - Wrecking Crew
@@ -10666,6 +10855,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Wretched Anurid
 - Wretched Camel
 - Wretched Confluence
+- Wretched Doll
 - Wriggling Grub
 - Wring Flesh
 - Writhing Chrysalis
@@ -10729,6 +10919,7 @@ Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigke
 - Youthful Scholar
 - Youthful Valkyrie
 - Yuki-Onna
+- Yuriko, Hope from the Shadows
 - Yuyan Archers
 - Zagoth Crystal
 - Zagoth Triome

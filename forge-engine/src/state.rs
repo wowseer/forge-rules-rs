@@ -397,6 +397,9 @@ pub struct GameState {
     pub lki_battlefield: Option<Vec<CardId>>,
     /// Verzögerte Trigger (CR 603.7), in Erzeugungsreihenfolge.
     pub delayed_triggers: Vec<crate::triggers::DelayedTrigger>,
+    /// Gleichzeitig zugefügter Schaden (Quelle, Ziel, Menge, Kampf) für
+    /// `DamageDoneOnce`; `None` = jeder Schaden ist ein eigenes Ereignis.
+    pub damage_batch: Option<Vec<(CardId, crate::decision::Target, u32, bool)>>,
     pub log: Vec<Event>,
     /// Token-Definitionen (`res/tokenscripts`), nach Skriptname.
     pub token_defs: Arc<std::collections::HashMap<String, Arc<Def>>>,
@@ -843,6 +846,7 @@ impl GameState {
             pending_triggers: Vec::new(),
             lki_battlefield: None,
             delayed_triggers: Vec::new(),
+            damage_batch: None,
             log: Vec::new(),
             token_defs: Arc::default(),
             rules: rules.clone(),

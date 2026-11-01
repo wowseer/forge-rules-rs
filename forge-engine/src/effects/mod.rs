@@ -161,6 +161,11 @@ pub enum Effect {
         who: Defined,
         num: Amount,
     },
+    /// Oberste Karten ansehen, beliebig in den Friedhof oder zurück (`Surveil`, CR 701.25).
+    Surveil {
+        who: Defined,
+        num: Amount,
+    },
     /// Oberste Karten in den Friedhof (`Mill`, CR 701.13).
     Mill {
         who: Defined,
@@ -1062,6 +1067,13 @@ fn compile_depth(
         "Scry" => {
             let num = c.amount("ScryNum", Some(1))?;
             Effect::Scry {
+                who: c.defined(Defined::You)?,
+                num,
+            }
+        }
+        "Surveil" => {
+            let num = c.amount("Amount", Some(1))?;
+            Effect::Surveil {
                 who: c.defined(Defined::You)?,
                 num,
             }

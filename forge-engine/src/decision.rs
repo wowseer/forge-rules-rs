@@ -124,10 +124,12 @@ pub enum Decision {
         player: PlayerId,
         descriptions: Vec<String>,
     },
-    /// CR 701.22: Scry – Karten oben/unten anordnen.
+    /// CR 701.22: Scry – Karten oben/unten anordnen. Bei Surveil (CR 701.25,
+    /// `graveyard = true`) gehen die „unteren“ Karten in den Friedhof.
     Scry {
         player: PlayerId,
         cards: Vec<CardId>,
+        graveyard: bool,
     },
     /// „… es sei denn, [Spieler] zahlt [Kosten]“ (CR 118.12). Wird nur
     /// gestellt, wenn die Kosten bezahlbar sind.

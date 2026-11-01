@@ -435,9 +435,11 @@ impl GameState {
             }
         }
         // CR 510.2: gleichzeitig
+        self.begin_damage_batch();
         for (src, tgt, n) in assignments {
             self.deal_damage_ex(src, tgt, n, true);
         }
+        self.end_damage_batch();
         Ok(())
     }
 }

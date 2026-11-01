@@ -293,6 +293,14 @@ impl GameState {
             target,
             amount,
         });
+        match self.damage_batch.as_mut() {
+            Some(b) => b.push((source, target, amount, combat)),
+            None => self.fire(crate::triggers::TriggerEvent::DamageDoneOnce {
+                target,
+                sources: vec![(source, amount)],
+                combat,
+            }),
+        }
         self.fire(crate::triggers::TriggerEvent::DamageDone {
             source,
             target,
@@ -302,6 +310,36 @@ impl GameState {
         if src.has(&Keyword::Lifelink) {
             let ctrl = self.card(source).controller;
             self.gain_life(ctrl, amount as i32);
+        }
+    }
+
+    /// Beginnt gleichzeitigen Schaden (CR 120.2, 510.2) – `DamageDoneOnce`
+    /// löst danach einmal je Empfänger aus.
+    pub fn begin_damage_batch(&mut self) {
+        if self.damage_batch.is_none() {
+            self.damage_batch = Some(Vec::new());
+        }
+    }
+
+    pub fn end_damage_batch(&mut self) {
+        let Some(batch) = self.damage_batch.take() else {
+            return;
+        };
+        let mut targets: Vec<Target> = Vec::new();
+        for (_, t, _, _) in &batch {
+            if !targets.contains(t) {
+                targets.push(*t);
+            }
+        }
+        for t in targets {
+            let entries: Vec<_> = batch.iter().filter(|e| e.1 == t).collect();
+            let combat = entries.iter().any(|e| e.3);
+            let sources = entries.iter().map(|e| (e.0, e.2)).collect();
+            self.fire(crate::triggers::TriggerEvent::DamageDoneOnce {
+                target: t,
+                sources,
+                combat,
+            });
         }
     }
 
