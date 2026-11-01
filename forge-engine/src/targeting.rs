@@ -186,7 +186,10 @@ impl GameState {
                     }
                     Zone::Exile => v.extend(self.exile.iter().map(|c| Target::Card(*c))),
                     Zone::Command => v.extend(self.command.iter().map(|c| Target::Card(*c))),
-                    Zone::Stack => {}
+                    Zone::Stack => v.extend(self.stack.iter().filter_map(|s| match s.kind {
+                        crate::state::StackKind::Spell { card } => Some(Target::Card(card)),
+                        _ => None,
+                    })),
                     pz => {
                         for p in self.players_from(self.active) {
                             v.extend(self.player(p).zone(*pz).iter().map(|c| Target::Card(*c)));

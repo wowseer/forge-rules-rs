@@ -133,6 +133,34 @@ pub enum Effect {
         power: Option<Amount>,
         toughness: Option<Amount>,
     },
+    /// Alle passenden bleibenden Karten bis Zugende verstärken (`PumpAll`).
+    PumpAll {
+        valid: ValidSpec,
+        power: Amount,
+        toughness: Amount,
+        keywords: Vec<Keyword>,
+    },
+    /// Alle passenden bleibenden Karten zerstören (`DestroyAll`, gleichzeitig).
+    DestroyAll {
+        valid: ValidSpec,
+    },
+    /// Schaden an alle passenden Kreaturen/Planeswalker und Spieler (`DamageAll`).
+    DamageAll {
+        amount: Amount,
+        valid_cards: Option<ValidSpec>,
+        valid_players: Option<ValidSpec>,
+    },
+    /// Abwerfen (`Discard`, CR 701.9).
+    Discard {
+        who: Defined,
+        mode: DiscardMode,
+        num: Amount,
+        valid: Option<ValidSpec>,
+    },
+    /// Zauber neutralisieren (`Counter`, CR 701.5); optional „es sei denn, … zahlt“.
+    Counter {
+        unless_cost: Option<forge_types::ManaCost>,
+    },
     /// Platzhalter für modale Fähigkeiten; wird vor dem Stapeln durch die
     /// gewählten Modi ersetzt (`GameState::choose_modes`).
     Charm(CharmSpec),
@@ -144,6 +172,19 @@ pub enum Effect {
         place: ZonePlacement,
         shuffle: bool,
     },
+}
+
+/// Wer wählt beim Abwerfen?
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiscardMode {
+    /// Der abwerfende Spieler wählt (`TgtChoose`).
+    PlayerChooses,
+    /// Die ganze Hand (`Hand`).
+    Hand,
+    /// Zufällig (`Random`).
+    Random,
+    /// Der Controller der Fähigkeit wählt aus der aufgedeckten Hand (`RevealYouChoose`).
+    YouChoose,
 }
 
 /// Modaler Effekt (`Charm`, CR 700.2): Modi werden beim Wirken/Stapeln gewählt.
@@ -507,7 +548,12 @@ fn compile_depth(
                 None => 1,
             };
             // Ziele außerhalb des Battlefields: TgtZone$, bei ChangeZone die Origin-Zone.
-            let zone_param = c.get("TgtZone").or_else(|| {
+            let zone_param = if c.ab.params.get("TargetType") == Some("Spell") {
+                Some("Stack")
+            } else {
+                c.get("TgtZone")
+            };
+            let zone_param = zone_param.or_else(|| {
                 if api == "ChangeZone" {
                     c.ab.params.get("Origin")
                 } else {
@@ -616,6 +662,84 @@ fn compile_depth(
             }
         }
         "ChangeZone" | "ChangeZoneAll" => compile_change_zone(&mut c, api)?,
+        "PumpAll" => {
+            let valid =
+                ValidSpec::parse(c.get("ValidCards").ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "ValidCards",
+                })?)?;
+            let power = c.amount("NumAtt", Some(0))?;
+            let toughness = c.amount("NumDef", Some(0))?;
+            let keywords = c.get("KW").map(Keyword::parse_list).unwrap_or_default();
+            if let Some(k) = keywords.iter().find(|k| !k.is_supported()) {
+                return Err(c.unsupported("KW", &format!("{k:?}")));
+            }
+            Effect::PumpAll {
+                valid,
+                power,
+                toughness,
+                keywords,
+            }
+        }
+        "DestroyAll" => {
+            let valid =
+                ValidSpec::parse(c.get("ValidCards").ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "ValidCards",
+                })?)?;
+            c.get("NoRegen");
+            Effect::DestroyAll { valid }
+        }
+        "DamageAll" => {
+            let amount = c.amount("NumDmg", None)?;
+            let valid_cards = c.get("ValidCards").map(ValidSpec::parse).transpose()?;
+            let valid_players = c.get("ValidPlayers").map(ValidSpec::parse).transpose()?;
+            c.get("ValidDescription");
+            Effect::DamageAll {
+                amount,
+                valid_cards,
+                valid_players,
+            }
+        }
+        "Discard" => {
+            let mode = match c.get("Mode").unwrap_or("TgtChoose") {
+                "TgtChoose" => DiscardMode::PlayerChooses,
+                "Hand" => DiscardMode::Hand,
+                "Random" => DiscardMode::Random,
+                "RevealYouChoose" => DiscardMode::YouChoose,
+                other => return Err(c.unsupported("Mode", other)),
+            };
+            let num = c.amount("NumCards", Some(1))?;
+            let valid = c.get("DiscardValid").map(ValidSpec::parse).transpose()?;
+            let who = c.defined(Defined::You)?;
+            Effect::Discard {
+                who,
+                mode,
+                num,
+                valid,
+            }
+        }
+        "Counter" => {
+            match c.get("TargetType") {
+                Some("Spell") | None => {}
+                Some(t) => return Err(c.unsupported("TargetType", t)),
+            }
+            if c.ab.params.has("Defined") {
+                return Err(c.unsupported("Defined", c.ab.params.get("Defined").unwrap_or("")));
+            }
+            let unless_cost = match c.get("UnlessCost") {
+                Some(v) if v.trim().parse::<u32>().is_ok() => Some(
+                    forge_types::ManaCost::parse(v).map_err(|_| c.unsupported("UnlessCost", v))?,
+                ),
+                Some(v) => return Err(c.unsupported("UnlessCost", v)),
+                None => None,
+            };
+            match c.get("UnlessPayer") {
+                None | Some("TargetedController") => {}
+                Some(v) => return Err(c.unsupported("UnlessPayer", v)),
+            }
+            Effect::Counter { unless_cost }
+        }
         "Token" => {
             let scripts_s = c.get("TokenScript").ok_or(CompileError::MissingParam {
                 api: api.into(),

@@ -122,6 +122,11 @@ pub enum Decision {
         player: PlayerId,
         descriptions: Vec<String>,
     },
+    /// „… es sei denn, sein Controller zahlt {N}“ (CR 118.12).
+    PayUnlessCost {
+        player: PlayerId,
+        cost: String,
+    },
     /// „You may“-Trigger beim Auflösen (OptionalDecider$ You).
     OptionalTrigger {
         player: PlayerId,
@@ -138,6 +143,8 @@ pub enum CardChoiceReason {
     LegendRule,
     /// CR 701.19: Bibliothek/Hand durchsuchen
     Search,
+    /// CR 701.9: Abwerfen durch einen Effekt
+    Discard,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -200,7 +207,8 @@ impl Decision {
             | Decision::ChooseCards { player, .. }
             | Decision::OrderTriggers { player, .. }
             | Decision::OptionalTrigger { player, .. }
-            | Decision::ChooseModes { player, .. } => *player,
+            | Decision::ChooseModes { player, .. }
+            | Decision::PayUnlessCost { player, .. } => *player,
         }
     }
 
@@ -347,7 +355,10 @@ impl Decision {
                 }
                 Ok(())
             }
-            (Decision::OptionalTrigger { .. }, Choice::Yes | Choice::No) => Ok(()),
+            (
+                Decision::OptionalTrigger { .. } | Decision::PayUnlessCost { .. },
+                Choice::Yes | Choice::No,
+            ) => Ok(()),
             (
                 Decision::ChooseModes {
                     modes,

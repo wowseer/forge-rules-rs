@@ -160,6 +160,7 @@ impl Controller for SimpleAi {
                 };
                 Choice::Modes(pick)
             }
+            Decision::PayUnlessCost { .. } => Choice::Yes,
             Decision::OrderTriggers { descriptions, .. } => {
                 Choice::Order((0..descriptions.len()).collect())
             }

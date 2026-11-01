@@ -3,6 +3,7 @@
 //! Java-Vorbild: `MagicStack.resolveStack`, `AbilityUtils.resolve`,
 //! die einzelnen `*Effect.resolve`-Methoden.
 
+use super::DiscardMode;
 use super::{Amount, CompiledAbility, Defined, Effect, ManaProduce};
 use crate::decision::{Choice, Decision, Target};
 use crate::ids::{CardId, PlayerId};
@@ -298,6 +299,157 @@ impl GameState {
                     }
                 }
             }
+            Effect::PumpAll {
+                valid,
+                power,
+                toughness,
+                keywords,
+            } => {
+                let p = self.amount(power, ctx);
+                let t = self.amount(toughness, ctx);
+                let affected: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .copied()
+                    .filter(|c| self.card_matches(*c, valid, ctx.source, ctx.controller))
+                    .collect();
+                for c in affected {
+                    let timestamp = self.timestamp();
+                    self.effects.push(ContinuousEffect {
+                        affected: c,
+                        power: p,
+                        toughness: t,
+                        keywords: keywords.clone(),
+                        duration: Duration::UntilEndOfTurn,
+                        timestamp,
+                    });
+                }
+            }
+            Effect::DestroyAll { valid } => {
+                let affected: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .copied()
+                    .filter(|c| self.card_matches(*c, valid, ctx.source, ctx.controller))
+                    .collect();
+                // CR 701.8 + 603.10a: gleichzeitig, Rückblick für „stirbt“-Trigger
+                self.lki_battlefield = Some(self.battlefield.clone());
+                for c in affected {
+                    self.destroy(c);
+                }
+                self.lki_battlefield = None;
+            }
+            Effect::DamageAll {
+                amount,
+                valid_cards,
+                valid_players,
+            } => {
+                let n = self.amount(amount, ctx).max(0) as u32;
+                let mut recipients: Vec<Target> = Vec::new();
+                if let Some(v) = valid_cards {
+                    recipients.extend(
+                        self.battlefield
+                            .iter()
+                            .copied()
+                            .filter(|c| self.card_matches(*c, v, ctx.source, ctx.controller))
+                            .map(Target::Card),
+                    );
+                }
+                if let Some(v) = valid_players {
+                    recipients.extend(
+                        self.apnap()
+                            .into_iter()
+                            .filter(|p| self.player_matches(*p, v, ctx.controller))
+                            .map(Target::Player),
+                    );
+                }
+                for r in recipients {
+                    self.deal_damage(ctx.source, r, n);
+                }
+            }
+            Effect::Discard {
+                who,
+                mode,
+                num,
+                valid,
+            } => {
+                let n = self.amount(num, ctx).max(0) as usize;
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let hand: Vec<CardId> = self
+                        .player(p)
+                        .hand
+                        .iter()
+                        .copied()
+                        .filter(|c| {
+                            valid.as_ref().is_none_or(|v| {
+                                self.card_matches(*c, v, ctx.source, ctx.controller)
+                            })
+                        })
+                        .collect();
+                    let chosen: Vec<CardId> = match mode {
+                        DiscardMode::Hand => self.player(p).hand.clone(),
+                        DiscardMode::Random => {
+                            let mut h = hand.clone();
+                            self.rng.shuffle(&mut h);
+                            h.into_iter().take(n).collect()
+                        }
+                        DiscardMode::PlayerChooses | DiscardMode::YouChoose => {
+                            let k = n.min(hand.len()) as u32;
+                            if k == 0 {
+                                Vec::new()
+                            } else {
+                                let chooser = if *mode == DiscardMode::YouChoose {
+                                    ctx.controller
+                                } else {
+                                    p
+                                };
+                                match ch.ask(Decision::ChooseCards {
+                                    player: chooser,
+                                    reason: crate::decision::CardChoiceReason::Discard,
+                                    options: hand,
+                                    min: k,
+                                    max: k,
+                                })? {
+                                    Choice::Cards(c) => c,
+                                    _ => Vec::new(),
+                                }
+                            }
+                        }
+                    };
+                    for c in chosen {
+                        self.move_card(c, Zone::Graveyard, true);
+                    }
+                }
+            }
+            Effect::Counter { unless_cost } => {
+                for t in targets {
+                    let Target::Card(card) = *t else { continue };
+                    let Some(pos) = self
+                        .stack
+                        .iter()
+                        .position(|s| matches!(s.kind, StackKind::Spell { card: c } if c == card))
+                    else {
+                        continue;
+                    };
+                    let spell_ctrl = self.stack[pos].controller;
+                    if let Some(cost) = unless_cost {
+                        // CR 118.12: Zahlung freiwillig; bezahlt wird aus Pool/automatisch.
+                        let wants = matches!(
+                            ch.ask(Decision::PayUnlessCost {
+                                player: spell_ctrl,
+                                cost: cost.to_string()
+                            })?,
+                            Choice::Yes
+                        );
+                        if wants && self.pay_unless_cost(spell_ctrl, cost) {
+                            continue;
+                        }
+                    }
+                    // CR 701.5a: vom Stapel in den Friedhof des Besitzers
+                    self.stack.remove(pos);
+                    self.move_card(card, Zone::Graveyard, true);
+                }
+            }
             // Modale Fähigkeiten werden vor dem Stapeln aufgelöst (choose_modes);
             // ein Charm ohne gewählte Modi tut nichts.
             Effect::Charm(_) => {}
@@ -548,5 +700,30 @@ impl GameState {
         } else {
             self.move_card(card, Zone::Graveyard, true);
         }
+    }
+}
+
+impl GameState {
+    /// Bezahlt Manakosten außerhalb des Wirkens (UnlessCost) aus Pool und
+    /// einfachen Quellen. `false`, wenn nicht bezahlbar (nichts wird verändert).
+    pub(crate) fn pay_unless_cost(&mut self, p: PlayerId, cost: &forge_types::ManaCost) -> bool {
+        let mut pool = self.player(p).mana_pool.clone();
+        if pool.try_pay(cost, 0, &[]) {
+            self.player_mut(p).mana_pool = pool;
+            return true;
+        }
+        let Some(plan) = self.auto_pay_plan(p, cost, 0, &[]) else {
+            return false;
+        };
+        for (c, _i, color) in plan {
+            self.card_mut(c).tapped = true;
+            self.player_mut(p).mana_pool.add(color, false);
+        }
+        let mut pool = self.player(p).mana_pool.clone();
+        let ok = pool.try_pay(cost, 0, &[]);
+        if ok {
+            self.player_mut(p).mana_pool = pool;
+        }
+        ok
     }
 }

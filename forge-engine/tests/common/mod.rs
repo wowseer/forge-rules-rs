@@ -95,6 +95,15 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Rest in Peace Lite\nManaCost:1 W\nTypes:Enchantment\nR:Event$ Moved | ActiveZones$ Battlefield | Destination$ Graveyard | ValidCard$ Card | ReplaceWith$ Exile | Description$ If a card or token would be put into a graveyard from anywhere, exile it instead.\nSVar:Exile:DB$ ChangeZone | Hidden$ True | Origin$ All | Destination$ Exile | Defined$ ReplacedCard\nOracle:\n",
     "Name:Counter Bear Lite\nManaCost:1 G\nTypes:Creature Bear\nPT:1/1\nK:etbCounter:P1P1:2\nOracle:\n",
     "Name:X Ooze Lite\nManaCost:X G\nTypes:Creature Ooze\nPT:0/0\nK:etbCounter:P1P1:X\nSVar:X:Count$xPaid\nOracle:\n",
+    "Name:Overrun Lite\nManaCost:2 G G G\nTypes:Sorcery\nA:SP$ PumpAll | ValidCards$ Creature.YouCtrl | NumAtt$ +3 | NumDef$ +3 | KW$ Trample | SpellDescription$ Creatures you control get +3/+3 and gain trample until end of turn.\nOracle:\n",
+    "Name:Wrath of God\nManaCost:2 W W\nTypes:Sorcery\nA:SP$ DestroyAll | ValidCards$ Creature | NoRegen$ True | SpellDescription$ Destroy all creatures. They can't be regenerated.\nOracle:\n",
+    "Name:Pyroclasm\nManaCost:1 R\nTypes:Sorcery\nA:SP$ DamageAll | NumDmg$ 2 | ValidCards$ Creature | ValidDescription$ each creature. | SpellDescription$ CARDNAME deals 2 damage to each creature.\nOracle:\n",
+    "Name:Earthquake Lite\nManaCost:X R\nTypes:Sorcery\nA:SP$ DamageAll | NumDmg$ X | ValidCards$ Creature.withoutFlying | ValidPlayers$ Player | SpellDescription$ X damage to each creature without flying and each player.\nSVar:X:Count$xPaid\nOracle:\n",
+    "Name:Mind Rot\nManaCost:2 B\nTypes:Sorcery\nA:SP$ Discard | ValidTgts$ Player | NumCards$ 2 | Mode$ TgtChoose | SpellDescription$ Target player discards two cards.\nOracle:\n",
+    "Name:Duress\nManaCost:B\nTypes:Sorcery\nA:SP$ Discard | ValidTgts$ Opponent | Mode$ RevealYouChoose | DiscardValid$ Card.nonCreature+nonLand | NumCards$ 1 | SpellDescription$ Target opponent reveals their hand. You choose a noncreature, nonland card from it. That player discards that card.\nOracle:\n",
+    "Name:Counterspell\nManaCost:U U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | TgtPrompt$ Select target spell | ValidTgts$ Card | SpellDescription$ Counter target spell.\nOracle:\n",
+    "Name:Mana Leak\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | TgtPrompt$ Select target spell | ValidTgts$ Card | UnlessCost$ 3 | SpellDescription$ Counter target spell unless its controller pays {3}.\nOracle:\n",
+    "Name:Essence Scatter Lite\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | ValidTgts$ Creature | TgtPrompt$ Select target creature spell | SpellDescription$ Counter target creature spell.\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
 ];
 
@@ -328,6 +337,7 @@ pub fn default_choice(d: &Decision) -> Choice {
             };
             Choice::Modes(pick)
         }
+        Decision::PayUnlessCost { .. } => Choice::Yes,
         Decision::OrderTriggers { descriptions, .. } => {
             Choice::Order((0..descriptions.len()).collect())
         }

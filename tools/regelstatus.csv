@@ -114,3 +114,8 @@ Static Ability;Continuous;teilweise;layers::affected_set_determined_after_type_c
 Effect (ApiType);Token;teilweise;tokens_charm::tokens_enter_and_trigger_etb;TokenScript (Liste), TokenAmount, TokenOwner, TokenTapped, TokenPower/Toughness; ETB-Trigger; RememberTokens, TokenAttacking, AtEOT, PumpKeywords fehlen
 Effect (ApiType);Charm;teilweise;tokens_charm::charm_choose_two_resolve_in_printed_order;CharmNum/MinCharmNum, CanRepeatModes, nur Modi mit legalen Zielen, Druckreihenfolge, bei Triggern beim Stapeln; ChoiceRestriction, Chooser, Random fehlen
 Replacement Effect;Moved;teilweise;replacements::rest_in_peace_redirects_to_exile_and_no_dies_trigger;Umleitung (ChangeZone ReplacedCard), getappt ins Spiel inkl. Bedingung, etbCounter; Reihenfolge bei mehreren Umleitungen vereinfacht (Zeitstempel statt Wahl, CR 616.1)
+Effect (ApiType);PumpAll;teilweise;mass_discard_counter::pump_all_own_creatures_until_end_of_turn;ValidCards, NumAtt/NumDef, KW bis Zugende; PumpZone, Duration fehlen
+Effect (ApiType);DestroyAll;teilweise;mass_discard_counter::wrath_destroys_all_simultaneously_with_dies_triggers;gleichzeitig mit Rückblick; Regeneration fehlt
+Effect (ApiType);DamageAll;teilweise;mass_discard_counter::damage_all_creatures_and_players;ValidCards/ValidPlayers; DamageSource fehlt
+Effect (ApiType);Discard;teilweise;mass_discard_counter::duress_caster_chooses_noncreature_nonland;TgtChoose, Hand, Random, RevealYouChoose, DiscardValid; RememberDiscarded fehlt
+Effect (ApiType);Counter;teilweise;mass_discard_counter::mana_leak_pay_or_countered;Zauber neutralisieren, UnlessCost (Zahl, automatische Zahlung); Fähigkeiten neutralisieren, Destination fehlen
