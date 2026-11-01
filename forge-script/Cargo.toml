@@ -1,0 +1,12 @@
+[package]
+name = "forge-script"
+description = "Parser für Forge-Kartenskripte (cardsfolder)"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+forge-types = { path = "../forge-types" }
+
+[lints]
+workspace = true

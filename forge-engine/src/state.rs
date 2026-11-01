@@ -1,0 +1,549 @@
+//! Spielzustand.
+//!
+//! Java-Vorbild: `Game`, `Player`, `Card`, `Zone`, `MagicStack`, `Combat`.
+//! Unterschied: alles ist ein einziger `Clone`-barer Wert; Objekte verweisen
+//! nur über [`CardId`]/[`PlayerId`] aufeinander.
+
+use crate::decision::{Choice, Decision, Target};
+use crate::definition::CardDefinition as Def;
+use crate::definition::{CardDefinition, CompiledFace};
+use crate::effects::CompiledAbility;
+use crate::ids::{CardId, PlayerId};
+use crate::keyword::Keyword;
+use crate::mana_pool::ManaPool;
+use crate::rng::Rng;
+use crate::turn::Step;
+use crate::zone::Zone;
+use forge_script::CardFace;
+use forge_types::{CardType, ColorSet, ManaCost};
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+/// Startparameter einer Partie.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GameRules {
+    pub starting_life: i32,
+    pub starting_hand: u32,
+    pub max_hand_size: u32,
+    /// CR 103.8a: Im Zwei-Spieler-Spiel zieht der Startspieler im ersten Zug nicht.
+    /// (Commander-Multiplayer: CR 103.8c – alle ziehen außer… siehe Format.)
+    pub first_player_skips_draw: bool,
+    pub poison_to_lose: u32,
+}
+
+impl Default for GameRules {
+    fn default() -> Self {
+        GameRules {
+            starting_life: 20,
+            starting_hand: 7,
+            max_hand_size: 7,
+            first_player_skips_draw: true,
+            poison_to_lose: 10,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LossReason {
+    /// CR 704.5a
+    LifeZero,
+    /// CR 704.5b
+    DrewFromEmptyLibrary,
+    /// CR 704.5c
+    Poison,
+    Conceded,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Player {
+    pub id: PlayerId,
+    pub name: String,
+    pub life: i32,
+    pub poison: u32,
+    /// Oberste Karte = letztes Element.
+    pub library: Vec<CardId>,
+    pub hand: Vec<CardId>,
+    /// Oberste Karte = letztes Element.
+    pub graveyard: Vec<CardId>,
+    pub mana_pool: ManaPool,
+    pub lands_played_this_turn: u32,
+    pub land_plays_per_turn: u32,
+    pub drew_from_empty_library: bool,
+    pub lost: Option<LossReason>,
+    pub mulligans: u32,
+    pub kept_hand: bool,
+}
+
+impl Player {
+    pub fn is_in_game(&self) -> bool {
+        self.lost.is_none()
+    }
+
+    pub fn zone(&self, z: Zone) -> &Vec<CardId> {
+        match z {
+            Zone::Library => &self.library,
+            Zone::Hand => &self.hand,
+            Zone::Graveyard => &self.graveyard,
+            _ => panic!("{z:?} ist keine Spielerzone"),
+        }
+    }
+
+    pub fn zone_mut(&mut self, z: Zone) -> &mut Vec<CardId> {
+        match z {
+            Zone::Library => &mut self.library,
+            Zone::Hand => &mut self.hand,
+            Zone::Graveyard => &mut self.graveyard,
+            _ => panic!("{z:?} ist keine Spielerzone"),
+        }
+    }
+}
+
+/// Ein physisches Objekt in einer Zone. Ein Zonenwechsel erzeugt ein neues
+/// Objekt mit neuer ID (CR 400.7); das alte bleibt mit `zone = None` als
+/// „last known information“ erhalten.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CardObj {
+    pub id: CardId,
+    pub def: Arc<CardDefinition>,
+    pub face: usize,
+    pub owner: PlayerId,
+    pub controller: PlayerId,
+    pub zone: Option<Zone>,
+    pub token: bool,
+    pub tapped: bool,
+    /// CR 302.6: seit Beginn des letzten eigenen Zuges ununterbrochen kontrolliert.
+    pub controlled_since_turn_start: bool,
+    pub damage: u32,
+    /// CR 704.5h
+    pub deathtouch_damage: bool,
+    pub counters: BTreeMap<String, u32>,
+    pub timestamp: u64,
+    /// Nachfolger nach Zonenwechsel.
+    pub moved_to: Option<CardId>,
+}
+
+impl CardObj {
+    pub fn face(&self) -> &CardFace {
+        self.def.face(self.face)
+    }
+
+    pub fn compiled(&self) -> &CompiledFace {
+        self.def.compiled(self.face)
+    }
+
+    pub fn counter(&self, kind: &str) -> u32 {
+        self.counters.get(kind).copied().unwrap_or(0)
+    }
+}
+
+/// Dauer eines Effekts (CR 611.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Duration {
+    UntilEndOfTurn,
+}
+
+/// Fortlaufender Effekt auf ein bestimmtes Objekt (CR 611, Layer 6/7c).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContinuousEffect {
+    pub affected: CardId,
+    pub power: i32,
+    pub toughness: i32,
+    pub keywords: Vec<Keyword>,
+    pub duration: Duration,
+    pub timestamp: u64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum StackKind {
+    /// Zauberspruch; `card` ist das Kartenobjekt in der Stack-Zone.
+    Spell { card: CardId },
+    /// Aktivierte (später: ausgelöste) Fähigkeit von `source`.
+    Ability,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StackItem {
+    pub id: u32,
+    pub kind: StackKind,
+    pub source: CardId,
+    pub controller: PlayerId,
+    /// `None` bei Bleibende-Karte-Zaubersprüchen ohne Spell-Fähigkeit.
+    pub ability: Option<Arc<CompiledAbility>>,
+    /// Ziele je Fähigkeit der `SubAbility`-Kette.
+    pub targets: Vec<Vec<Target>>,
+    pub x: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AttackerInfo {
+    pub card: CardId,
+    pub defender: PlayerId,
+    /// CR 509.1h: bleibt geblockt, auch wenn Blocker entfernt werden.
+    pub blocked: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Combat {
+    pub attackers: Vec<AttackerInfo>,
+    /// (Blocker, Angreifer) in Deklarationsreihenfolge.
+    pub blocks: Vec<(CardId, CardId)>,
+    /// Kreaturen, die im Erstschlag-Schritt Schaden zugefügt haben.
+    pub dealt_first_strike: Vec<CardId>,
+}
+
+impl Combat {
+    pub fn attacker(&self, c: CardId) -> Option<&AttackerInfo> {
+        self.attackers.iter().find(|a| a.card == c)
+    }
+
+    pub fn blockers_of(&self, attacker: CardId) -> Vec<CardId> {
+        self.blocks
+            .iter()
+            .filter(|(_, a)| *a == attacker)
+            .map(|(b, _)| *b)
+            .collect()
+    }
+
+    pub fn blocked_by(&self, blocker: CardId) -> Vec<CardId> {
+        self.blocks
+            .iter()
+            .filter(|(b, _)| *b == blocker)
+            .map(|(_, a)| *a)
+            .collect()
+    }
+
+    pub fn is_attacking(&self, c: CardId) -> bool {
+        self.attacker(c).is_some()
+    }
+
+    pub fn is_blocking(&self, c: CardId) -> bool {
+        self.blocks.iter().any(|(b, _)| *b == c)
+    }
+}
+
+/// Wo im Ablauf sich das Spiel befindet. Jeder Wert ist ein stabiler
+/// Wiederaufsetzpunkt (siehe `engine.rs`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Flow {
+    Setup,
+    Mulligan { player: PlayerId },
+    BeginStep,
+    Priority { player: PlayerId, passes: u8 },
+    EndStep,
+    GameOver,
+}
+
+/// Protokoll für Tests, Replays und den Abgleich mit der Java-Engine.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Event {
+    TurnBegan {
+        turn: u32,
+        player: PlayerId,
+    },
+    StepBegan(Step),
+    Drew {
+        player: PlayerId,
+        card: CardId,
+    },
+    LandPlayed {
+        player: PlayerId,
+        card: CardId,
+    },
+    Cast {
+        player: PlayerId,
+        card: CardId,
+    },
+    Activated {
+        player: PlayerId,
+        card: CardId,
+        index: usize,
+    },
+    Resolved {
+        item: u32,
+    },
+    Fizzled {
+        item: u32,
+    },
+    ZoneChange {
+        old: CardId,
+        new: CardId,
+        from: Option<Zone>,
+        to: Zone,
+    },
+    Damage {
+        source: CardId,
+        target: Target,
+        amount: u32,
+    },
+    LifeChanged {
+        player: PlayerId,
+        delta: i32,
+    },
+    Destroyed(CardId),
+    AttackersDeclared(Vec<(CardId, PlayerId)>),
+    BlockersDeclared(Vec<(CardId, CardId)>),
+    PlayerLost {
+        player: PlayerId,
+        reason: LossReason,
+    },
+    GameWon(Option<PlayerId>),
+}
+
+/// Abgeleitete Eigenschaften eines Objekts nach Anwendung fortlaufender
+/// Effekte (CR 613). Wird bei jeder Abfrage neu berechnet.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Characteristics {
+    pub name: String,
+    pub types: CardType,
+    pub colors: ColorSet,
+    pub mana_cost: Option<ManaCost>,
+    pub power: Option<i32>,
+    pub toughness: Option<i32>,
+    pub keywords: Vec<Keyword>,
+}
+
+impl Characteristics {
+    pub fn has(&self, k: &Keyword) -> bool {
+        self.keywords.contains(k)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GameState {
+    pub rules: GameRules,
+    pub players: Vec<Player>,
+    pub cards: Vec<CardObj>,
+    pub battlefield: Vec<CardId>,
+    pub exile: Vec<CardId>,
+    pub command: Vec<CardId>,
+    /// Oberstes Element = letztes.
+    pub stack: Vec<StackItem>,
+    pub turn: u32,
+    pub active: PlayerId,
+    pub step: Step,
+    pub flow: Flow,
+    pub combat: Option<Combat>,
+    pub effects: Vec<ContinuousEffect>,
+    pub rng: Rng,
+    pub next_timestamp: u64,
+    pub next_stack_id: u32,
+    pub starting_player: PlayerId,
+    pub winner: Option<Option<PlayerId>>,
+    /// CR 514.3a: Cleanup wiederholen
+    pub repeat_cleanup: bool,
+    pub log: Vec<Event>,
+}
+
+/// Ergebnis eines Abbruchs innerhalb eines atomaren Schritts.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Interrupt {
+    /// Eine Entscheidung wird benötigt.
+    Need(Decision),
+    /// Spieler hat eine Aktion abgebrochen – Zustand wird verworfen.
+    Cancelled,
+    /// Eine Antwort verstößt gegen zustandsabhängige Regeln.
+    Invalid(crate::decision::InvalidChoice),
+}
+
+/// Quelle für bereits getroffene Entscheidungen während eines Schritts.
+pub struct Choices<'a> {
+    queue: &'a [Choice],
+    pub(crate) pos: usize,
+}
+
+impl<'a> Choices<'a> {
+    pub fn new(queue: &'a [Choice]) -> Choices<'a> {
+        Choices { queue, pos: 0 }
+    }
+
+    pub fn ask(&mut self, d: Decision) -> Result<Choice, Interrupt> {
+        match self.queue.get(self.pos) {
+            Some(c) => {
+                self.pos += 1;
+                Ok(c.clone())
+            }
+            None => Err(Interrupt::Need(d)),
+        }
+    }
+
+    pub fn consumed(&self) -> usize {
+        self.pos
+    }
+}
+
+/// Ergebnis eines Teilschritts, der eine Entscheidung brauchen kann.
+pub type Res<T> = Result<T, Interrupt>;
+
+impl GameState {
+    pub fn card(&self, id: CardId) -> &CardObj {
+        &self.cards[id.0 as usize]
+    }
+
+    pub fn card_mut(&mut self, id: CardId) -> &mut CardObj {
+        &mut self.cards[id.0 as usize]
+    }
+
+    pub fn player(&self, id: PlayerId) -> &Player {
+        &self.players[id.0 as usize]
+    }
+
+    pub fn player_mut(&mut self, id: PlayerId) -> &mut Player {
+        &mut self.players[id.0 as usize]
+    }
+
+    pub fn timestamp(&mut self) -> u64 {
+        self.next_timestamp += 1;
+        self.next_timestamp
+    }
+
+    /// Spieler, die noch im Spiel sind, in Zugreihenfolge ab `from`.
+    pub fn players_from(&self, from: PlayerId) -> Vec<PlayerId> {
+        let n = self.players.len();
+        (0..n)
+            .map(|i| PlayerId(((from.0 as usize + i) % n) as u8))
+            .filter(|p| self.player(*p).is_in_game())
+            .collect()
+    }
+
+    /// APNAP-Reihenfolge (CR 101.4).
+    pub fn apnap(&self) -> Vec<PlayerId> {
+        self.players_from(self.active)
+    }
+
+    pub fn next_player(&self, after: PlayerId) -> PlayerId {
+        let order = self.players_from(PlayerId(
+            ((after.0 as usize + 1) % self.players.len()) as u8,
+        ));
+        order.first().copied().unwrap_or(after)
+    }
+
+    pub fn opponents(&self, of: PlayerId) -> Vec<PlayerId> {
+        self.players_from(of)
+            .into_iter()
+            .filter(|p| *p != of)
+            .collect()
+    }
+
+    pub fn players_in_game(&self) -> usize {
+        self.players.iter().filter(|p| p.is_in_game()).count()
+    }
+
+    pub fn battlefield_of(&self, controller: PlayerId) -> impl Iterator<Item = CardId> + '_ {
+        self.battlefield
+            .iter()
+            .copied()
+            .filter(move |c| self.card(*c).controller == controller)
+    }
+
+    /// Eigenschaften nach Layer-System (aktuell: Basis + Layer 6 Fähigkeiten
+    /// hinzufügen + Layer 7c P/T-Modifikationen und Marken).
+    pub fn chars(&self, id: CardId) -> Characteristics {
+        let c = self.card(id);
+        let face = c.face();
+        let compiled = c.compiled();
+        let mut ch = Characteristics {
+            name: face.name.clone(),
+            types: face.types.clone(),
+            colors: face.color(),
+            mana_cost: face.mana_cost.clone(),
+            power: face.power.as_ref().map(|p| p.base()),
+            toughness: face.toughness.as_ref().map(|t| t.base()),
+            keywords: compiled.keywords.clone(),
+        };
+        let mut effs: Vec<&ContinuousEffect> =
+            self.effects.iter().filter(|e| e.affected == id).collect();
+        effs.sort_by_key(|e| e.timestamp);
+        // Layer 6
+        for e in &effs {
+            for k in &e.keywords {
+                if !ch.keywords.contains(k) {
+                    ch.keywords.push(k.clone());
+                }
+            }
+        }
+        // Layer 7c
+        if let (Some(p), Some(t)) = (ch.power.as_mut(), ch.toughness.as_mut()) {
+            for e in &effs {
+                *p += e.power;
+                *t += e.toughness;
+            }
+            let plus = c.counter("P1P1") as i32;
+            let minus = c.counter("M1M1") as i32;
+            *p += plus - minus;
+            *t += plus - minus;
+        }
+        ch
+    }
+
+    pub fn is_creature(&self, id: CardId) -> bool {
+        self.chars(id).types.is_creature()
+    }
+
+    pub fn has_keyword(&self, id: CardId, k: &Keyword) -> bool {
+        self.chars(id).has(k)
+    }
+
+    pub fn push_event(&mut self, e: Event) {
+        self.log.push(e);
+    }
+}
+
+impl GameState {
+    /// Neue Partie. `decks[i]` = (Spielername, Bibliothek). Der Startspieler
+    /// wird per Seed bestimmt (CR 103.1), sofern `starting_player` fehlt.
+    pub fn new(
+        rules: GameRules,
+        decks: Vec<(String, Vec<Arc<Def>>)>,
+        seed: u64,
+        starting_player: Option<PlayerId>,
+    ) -> GameState {
+        let mut rng = Rng::new(seed);
+        let n = decks.len();
+        let start = starting_player.unwrap_or_else(|| PlayerId(rng.below(n as u64) as u8));
+        let mut g = GameState {
+            players: Vec::new(),
+            cards: Vec::new(),
+            battlefield: Vec::new(),
+            exile: Vec::new(),
+            command: Vec::new(),
+            stack: Vec::new(),
+            turn: 0,
+            active: start,
+            step: Step::Untap,
+            flow: Flow::Setup,
+            combat: None,
+            effects: Vec::new(),
+            rng,
+            next_timestamp: 0,
+            next_stack_id: 0,
+            starting_player: start,
+            winner: None,
+            repeat_cleanup: false,
+            log: Vec::new(),
+            rules: rules.clone(),
+        };
+        for (i, (name, deck)) in decks.into_iter().enumerate() {
+            let id = PlayerId(i as u8);
+            g.players.push(Player {
+                id,
+                name,
+                life: rules.starting_life,
+                poison: 0,
+                library: Vec::new(),
+                hand: Vec::new(),
+                graveyard: Vec::new(),
+                mana_pool: ManaPool::default(),
+                lands_played_this_turn: 0,
+                land_plays_per_turn: 1,
+                drew_from_empty_library: false,
+                lost: None,
+                mulligans: 0,
+                kept_hand: false,
+            });
+            for def in deck {
+                g.create_card(def, id, Zone::Library, false);
+            }
+        }
+        g
+    }
+}

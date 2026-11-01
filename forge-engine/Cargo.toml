@@ -1,0 +1,13 @@
+[package]
+name = "forge-engine"
+description = "Regelkern: Spielzustand, Zugstruktur, Priorität, Stack, SBAs, Kampf, Effekte"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+forge-types = { path = "../forge-types" }
+forge-script = { path = "../forge-script" }
+
+[lints]
+workspace = true

@@ -1,0 +1,141 @@
+//! Auswertung von Filtern und Zielwahl (CR 115, CR 608.2b).
+
+use crate::decision::Target;
+use crate::effects::TargetSpec;
+use crate::ids::{CardId, PlayerId};
+use crate::keyword::Keyword;
+use crate::state::GameState;
+use crate::valid::{Alternative, CardBase, PlayerBase, Prop, ValidSpec};
+use crate::zone::Zone;
+
+impl GameState {
+    fn card_base_matches(&self, id: CardId, base: &CardBase) -> bool {
+        let ch = self.chars(id);
+        match base {
+            CardBase::Card => true,
+            CardBase::Permanent => {
+                self.card(id).zone == Some(Zone::Battlefield) && ch.types.is_permanent()
+            }
+            CardBase::Core(c) => ch.types.has_core(*c),
+            CardBase::Word(w) => {
+                ch.types.has_subtype(w)
+                    || forge_types::Supertype::from_name(w).is_some_and(|s| ch.types.has_super(s))
+            }
+        }
+    }
+
+    fn prop_matches(&self, id: CardId, prop: &Prop, source: CardId, you: PlayerId) -> bool {
+        let c = self.card(id);
+        let ch = self.chars(id);
+        let combat = self.combat.as_ref();
+        match prop {
+            Prop::YouCtrl => c.controller == you,
+            Prop::YouDontCtrl => c.controller != you,
+            Prop::OppCtrl => c.controller != you,
+            Prop::YouOwn => c.owner == you,
+            Prop::Other => id != source,
+            Prop::SelfCard => id == source,
+            Prop::Tapped => c.tapped,
+            Prop::Untapped => !c.tapped,
+            Prop::Attacking => combat.is_some_and(|cb| cb.is_attacking(id)),
+            Prop::Blocking => combat.is_some_and(|cb| cb.is_blocking(id)),
+            Prop::Token => c.token,
+            Prop::NonToken => !c.token,
+            Prop::Is(b) => self.card_base_matches(id, b),
+            Prop::Non(b) => !self.card_base_matches(id, b),
+            Prop::Color(col) => ch.colors.contains(*col),
+            Prop::NonColor(col) => !ch.colors.contains(*col),
+            Prop::Multicolor => ch.colors.is_multicolor(),
+            Prop::Colorless => ch.colors.is_colorless(),
+            Prop::NonColorless => !ch.colors.is_colorless(),
+            Prop::With(k) => ch.has(k),
+            Prop::Without(k) => !ch.has(k),
+            Prop::PlayerOpponent => false,
+        }
+    }
+
+    /// Erfüllt das Objekt den Filter (aus Sicht von `you`, Quelle `source`)?
+    pub fn card_matches(
+        &self,
+        id: CardId,
+        spec: &ValidSpec,
+        source: CardId,
+        you: PlayerId,
+    ) -> bool {
+        spec.alternatives.iter().any(|a| match a {
+            Alternative::Card { base, props } => {
+                self.card_base_matches(id, base)
+                    && props.iter().all(|p| self.prop_matches(id, p, source, you))
+            }
+            Alternative::Player { .. } => false,
+        })
+    }
+
+    pub fn player_matches(&self, p: PlayerId, spec: &ValidSpec, you: PlayerId) -> bool {
+        spec.alternatives.iter().any(|a| match a {
+            Alternative::Player { base, props } => {
+                let base_ok = match base {
+                    PlayerBase::Player => true,
+                    PlayerBase::Opponent => p != you,
+                    PlayerBase::You => p == you,
+                };
+                base_ok
+                    && props
+                        .iter()
+                        .all(|pr| matches!(pr, Prop::PlayerOpponent) && p != you)
+            }
+            Alternative::Card { .. } => false,
+        })
+    }
+
+    /// Kann `target` von einer Fähigkeit von `source` (kontrolliert von `you`)
+    /// anvisiert werden? Prüft Filter, Zone (Standard: Battlefield) sowie
+    /// Fluchsicherheit/Verhüllung (CR 702.11, 702.18).
+    pub fn is_legal_target(
+        &self,
+        spec: &TargetSpec,
+        target: Target,
+        source: CardId,
+        you: PlayerId,
+    ) -> bool {
+        match target {
+            Target::Player(p) => {
+                self.player(p).is_in_game() && self.player_matches(p, &spec.valid, you)
+            }
+            Target::Card(c) => {
+                let card = self.card(c);
+                if card.zone != Some(Zone::Battlefield) {
+                    return false;
+                }
+                if self.has_keyword(c, &Keyword::Shroud) {
+                    return false;
+                }
+                if self.has_keyword(c, &Keyword::Hexproof) && card.controller != you {
+                    return false;
+                }
+                self.card_matches(c, &spec.valid, source, you)
+            }
+        }
+    }
+
+    pub fn target_candidates(
+        &self,
+        spec: &TargetSpec,
+        source: CardId,
+        you: PlayerId,
+    ) -> Vec<Target> {
+        let mut v: Vec<Target> = Vec::new();
+        if spec.valid.allows_players() {
+            v.extend(
+                self.players_from(self.active)
+                    .into_iter()
+                    .map(Target::Player),
+            );
+        }
+        if spec.valid.allows_cards() {
+            v.extend(self.battlefield.iter().map(|c| Target::Card(*c)));
+        }
+        v.retain(|t| self.is_legal_target(spec, *t, source, you));
+        v
+    }
+}

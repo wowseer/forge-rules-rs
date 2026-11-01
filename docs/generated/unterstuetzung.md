@@ -1,0 +1,2922 @@
+# Unterstützung des Zielkartenpools
+
+Automatisch erzeugt von `cargo run --release -p forge-engine --bin support-report`. Nicht von Hand bearbeiten.
+
+Eine Karte gilt als **unterstützt**, wenn jede ihrer Zeilen (Keywords, Fähigkeiten, Trigger, Statics, Replacements, Kosten, Filter) vom Effekt-Compiler übersetzt wird. Ob die Umsetzung mit Java übereinstimmt, sichern erst die Differential-Tests ab.
+
+- Karten im Zielpool: 32336 (zusätzlich ohne Skript in cardsfolder: 551; Sonderformat-Typen ausgeschlossen: 369)
+- davon unterstützt: **2725** (8.4 %)
+
+## Je Format
+
+| Format | Karten | unterstützt | % |
+|---|---:|---:|---:|
+| Commander | 32190 | 2713 | 8.4 |
+| Legacy | 32014 | 2695 | 8.4 |
+| Modern | 22711 | 1970 | 8.7 |
+| Pauper | 10833 | 1841 | 17.0 |
+| Pioneer | 15080 | 1174 | 7.8 |
+| Standard | 5163 | 227 | 4.4 |
+| Vintage | 32084 | 2704 | 8.4 |
+
+## Einziger fehlender Baustein (schnellster Gewinn)
+
+| fehlt | Karten |
+|---|---:|
+| Trigger: ChangesZone | 3177 |
+| Effekt nicht unterstützt: ChangeZone | 1030 |
+| Static: Continuous | 981 |
+| Trigger: Phase | 809 |
+| Trigger: SpellCast | 607 |
+| Trigger: Attacks | 574 |
+| Effekt nicht unterstützt: Charm | 433 |
+| Effekt nicht unterstützt: Token | 359 |
+| Trigger: DamageDone | 299 |
+| Effekt nicht unterstützt: Effect | 297 |
+| Replacement: Moved | 297 |
+| Effekt nicht unterstützt: Discard | 244 |
+| Effekt nicht unterstützt: Counter | 242 |
+| Effekt nicht unterstützt: PumpAll | 237 |
+| Effekt nicht unterstützt: Animate | 182 |
+| Effekt nicht unterstützt: Dig | 171 |
+| Static: ReduceCost | 139 |
+| Effekt nicht unterstützt: ChangeZoneAll | 132 |
+| Effekt nicht unterstützt: DamageAll | 123 |
+| Effekt nicht unterstützt: DestroyAll | 114 |
+| Effekt nicht unterstützt: Regenerate | 114 |
+| Static: CantBlockBy | 114 |
+| Effekt nicht unterstützt: Mill | 81 |
+| Trigger: AttackerBlocked | 81 |
+| Effekt nicht unterstützt: Sacrifice | 78 |
+| Effekt nicht unterstützt: Scry | 76 |
+| Replacement: DamageDone | 74 |
+| Trigger: DamageDoneOnce | 74 |
+| Effekt nicht unterstützt: PreventDamage | 69 |
+| Effekt nicht unterstützt: RepeatEach | 67 |
+| Trigger: AttackersDeclared | 66 |
+| Effekt nicht unterstützt: GainControl | 61 |
+| Trigger: BecomesTarget | 54 |
+| Effekt nicht unterstützt: ChooseCard | 53 |
+| Trigger: Taps | 53 |
+| Effekt nicht unterstützt: DelayedTrigger | 51 |
+| Trigger: Drawn | 51 |
+| Effekt nicht unterstützt: PeekAndReveal | 49 |
+| Effekt nicht unterstützt: ChooseType | 47 |
+| Mana: Amount$ X nicht unterstützt | 46 |
+| Keyword: Cycling:2 | 45 |
+| Trigger: AttackerBlockedByCreature | 43 |
+| Keyword: ETBReplacement:Copy:DBCopy:Optional | 42 |
+| Trigger: LifeGained | 42 |
+| Effekt nicht unterstützt: ChooseSource | 40 |
+| DealDamage: NumDmg$ ParentTargeted$CardPower nicht unterstützt | 39 |
+| Trigger: Discarded | 38 |
+| Effekt nicht unterstützt: Fight | 37 |
+| Trigger: ChangesZoneAll | 37 |
+| Static: AlternativeCost | 35 |
+| Static: CantBlock | 34 |
+| Effekt nicht unterstützt: RollDice | 32 |
+| Kostenteil nicht unterstützt: ExileFromGrave<1/CARDNAME> | 32 |
+| Pump: ActivationLimit$ 1 nicht unterstützt | 32 |
+| Static: RaiseCost | 32 |
+| Effekt nicht unterstützt: AnimateAll | 31 |
+| Effekt nicht unterstützt: CopyPermanent | 31 |
+| Effekt nicht unterstützt: NameCard | 31 |
+| Keyword: Convoke | 31 |
+| Static: CantAttack | 31 |
+
+## Häufigste fehlende Bausteine insgesamt
+
+| fehlt | Karten |
+|---|---:|
+| Trigger: ChangesZone | 6678 |
+| Static: Continuous | 4219 |
+| Trigger: Phase | 2061 |
+| Effekt nicht unterstützt: ChangeZone | 1714 |
+| Trigger: Attacks | 1507 |
+| Trigger: SpellCast | 1280 |
+| Replacement: Moved | 943 |
+| Keyword: Enchant:Creature | 894 |
+| Trigger: DamageDone | 808 |
+| Effekt nicht unterstützt: Token | 711 |
+| Effekt nicht unterstützt: Charm | 535 |
+| Static: ReduceCost | 483 |
+| Effekt nicht unterstützt: Effect | 479 |
+| Effekt nicht unterstützt: PumpAll | 400 |
+| mehrseitige Karte (DoubleFaced) | 389 |
+| Effekt nicht unterstützt: Discard | 361 |
+| Static: CantBlockBy | 344 |
+| Effekt nicht unterstützt: Counter | 333 |
+| Effekt nicht unterstützt: Animate | 331 |
+| Planeswalker | 323 |
+| Effekt nicht unterstützt: Dig | 280 |
+| variable Stärke/Widerstandskraft (*) | 236 |
+| Keyword: Equip:2 | 223 |
+| Effekt nicht unterstützt: Regenerate | 220 |
+| Kostenteil nicht unterstützt: AddCounter<1/LOYALTY> | 218 |
+| Trigger: AttackersDeclared | 212 |
+| Replacement: DamageDone | 201 |
+| Trigger: DamageDoneOnce | 190 |
+| Effekt nicht unterstützt: ChangeZoneAll | 180 |
+| Effekt nicht unterstützt: DamageAll | 175 |
+| Effekt nicht unterstützt: Mill | 158 |
+| Effekt nicht unterstützt: DestroyAll | 157 |
+| Replacement: Untap | 155 |
+| Keyword: Cycling:2 | 153 |
+| Static: AlternativeCost | 143 |
+| Trigger: Drawn | 139 |
+| mehrseitige Karte (Adventure) | 139 |
+| Static: CantBlock | 137 |
+| Keyword: Equip:3 | 133 |
+| Keyword: Devoid | 132 |
+| Trigger: Blocks | 125 |
+| mehrseitige Karte (Split) | 124 |
+| Trigger: AttackerBlocked | 123 |
+| Trigger: TurnFaceUp | 121 |
+| Effekt nicht unterstützt: Scry | 118 |
+| Static: CantAttack | 115 |
+| Trigger: ChangesZoneAll | 114 |
+| Effekt nicht unterstützt: Sacrifice | 113 |
+| Kostenteil nicht unterstützt: SubCounter<2/LOYALTY> | 113 |
+| Trigger: BecomesTarget | 111 |
+| Trigger: Taps | 111 |
+| Keyword: Equip:1 | 108 |
+| Trigger: Sacrificed | 107 |
+| Replacement: Counter | 105 |
+| Keyword: Convoke | 104 |
+| Kostenteil nicht unterstützt: SubCounter<3/LOYALTY> | 103 |
+| mehrseitige Karte (Modal) | 99 |
+| Keyword: Ward:2 | 97 |
+| Static: MustAttack | 97 |
+| Effekt nicht unterstützt: GainControl | 96 |
+| Keyword: Prowess | 95 |
+| Trigger: LifeGained | 94 |
+| Mana: Amount$ X nicht unterstützt | 88 |
+| Static: RaiseCost | 88 |
+| Static: CantBeCast | 87 |
+| Effekt nicht unterstützt: PreventDamage | 85 |
+| Effekt nicht unterstützt: RepeatEach | 83 |
+| Keyword: Enchant:Land | 82 |
+| Kostenteil nicht unterstützt: AddCounter<2/LOYALTY> | 79 |
+| PutCounter: Pflichtparameter CounterType$ fehlt | 78 |
+| Effekt nicht unterstützt: SetState | 75 |
+| Trigger: Cycled | 75 |
+| Trigger: Discarded | 72 |
+| Kostenteil nicht unterstützt: SubCounter<7/LOYALTY> | 71 |
+| Keyword: Crew:2 | 70 |
+| Effekt nicht unterstützt: ChooseCard | 69 |
+| Keyword: ETBReplacement:Other:ChooseColor | 69 |
+| Effekt nicht unterstützt: CopyPermanent | 68 |
+| mehrseitige Karte (Prepare) | 67 |
+| Effekt nicht unterstützt: DelayedTrigger | 64 |
+| Effekt nicht unterstützt: Surveil | 63 |
+| Trigger: AttackerBlockedByCreature | 63 |
+| Effekt nicht unterstützt: ChooseType | 62 |
+| Keyword: Changeling | 62 |
+| Keyword: ETBReplacement:Copy:DBCopy:Optional | 62 |
+| Kostenteil nicht unterstützt: ExileFromGrave<1/CARDNAME> | 62 |
+| Keyword: ETBReplacement:Other:ChooseCT | 61 |
+| Effekt nicht unterstützt: ChooseSource | 60 |
+| Keyword: Partner | 59 |
+| Trigger: TapsForMana | 59 |
+| Effekt nicht unterstützt: PutCounterAll | 58 |
+| Trigger: Always | 58 |
+| Kostenteil nicht unterstützt: Exile<1/CARDNAME> | 55 |
+| Static: CantAttack,CantBlock | 54 |
+| DealDamage: NumDmg$ ParentTargeted$CardPower nicht unterstützt | 53 |
+| Effekt nicht unterstützt: Fight | 53 |
+| Effekt nicht unterstützt: PeekAndReveal | 53 |
+| Keyword: Enchant:Creature.YouCtrl:creature you control | 53 |
+| Keyword: etbCounter:P1P1:X | 53 |
+| Static: CastWithFlash | 52 |
+
+## Unterstützte Karten (2725)
+
+<details><summary>Liste</summary>
+
+- A.I.M. Bot
+- Aang's Defense
+- Aardvark Sloth
+- Abbey Griffin
+- Abbey Matron
+- Abzan Banner
+- Accelerate
+- Accursed Horde
+- Acolyte of Xathrid
+- Acrobatic Leap
+- Adamant Will
+- Adarkar Sentinel
+- Adarkar Wastes
+- Adult Gold Dragon
+- Advance Scout
+- Advanced Hoverguard
+- Aegis Turtle
+- Aegis of the Heavens
+- Aeolipile
+- Aerial Maneuver
+- Aerial Predation
+- Aerial Responder
+- Aetherjacket
+- Affa Protector
+- Afflict
+- Aftershock
+- Ageless Guardian
+- Agent of Acquisitions
+- Agent of Shauku
+- Agent of Stromgald
+- Aggressive Urge
+- Agonizing Syphon
+- Agony Warp
+- Aim High
+- Air Elemental
+- Air Marshal
+- Air Servant
+- Ajani's Sunstriker
+- Akki Drillmaster
+- Akroan Jailer
+- Akroan Mastiff
+- Alabaster Host Sanctifier
+- Alabaster Kirin
+- Alabaster Mage
+- Alaborn Grenadier
+- Alaborn Musketeer
+- Alaborn Trooper
+- Aladdin's Ring
+- Alchemist's Apprentice
+- Alert Shu Infantry
+- Alesha's Legacy
+- Ali Baba
+- Aliban's Tower
+- Alley Strangler
+- Alloy Myr
+- Almighty Brushwagg
+- Alpha Myr
+- Alpha Tyrranax
+- Alpine Grizzly
+- Alpine Watchdog
+- Altar's Reap
+- Amaranthine Wall
+- Ambition's Cost
+- Ambush Party
+- Ambush Viper
+- Amphin Cutthroat
+- An-Havva Township
+- Ana Disciple
+- Anaba Bodyguard
+- Anaba Shaman
+- Ancestral Recall
+- Ancient Brontodon
+- Ancient Carp
+- Ancient Crab
+- Ancient Craving
+- Ancient Den
+- Ancient Spider
+- Ancient Tomb
+- Angel of Light
+- Angel of Retribution
+- Angel's Mercy
+- Angelfire Crusader
+- Angelic Blessing
+- Angelic Page
+- Angelic Wall
+- Animal Sanctuary
+- Ankle Biter
+- Annihilate
+- Anointed Chorister
+- Anointer of Champions
+- Ant-Man, Scott Lang
+- Antagonize
+- Anvilwrought Raptor
+- Appetite for the Unnatural
+- Aquus Steed
+- Arachnoid
+- Arachnoid Adaptation
+- Arbor Armament
+- Arbor Elf
+- Arcane Encyclopedia
+- Archaeological Dig
+- Archangel
+- Archdemon of Paliano
+- Archers of Qarsi
+- Archers' Parapet
+- Archivist
+- Archweaver
+- Ardent Militia
+- Argothian Elder
+- Argothian Swine
+- Ark of Blight
+- Armistice
+- Armor Thrull
+- Armor of Shadows
+- Armored Cancrix
+- Armored Griffin
+- Armored Pegasus
+- Armored Warhorse
+- Armored Whirl Turtle
+- Armored Wolf-Rider
+- Armorer Guildmage
+- Arms Dealer
+- Army Ants
+- Arrogant Vampire
+- Arrows of Justice
+- Ascended Lawmage
+- Ashcoat Bear
+- Ashnod's Altar
+- Asphyxiate
+- Assassinate
+- Assault Griffin
+- Assault Strobe
+- Assault Zeppelid
+- Atog
+- Atraxa's Fall
+- Attrition
+- Auger Spree
+- Augmenting Automaton
+- Aura Blast
+- Aura Fracture
+- Auratog
+- Auriok Transfixer
+- Avacyn's Pilgrim
+- Avacynian Priest
+- Aven Archer
+- Aven Envoy
+- Aven Fleetwing
+- Aven Flock
+- Aven Reedstalker
+- Aven Sentry
+- Aven Skirmisher
+- Aven Trooper
+- Awaken the Bear
+- Axebane Beast
+- Axebane Stag
+- Axegrinder Giant
+- Axgard Cavalry
+- Aysen Abbey
+- Azorius Cluestone
+- Azorius Locket
+- Azorius Signet
+- Azure Drake
+- Azure Mage
+- Badlands
+- Bagel and Schmear
+- Balduvian Barbarians
+- Balduvian Bears
+- Ballista Squad
+- Balloon Peddler
+- Balshan Collaborator
+- Bane Alley Blackguard
+- Bane's Invoker
+- Banehound
+- Bankrupt in Blood
+- Bant Battlemage
+- Barbarian Horde
+- Barbarian Lunatic
+- Barbarian Riftcutter
+- Barbary Apes
+- Barbtooth Wurm
+- Bargain
+- Barktooth Warbeard
+- Barony Vampire
+- Barrage Ogre
+- Barrage of Expendables
+- Bartizan Bats
+- Basal Thrull
+- Basilica Skullbomb
+- Bassara Tower Archer
+- Bastion Enforcer
+- Bastion Mastodon
+- Bathe in Dragonfire
+- Battle Hurda
+- Battle Rampart
+- Battle-Rage Blessing
+- Battlefield Forge
+- Battlefield Promotion
+- Battlefield Raptor
+- Battlefly Swarm
+- Battlegrowth
+- Bay Falcon
+- Bayou
+- Beaming Defiance
+- Bear Cub
+- Bear Trap
+- Bearer of Memory
+- Bedevil
+- Bee Sting
+- Befoul
+- Befuddle
+- Bellows Lizard
+- Benalish Heralds
+- Benalish Knight
+- Benalish Trapper
+- Benthic Giant
+- Bestow Greatness
+- Bewilder
+- Bhaal's Invoker
+- Big Play
+- Bilbo's Deadly Slice
+- Bile Urchin
+- Biosynthic Burst
+- Bird Maiden
+- Birds of Paradise
+- Bishop's Soldier
+- Bitterbow Sharpshooters
+- Black Lotus
+- Black Widow, Natasha Romanoff
+- Blade of the Sixth Pride
+- Bladebrand
+- Bladed Sentinel
+- Blanchwood Treefolk
+- Blaster Mage
+- Blaze
+- Blazemire Verge
+- Blazing Hellhound
+- Bleachbone Verge
+- Blight Keeper
+- Blight Rot
+- Blighted Bat
+- Blighted Cataract
+- Blighted Gorge
+- Blighted Shaman
+- Blightsoil Druid
+- Blind Phantasm
+- Blinding Mage
+- Blinkmoth Well
+- Blistering Barrier
+- Blistering Dieflyn
+- Blitzball Shot
+- Blizzard Elemental
+- Blood Bairn
+- Blood Celebrant
+- Blood Divination
+- Blood Glutton
+- Blood Host
+- Blood Pact
+- Blood Pet
+- Blood Rites
+- Blood Tithe
+- Blood Vassal
+- Bloodcurdling Scream
+- Bloodflow Connoisseur
+- Bloodlust Inciter
+- Bloodpyre Elemental
+- Bloodrite Invoker
+- Bloodshot Trainee
+- Bloodstone Cameo
+- Bloodtallow Candle
+- Bloodthrone Vampire
+- Blor the Impervious
+- Blorbian Buddy
+- Blossom Dryad
+- Blossoming Defense
+- Blur of Blades
+- Boa Constrictor
+- Bog Imp
+- Bog Initiate
+- Bog Naughty
+- Bog Witch
+- Boggart Brute
+- Bogstomper
+- Bold Impaler
+- Boltwave
+- Bombard
+- Bonders' Enclave
+- Bone Splinters
+- Bonebreaker Giant
+- Book of Rass
+- Boom Box
+- Border Guard
+- Border Patrol
+- Borderland Minotaur
+- Boreal Druid
+- Boreal Griffin
+- Boros Cluestone
+- Boros Guildmage
+- Boros Locket
+- Boros Recruit
+- Boros Signet
+- Boros Swiftblade
+- Bottle Gnomes
+- Bounding Wolf
+- Bounty of Might
+- Braidwood Cup
+- Braingeyser
+- Bramblecrush
+- Brambleweft Behemoth
+- Brass Secretary
+- Brave-Kin Duo
+- Brazen Scourge
+- Breakneck Berserker
+- Breath of Fire
+- Breath of Malfegor
+- Breathstealer
+- Bright Reprisal
+- Brightblade Stoat
+- Brilliant Plan
+- Brimstone Dragon
+- Brindle Boar
+- Broken Wings
+- Bronze Sable
+- Broodhunter Wurm
+- Brushland
+- Brushstrider
+- Brute Force
+- Brute Strength
+- Bull Cerodon
+- Bull Rush
+- Bull's Strength
+- Burning Cloak
+- Burning Fields
+- Burning-Fist Minotaur
+- Burrog Banemaker
+- Burst of Energy
+- Burst of Strength
+- Cabal Archon
+- Cabal Evangel
+- Cabal Trainee
+- Cabaretti Initiate
+- Cackling Imp
+- Cackling Witch
+- Caelorna, Coral Tyrant
+- Caller of Gales
+- Canal Monitor
+- Canopy Gorger
+- Canopy Spider
+- Canyon Minotaur
+- Capashen Knight
+- Capashen Templar
+- Capashen Unicorn
+- Capital Guard
+- Captain's Defense
+- Captivating Cave
+- Captive Flame
+- Caravan Hurda
+- Carnage Altar
+- Carnivorous Moss-Beast
+- Carnivorous Plant
+- Carrion Ants
+- Carrion Howler
+- Carrion Screecher
+- Cascade Bluffs
+- Cast Away Doubt
+- Cast Down
+- Castle Sengir
+- Catacomb Crocodile
+- Catacomb Slug
+- Catalyst Elemental
+- Cathar Commando
+- Cathartic Reunion
+- Caustic Caterpillar
+- Cave of Temptation
+- Cavern Thoctar
+- Caves of Koilos
+- Celestial Enforcer
+- Celestial Prism
+- Centaur Archer
+- Centaur Courser
+- Cephalid Retainer
+- Cephalid Scout
+- Cerodon Yearling
+- Certain Death
+- Ceta Disciple
+- Champion of Arashin
+- Chandler
+- Chandra's Magmutt
+- Channel the Suns
+- Chapel Geist
+- Chaplain's Blessing
+- Char-Rumbler
+- Chardalyn Dragon
+- Charge Through
+- Charging Badger
+- Charging Monstrosaur
+- Charging Strifeknight
+- Charity Extractor
+- Chase Inspiration
+- Checkpoint Officer
+- Child of Night
+- Child of Thorns
+- Chill to the Bone
+- Chilling Shade
+- Chromatic Sphere
+- Chronomaton
+- Cinder Crawler
+- Cinder Elemental
+- Cinder Storm
+- Claws of Gix
+- Cleansing Screech
+- Clear a Path
+- Clickslither
+- Cliffhaven Sell-Sword
+- Cloak of Feathers
+- Cloaked Siren
+- Clockwork Drawbridge
+- Cloud Crusader
+- Cloud Manta
+- Cloudcrown Oak
+- Cloudheath Drake
+- Coal Golem
+- Coalborn Entity
+- Coastal Hornclaw
+- Coat with Venom
+- Cobalt Golem
+- Cobblebrute
+- Coeurl
+- Cogwork Librarian
+- Cogwork Spy
+- Coiled Tinviper
+- Cold-Water Snapper
+- Collateral Damage
+- Colorful Feiyi Sparrow
+- Colossadactyl
+- Colossal Dreadmaw
+- Colossal Might
+- Colossapede
+- Colossodon Yearling
+- Combat Tutorial
+- Command the Storm
+- Common Bond
+- Companion of the Trials
+- Composite Golem
+- Compulsion
+- Concentrate
+- Concentrated Fire
+- Concordia Pegasus
+- Confidence from Strength
+- Conifer Strider
+- Consign to the Pit
+- Consulate Skygate
+- Consumptive Goo
+- Coordinated Assault
+- Copper Host Crusher
+- Copper Myr
+- Coral Commando
+- Coral Eel
+- Coral Merfolk
+- Coretapper
+- Corpse Blockade
+- Corrupted Conviction
+- Cosmium Blast
+- Counsel of the Soratami
+- Courier Hawk
+- Courier's Capsule
+- Cowl Prowler
+- Crackling Triton
+- Crash of Rhinos
+- Crash the Ramparts
+- Craterize
+- Craw Wurm
+- Crazed Skirge
+- Creeping Mold
+- Crenellated Wall
+- Crimson Kobolds
+- Crimson Mage
+- Crimson Manticore
+- Crookshank Kobolds
+- Crosis's Attendant
+- Crossbow Infantry
+- Crowd Favorites
+- Crush
+- Crushing Disappointment
+- Cryoclasm
+- Cryogenic Stasis
+- Crypt Ripper
+- Crystacean
+- Crystal Quarry
+- Crystal Vein
+- Cunning Sparkmage
+- Curio Vendor
+- Cursebreak
+- Cursed Minotaur
+- Cutthroat Maneuver
+- Cyclops of One-Eyed Pass
+- Cylian Elf
+- D'Avenant Archer
+- Daggerback Basilisk
+- Daggerdrome Imp
+- Dakmor Bat
+- Dakmor Scorpion
+- Damnable Pact
+- Dancing Scimitar
+- Daraja Griffin
+- Darigaaz's Attendant
+- Daring Demolition
+- Daring Leap
+- Daring Mechanic
+- Dark Banishing
+- Dark Betrayal
+- Dark Deed
+- Dark Fortress
+- Dark Heart of the Wood
+- Dark Nourishment
+- Dark Offering
+- Dark Remedy
+- Darklit Gargoyle
+- Darksteel Citadel
+- Darksteel Gargoyle
+- Darksteel Ingot
+- Darksteel Myr
+- Darksteel Relic
+- Darksteel Sentinel
+- Darkwater Catacombs
+- Darkwater Egg
+- Dauntless Onslaught
+- Dawn Gryff
+- Dawn's Light Archer
+- Dawnstrike Paladin
+- Daybreak Chaplain
+- Dazzling Ramparts
+- Deadapult
+- Deadeye Duelist
+- Deadly Insect
+- Deadly Recluse
+- Deadly Riposte
+- Death Bomb
+- Death Cultist
+- Death Grasp
+- Death Stroke
+- Death-Hood Cobra
+- Deathbloom Gardener
+- Deathgaze Cockatrice
+- Deathless Angel
+- Deathmark
+- Deathmark Prelate
+- Decimate
+- Deconstruct
+- Dedicated Martyr
+- Deepwood Drummer
+- Deer-Dog
+- Defenestrate
+- Defense Force Aggressor
+- Defiant Elf
+- Defiant Khenra
+- Defiant Strike
+- Defibrillating Current
+- Deft Duelist
+- Dega Disciple
+- Demolish
+- Demon's Grasp
+- Demystify
+- Deranged Outcast
+- Deranged Whelp
+- Desecration Plague
+- Desert Drake
+- Desert Twister
+- Deserted Temple
+- Desiccated Naga
+- Desolate Mire
+- Desperate Lunge
+- Despoil
+- Despotic Scepter
+- Destructive Revelry
+- Devilthorn Fox
+- Devkarin Dissident
+- Devoted Hero
+- Devotee of Strength
+- Devouring Swarm
+- Devout Witness
+- Dimir Cluestone
+- Dimir Locket
+- Dimir Signet
+- Direct Hit
+- Disciple of Tevesh Szat
+- Disciple of the Old Ways
+- Disenchant
+- Disfigure
+- Dismember
+- Dismissive Pyromancer
+- Disorient
+- Dispeller's Capsule
+- Disruptor Pistol
+- Dive Bomber
+- Dive Down
+- Divebomber Griffin
+- Divination
+- Divine Arrow
+- Divine Verdict
+- Diving Griffin
+- Djinn of the Lamp
+- Dogged Hunter
+- Donatello's Science Lesson
+- Doom Blade
+- Dosan's Oldest Chant
+- Double Cleave
+- Douse in Gloom
+- Douser of Lights
+- Downpour
+- Dragon Blood
+- Dragon Engine
+- Dragon Hatchling
+- Dragon Moose
+- Dragon Sniper
+- Dragon's Eye Sentry
+- Dragon's Presence
+- Dragonscale Boon
+- Drain the Well
+- Drake-Skull Cameo
+- Drakewing Krasis
+- Dread Shade
+- Dreadbore
+- Dreadwing
+- Dreamstone Hedron
+- Dreg Reaver
+- Drifting Shade
+- Dromar's Attendant
+- Dromoka Dunecaster
+- Dromoka Warrior
+- Dross Crocodile
+- Dross Hopper
+- Dross Ripper
+- Drudge Sentinel
+- Druid Lyrist
+- Druid of the Anima
+- Druid of the Cowl
+- Dryad Arbor
+- Dual Shot
+- Duergar Assailant
+- Dukhara Peafowl
+- Dune Beetle
+- Dungeon Shade
+- Durkwood Boars
+- Dusk Imp
+- Duskdale Wurm
+- Dust Bowl
+- Dutiful Servants
+- Dwarven Armorer
+- Dwarven Demolition Team
+- Dwarven Miner
+- Dwarven Trader
+- Eager Cadet
+- Eagle of the Watch
+- Early Frost
+- Earth Elemental
+- Earth Kingdom Protectors
+- Earthblighter
+- Earthshaking Si
+- Eastern Paladin
+- Ebony Rhino
+- Ebony Treefolk
+- Eidolon of Philosophy
+- Ekundu Griffin
+- Eldrazi Devastator
+- Electrify
+- Elephant-Rat
+- Elf Replica
+- Elfhame Wurm
+- Elite Archers
+- Elite Arrester
+- Elite Vanguard
+- Elven Fortress
+- Elven Lyre
+- Elven Palisade
+- Elves of Deep Shadow
+- Elvish Archers
+- Elvish Herder
+- Elvish Hexhunter
+- Elvish Lookout
+- Elvish Lyrist
+- Elvish Mystic
+- Elvish Ranger
+- Elvish Scrapper
+- Elvish Skysweeper
+- Elvish Warrior
+- Ember Hauler
+- Ember Shot
+- Ember-Eye Wolf
+- Embraal Gear-Smasher
+- Emerald Dragonfly
+- Encroaching Wastes
+- Energizer
+- Enforcer Griffin
+- Engine Rat
+- Engulfing Eruption
+- Enormous Baloth
+- Enrage
+- Enslaved Dwarf
+- Eriette's Lullaby
+- Escape from Orthanc
+- Esper Cormorants
+- Essence Drain
+- Essence Extraction
+- Essence Infusion
+- Etherium Astrolabe
+- Ethersworn Adjudicator
+- Eviscerate
+- Execute
+- Executioner's Capsule
+- Exocomp
+- Exorcist
+- Expanded Anatomy
+- Expedite
+- Expedition Envoy
+- Expendable Troops
+- Explosive Apparatus
+- Explosive Entry
+- Explosive Impact
+- Explosive Shot
+- Exsanguinate
+- Exultant Skymarcher
+- Eye of Ramos
+- Eyeblight's Ending
+- Eyes of the Beholder
+- Facevaulter
+- Faerie Invaders
+- Faithbearer Paladin
+- Falkenrath Reaver
+- Fallaji Chaindancer
+- Fallen Angel
+- Fan Bearer
+- Fanatical Fever
+- Fanatical Firebrand
+- Fanatical Strength
+- Fancy Footwork
+- Fang of Shigeki
+- Fangren Hunter
+- Fatal Fumes
+- Fathom Fleet Firebrand
+- Fearless Halberdier
+- Feiyi Snake
+- Felhide Minotaur
+- Felidar Cub
+- Fell
+- Femeref Archers
+- Femeref Scouts
+- Fencing Ace
+- Feral Abomination
+- Feral Ferocity
+- Feral Krushok
+- Feral Maaka
+- Feral Ridgewolf
+- Feral Shadow
+- Ferocious Zheng
+- Ferrous Lake
+- Ferrovore
+- Fervent Strike
+- Fetid Heath
+- Fetid Horror
+- Fetid Imp
+- Fevered Convulsions
+- Field Creeper
+- Fiery Conclusion
+- Fiery Finish
+- Fiery Hellhound
+- Fiery Islet
+- Fighting Drake
+- Filigree Sages
+- Finishing Blow
+- Fire Ambush
+- Fire Elemental
+- Fire Nation Ambushers
+- Fire Nation Soldier
+- Fire Shrine Keeper
+- Fire Sprites
+- Fire-Lit Thicket
+- Fireborn Knight
+- Firefly
+- Firehoof Cavalry
+- Firescreamer
+- Fissure
+- Fists of the Anvil
+- Fit of Rage
+- Flame Javelin
+- Flame Lash
+- Flame Slash
+- Flame Spirit
+- Flame-Chain Mauler
+- Flameborn Viron
+- Flamecast Wheel
+- Flamekin Brawler
+- Flamekin Spitfire
+- Flamewave Invoker
+- Flatten
+- Fledgling Imp
+- Fleetfoot Dancer
+- Fleeting Distraction
+- Flesh to Dust
+- Fleshgrafter
+- Flood
+- Flooded Grove
+- Floodfarm Verge
+- Flowstone Channeler
+- Flowstone Crusher
+- Flowstone Giant
+- Flowstone Hellion
+- Flowstone Infusion
+- Flowstone Kavu
+- Flowstone Mauler
+- Flowstone Overseer
+- Flowstone Shambler
+- Flowstone Strike
+- Flowstone Thopter
+- Flowstone Wall
+- Flowstone Wyvern
+- Flying Carpet
+- Flying Dolphin-Fish
+- Flying Men
+- Fodder Cannon
+- Fodder Launch
+- Fodder Tosser
+- Fogwell's Gym
+- Folk of the Pines
+- Fomori Nomad
+- Font of Fortunes
+- Font of Ire
+- Font of Vigor
+- Foot Soldiers
+- Foratog
+- Force of Savagery
+- Forest
+- Forest Bear
+- Fortified Rampart
+- Fortress Crab
+- Fountain of Youth
+- Foxfire Oak
+- Fracture
+- Frantic Confrontation
+- Free from Flesh
+- Frenzied Raptor
+- Fresh Volunteers
+- Frog Butler
+- Frog-Squirrels
+- Frost Ogre
+- Frost Raptor
+- Frostbridge Guard
+- Frostburn Weird
+- Frostling
+- Frozen Shade
+- Fugitive Wizard
+- Fully Grown
+- Fulminator Mage
+- Fumarole
+- Fume Spitter
+- Fungal Bloom
+- Fungus Elemental
+- Furious Reprisal
+- Furious Resistance
+- Furnace Skullbomb
+- Furnace Spirit
+- Furnace Whelp
+- Fusion Elemental
+- Fyndhorn Bow
+- Fyndhorn Brownie
+- Fyndhorn Elder
+- Fyndhorn Elves
+- Gaea's Gift
+- Gaea's Skyfolk
+- Galewind Moose
+- Gallantry
+- Galvanic Key
+- Garruk's Companion
+- Garruk's Gorehorn
+- Gathering Place
+- Gavony Trapper
+- Geist of the Moors
+- Gerrard's Command
+- Gerrard's Irregulars
+- Ghirapur Osprey
+- Ghitu War Cry
+- Ghost Warden
+- Ghostly Sentinel
+- Ghostly Visit
+- Ghosts of the Damned
+- Giant Cockroach
+- Giant Crab
+- Giant Growth
+- Giant Mantis
+- Giant Octopus
+- Giant Scorpion
+- Giant Solifuge
+- Giant Spider
+- Giant Warthog
+- Gibbering Barricade
+- Gideon's Lawkeeper
+- Gideon's Reproach
+- Gift of Strength
+- Gifted Aetherborn
+- Gigantosaurus
+- Gilacorn
+- Gilded Lotus
+- Gilded Sentinel
+- Gin'tak Charge
+- Gird for Battle
+- Give In to Violence
+- Glacial Wall
+- Gladecover Scout
+- Glamorous Grapplers
+- Glass Golem
+- Gleaming Bastion
+- Glimmer Bairn
+- Glimmerbell
+- Glimmering Angel
+- Glint
+- Glintwing Invoker
+- Glissa's Scorn
+- Gloom Pangolin
+- Gloomhunter
+- Gloomlake Verge
+- Glorifier of Dusk
+- Glory Seeker
+- Gnarled Effigy
+- Gnarled Mass
+- Gnathosaur
+- Gnawing Zombie
+- Gnottvold Recluse
+- Go for the Throat
+- Gobbling Ooze
+- Goblin Assailant
+- Goblin Balloon Brigade
+- Goblin Berserker
+- Goblin Bird-Grabber
+- Goblin Bombardment
+- Goblin Bully
+- Goblin Cavaliers
+- Goblin Chariot
+- Goblin Clearcutter
+- Goblin Deathraiders
+- Goblin Digging Team
+- Goblin Dynamo
+- Goblin Firebomb
+- Goblin Fireslinger
+- Goblin Grenade
+- Goblin Hero
+- Goblin Motivator
+- Goblin Picker
+- Goblin Piker
+- Goblin Replica
+- Goblin Roughrider
+- Goblin Sky Raider
+- Goblin Sledder
+- Goblin Striker
+- Goblin Trailblazer
+- Gold Myr
+- Gold-Forged Sentinel
+- Golden Bear
+- Golden Hind
+- Golden-Tail Disciple
+- Goldhound
+- Goldmeadow Harrier
+- Golgari Cluestone
+- Golgari Locket
+- Golgari Longlegs
+- Golgari Rotwurm
+- Golgari Signet
+- Goliath Beetle
+- Goliath Sphinx
+- Goliath Spider
+- Goobbue Gardener
+- Gore Swine
+- Gorilla Warrior
+- Gorn Captain
+- Grandmother Sengir
+- Granger Guildmage
+- Granite Gargoyle
+- Grapeshot Catapult
+- Grappler Spider
+- Grappling Sundew
+- Grasp of Darkness
+- Grasping Dunes
+- Gravel-Hide Goblin
+- Graven Cairns
+- Gray Ogre
+- Grazing Whiptail
+- Great Forest Druid
+- Great Furnace
+- Great Hart
+- Great-Horn Krushok
+- Greater Basilisk
+- Greater Forgeling
+- Greed
+- Greenhilt Trainee
+- Greenside Watcher
+- Greenweaver Druid
+- Greenwood Sentinel
+- Grendel, Spawn of Knull
+- Griffin Canyon
+- Griffin Sentinel
+- Grim Backwoods
+- Grim Draugr
+- Grimclaw Bats
+- Griselbrand
+- Grizzled Leotau
+- Grizzled Outrider
+- Grizzly Bears
+- Grotag Siege-Runner
+- Grotesque Mutation
+- Grove of the Burnwillows
+- Gruul Cluestone
+- Gruul Guildmage
+- Gruul Locket
+- Gruul Nodorog
+- Gruul Signet
+- Guardian Lions
+- Guardian of the Halls
+- Guardians of Meletis
+- Guided Strike
+- Gumato
+- Gurmag Swiftwing
+- Gust-Skimmer
+- Gutless Ghoul
+- Gutter Skulk
+- Guy in the Chair
+- Gyre Engineer
+- Haazda Exonerator
+- Hagra Sharpshooter
+- Hailstorm Valkyrie
+- Halberdier
+- Half-Elf Monk
+- Hand of Death
+- Hand of Silumgar
+- Happy Hogan, Dauntless Driver
+- Hardened Tactician
+- Harmattan Efreet
+- Harmonize
+- Harrier Naga
+- Harrowing Journey
+- Hashep Oasis
+- Hate Weaver
+- Haunted Guardian
+- Havenwood Wurm
+- Havoc Devils
+- Hawkeater Moth
+- Hawkeye, Clint Barton
+- Head of Security
+- Headless Horseman
+- Headwater Sentries
+- Healer's Flock
+- Healer's Hawk
+- Healing Hands
+- Heart Warden
+- Heart of Ramos
+- Hearthfire Hobgoblin
+- Hearts on Fire
+- Heartwood Giant
+- Heat Ray
+- Heavy Ballista
+- Hedron Archive
+- Hedron Crawler
+- Heightened Reflexes
+- Helionaut
+- Hellkite Punisher
+- Hematite Golem
+- Henge Guardian
+- Henge of Ramos
+- Herald of the Sun
+- Hermitic Nautilus
+- Hero's Downfall
+- Heroes' Reunion
+- Hex
+- Hexplate Golem
+- Hidden Lair
+- Hideous End
+- High Market
+- High Stride
+- Highborn Vampire
+- Highland Giant
+- Highspire Infusion
+- Highspire Mantis
+- Hill Giant
+- Hippo-Cows
+- Hired Blade
+- Hired Poisoner
+- Hitchclaw Recluse
+- Hoar Shade
+- Hobblefiend
+- Hobgoblin Dragoon
+- Hollowhenge Beast
+- Homarid Shaman
+- Honor
+- Honor Guard
+- Hoof Skulkin
+- Hope and Glory
+- Hopping Automaton
+- Horizon Canopy
+- Horn of Ramos
+- Horned Turtle
+- Hornet Cobra
+- Hornet Sting
+- Horrid Vigor
+- Horror of the Dim
+- Horseshoe Crab
+- Hostile Minotaur
+- Hotfoot Gnome
+- Hover Barrier
+- Hovermyr
+- Howl from Beyond
+- Howling Fury
+- Huatli's Snubhorn
+- Hulk, Bruce Banner
+- Hulking Bugbear
+- Hulking Devil
+- Hullcarver
+- Humble Budoka
+- Humongulus
+- Hungry Ghoul
+- Hungry Megasloth
+- Hurler Cyclops
+- Hurloon Minotaur
+- Hushwood Verge
+- Hussar Patrol
+- Hyalopterous Lemure
+- Hydrosurge
+- Hyena Pack
+- Icatian Priest
+- Icatian Scout
+- Ice Storm
+- Icebind Pillar
+- Icehide Golem
+- Icehide Troll
+- Icy Manipulator
+- Ifnir Deadlands
+- Igneous Cur
+- Igneous Golem
+- Illusionary Informant
+- Illvoi Galeblade
+- Immolating Glare
+- Immolating Souleater
+- Impale
+- Impeccable Timing
+- Imperial Outrider
+- Implements of Sacrifice
+- Implode
+- Impolite Entrance
+- Incurable Ogre
+- Independent Troops
+- Indicate
+- Indomitable Ancients
+- Infantry Veteran
+- Infernal Grasp
+- Infernal Idol
+- Infernal Plunge
+- Infuriate
+- Inkrise Infiltrator
+- Inner Demons Gangsters
+- Insatiable Harpy
+- Insatiable Souleater
+- Insolent Neonate
+- Inspiration
+- Inspired Insurgent
+- Inspired Ultimatum
+- Inspirit
+- Instill Infection
+- Interjection
+- Into the Maw of Hell
+- Intrepid Tenderfoot
+- Intruding Soulrager
+- Invoke the Divine
+- Involuntary Cooldown
+- Iridescent Blademaster
+- Iroas's Champion
+- Iron Giant
+- Iron Lance
+- Iron Myr
+- Iron Tusk Elephant
+- Iron-Shield Elf
+- Ironclad Krovod
+- Ironroot Treefolk
+- Isamaru, Hound of Konda
+- Island
+- Ixalli's Keeper
+- Izzet Cluestone
+- Izzet Locket
+- Izzet Signet
+- Jace's Ingenuity
+- Jagged Lightning
+- Jagwasp Swarm
+- Jandor's Ring
+- Jandor's Saddlebags
+- Jasmine Boreal
+- Jawbone Skulkin
+- Jaya's Immolating Inferno
+- Jayemdae Tome
+- Jedit Ojanen
+- Jenara, Asura of War
+- Jerrard of the Closed Fist
+- Jeska, Warrior Adept
+- Jeskai Banner
+- Jhessian Lookout
+- Jhovall Queen
+- Jhovall Rider
+- Jibbirik Omnivore
+- Join Forces
+- Joust Through
+- Jousting Dummy
+- Joven
+- Jump
+- Jungle Delver
+- Juniper Order Druid
+- Jwari Scuttler
+- Kabuto Moth
+- Kalakscion, Hunger Tyrant
+- Kalonian Behemoth
+- Kalonian Tusker
+- Kamahl, Pit Fighter
+- Kami of Ancient Law
+- Kami of Old Stone
+- Karplusan Forest
+- Kasimir the Lone Wolf
+- Kavaron Turbodrone
+- Kavu Glider
+- Kederekt Creeper
+- Keen Glidemaster
+- Keen-Eyed Archers
+- Keening Apparition
+- Keepers of the Faith
+- Keldon Arsonist
+- Keldon Necropolis
+- Kelinore Bat
+- Kelsinko Ranger
+- Kessig Recluse
+- Kessig Wolf
+- Kessig Wolf Run
+- Kill Shot
+- Killer Bees
+- Killer Whale
+- Kindercatch
+- Kindled Fury
+- King Cheetah
+- King Suleiman
+- Kiora's Follower
+- Kiss of Death
+- Kiss of the Amesha
+- Kitesail Scout
+- Kithkin Billyrider
+- Kithkin Daggerdare
+- Kithkin Shielddare
+- Kitsune Diviner
+- Kjeldoran Outrider
+- Knight Errant
+- Knight of Meadowgrain
+- Knight of New Benalia
+- Knight of the Keep
+- Knight of the Tusk
+- Knotvine Mystic
+- Kobolds of Kher Keep
+- Kodama of the North Tree
+- Kolinahr Priest
+- Komodo Rhino
+- Kor Sky Climber
+- Koskun Keep
+- Kozilek's Channeler
+- Kraken Hatchling
+- Kranioceros
+- Krark-Clan Engineers
+- Krark-Clan Grunt
+- Krark-Clan Ironworks
+- Krark-Clan Stoker
+- Kraul Raider
+- Kraul Stinger
+- Kraul Warrior
+- Kris Mage
+- Krosan Archer
+- Krovikan Scoundrel
+- Kyoshi Warrior Guard
+- Lace with Moonglove
+- Lady Caleria
+- Lady Orca
+- Lagac Lizard
+- Lampad of Death's Vigil
+- Land Leeches
+- Lantern Kami
+- Large Bear
+- Larger Than Life
+- Lash of Malice
+- Lash of Thorns
+- Lash of the Whip
+- Last Caress
+- Last Gasp
+- Last Kiss
+- Lathnu Sailback
+- Latulla, Keldon Overseer
+- Launch Party
+- Lava Axe
+- Lava Flow
+- Lava Spike
+- Lavastep Raider
+- Lazotep Behemoth
+- Lead Astray
+- Leaden Myr
+- Leaf Arrow
+- Leaf Gilder
+- Leap
+- Leaping Ambush
+- Leaping Lizard
+- Leaping Master
+- Leatherback Baloth
+- Legion Guildmage
+- Leo's Guidance
+- Leonin Skyhunter
+- Leopard-Spotted Jiao
+- Leovold's Operative
+- Letter of Acceptance
+- Ley Druid
+- Leyline Prowler
+- Liberated Dwarf
+- Lich's Caress
+- Lifespring Druid
+- Lightfoot Technique
+- Lightning Angel
+- Lightning Blast
+- Lightning Bolt
+- Lightning Elemental
+- Lightning Helix
+- Lightning Hounds
+- Lightning Stormkin
+- Lightning Strike
+- Lightning Wolf
+- Lightning-Core Excavator
+- Limestone Golem
+- Lionheart Maverick
+- Lithatog
+- Liturgy of Blood
+- Live Fast
+- Living Tempest
+- Lizard Warrior
+- Llanowar Cavalry
+- Llanowar Dead
+- Llanowar Elves
+- Llanowar Envoy
+- Llanowar Tribe
+- Llanowar Vanguard
+- Llanowar Wastes
+- Loamdragger Giant
+- Loch Korrigan
+- Locthwain Gargoyle
+- Longbow Archer
+- Looming Altisaur
+- Looming Shade
+- Lore Seeker
+- Lotus Guardian
+- Lotus Petal
+- Lowland Giant
+- Loxodon Convert
+- Loxodon Line Breaker
+- Loxodon Mystic
+- Loxodon Stalwart
+- Loxodon Wayfarer
+- Lucent Liminid
+- Lumengrid Gargoyle
+- Lumengrid Warden
+- Lunar Frenzy
+- Mad Prophet
+- Magic Damper
+- Magma Rift
+- Magmatic Insight
+- Magmaw
+- Magnigoth Sentry
+- Mahamoti Djinn
+- Makindi Aeronaut
+- Makindi Griffin
+- Malachite Golem
+- Mammoth Spider
+- Mana Confluence
+- Mana Cylix
+- Mana Prism
+- Manakin
+- Manalith
+- Maned Serval
+- Manta Riders
+- Mantis Engine
+- Mantis Rider
+- Maraleaf Pixie
+- Marble Chalice
+- Marble Gargoyle
+- Mardu Banner
+- Mardu Hateblade
+- Marisi's Twinclaws
+- Maritime Guard
+- Markov Dreadknight
+- Markov Patrician
+- Martial Glory
+- Masked Blackguard
+- Masked Meower
+- Mass of Ghouls
+- Massive Might
+- Master Decoy
+- Maw of the Mire
+- Mawcor
+- Maximum Overdrive
+- Maze Skullbomb
+- Megatog
+- Mek'leth Berserker
+- Melt Terrain
+- Memnite
+- Meng Huo's Horde
+- Mental Discipline
+- Merciless Enforcers
+- Merfolk of the Depths
+- Merfolk of the Pearl Trident
+- Merrow Grimeblotter
+- Merrow Wavebreakers
+- Mesa Falcon
+- Mesa Unicorn
+- Metallic Sliver
+- Metropolis Sprite
+- Midnight Assassin
+- Might Weaver
+- Might of Oaks
+- Mighty Leap
+- Mikokoro, Center of the Sea
+- Millennial Gargoyle
+- Mind Spring
+- Mind Stone
+- Mine Bearer
+- Miner's Bane
+- Minister of Impediments
+- Minotaur Abomination
+- Minotaur Aggressor
+- Minotaur Sureshot
+- Minotaur Warrior
+- Mire Shade
+- Mischief and Mayhem
+- Misshapen Fiend
+- Mist Leopard
+- Mistral Charger
+- Moaning Spirit
+- Moat Piranhas
+- Mogg Fanatic
+- Mogg Raider
+- Moldering Karok
+- Molten Ravager
+- Molten Vortex
+- Moltensteel Dragon
+- Moment of Craving
+- Moment of Defiance
+- Moment of Heroism
+- Moment of Triumph
+- Monoist Sentry
+- Mons's Goblin Raiders
+- Monster Mashup
+- Monstrous Growth
+- Moon Heron
+- Moon Sprite
+- Moonglove Extract
+- Moonglove Winnower
+- Moonwing Moth
+- Moopsy
+- Moorish Cavalry
+- Moorland Inquisitor
+- Morgue Toad
+- Moriok Reaver
+- Moriok Replica
+- Morphling
+- Mortal's Ardor
+- Mortal's Resolve
+- Mortify
+- Moss Kami
+- Moss Monster
+- Moss Viper
+- Mosscoat Goriak
+- Mossfire Egg
+- Mossfire Valley
+- Mothrider Patrol
+- Mountain
+- Mountain Bandit
+- Mournful Zombie
+- Mouth of Ronom
+- Mox Emerald
+- Mox Jasper
+- Mox Jet
+- Mox Pearl
+- Mox Ruby
+- Mox Sapphire
+- Muck Rats
+- Mugato
+- Murasa Brute
+- Murder
+- Murmuring Phantasm
+- Murmuring Volume
+- Mushroom Watchdogs
+- Mutagenic Growth
+- Myr Scrapling
+- Mystic Archaeologist
+- Mystic Gate
+- Naga Eternal
+- Nahiri's Stoneblades
+- Nantuko Disciple
+- Nantuko Elder
+- Nantuko Husk
+- Nantuko Shade
+- Narcissism
+- Narnam Cobra
+- Narstad Scrapper
+- Natural End
+- Natural Spring
+- Naturalize
+- Nature's Chant
+- Nature's Claim
+- Naya Battlemage
+- Nebelgast Beguiler
+- Neck Snap
+- Nectar Faerie
+- Need for Speed
+- Needlepeak Spider
+- Needleshot Gourna
+- Needlethorn Drake
+- Nema Siltlurker
+- Nephalia Seakite
+- Nessian Courser
+- Nest Robber
+- Nether Horror
+- Nettle Swine
+- Nezumi Shadow-Watcher
+- Night's Whisper
+- Nightguard Patrol
+- Nightshade Dryad
+- Nightveil Predator
+- Nightwing Shade
+- Nim Replica
+- Nimble Birdsticker
+- Nimbus Maze
+- Nimbus of the Isles
+- Nin, the Pain Artist
+- Nip Gwyllion
+- Noble Panther
+- Noble Steeds
+- Nomadic Elf
+- Noose Constrictor
+- Northern Paladin
+- Norwood Archers
+- Norwood Ranger
+- Notorious Assassin
+- Nourish
+- Novice Dissector
+- Noxious Grasp
+- Noxious Groodion
+- Noxious Newt
+- Nurturing Peatland
+- Nyxborn Brute
+- Nyxborn Colossus
+- Nyxborn Courser
+- Nyxborn Marauder
+- Nyxborn Seaguard
+- Oakgnarl Warrior
+- Obelisk of Bant
+- Obelisk of Esper
+- Obelisk of Grixis
+- Obelisk of Jund
+- Obelisk of Naya
+- Obscura Initiate
+- Obsianus Golem
+- Obsidian Giant
+- Octopus Form
+- Offer Immortality
+- Ogre Berserker
+- Ogre Resister
+- Ogre Sentry
+- Ogre Warrior
+- Oko's Accomplices
+- Old Ghastbark
+- Olivia's Dragoon
+- Omega Myr
+- Onakke Javelineer
+- Onakke Ogre
+- One-Clown Band
+- Onyx Goblet
+- Onyx Mage
+- Opaline Unicorn
+- Open Fire
+- Opportunity
+- Oracle of Nectars
+- Oran-Rief Invoker
+- Orazca Frillback
+- Orazca Raptor
+- Orcish Bloodpainter
+- Orcish Lumberjack
+- Orcish Mechanics
+- Orcish Vandal
+- Order of the Sacred Bell
+- Ordinary Bear
+- Oread of Mountain's Blaze
+- Oreskos Swiftclaw
+- Ornamental Courage
+- Ornithopter
+- Ornithopter of Paradise
+- Orochi Leafcaller
+- Orochi Sustainer
+- Orzhov Cluestone
+- Orzhov Guildmage
+- Orzhov Locket
+- Orzhov Signet
+- Orzhova, the Church of Deals
+- Oscorp Research Team
+- Ostiary Thrull
+- Overeager Apprentice
+- Overflowing Basin
+- Overflowing Insight
+- Overgrown Estate
+- Overkill
+- Overprotect
+- Oxidda Daredevil
+- Oxidize
+- Pacification Array
+- Pain Kami
+- Painful Lesson
+- Painted Bluffs
+- Palladium Myr
+- Panicked Altisaur
+- Panther Warriors
+- Parapet Watchers
+- Parcel Myr
+- Pardic Collaborator
+- Pardic Wanderer
+- Patagia Golem
+- Patrol Hound
+- Pavel Maliki
+- Peace and Quiet
+- Peace of Mind
+- Peak Eruption
+- Pearl Dragon
+- Pearled Unicorn
+- Pedal to the Metal
+- Pegasus Charger
+- Penregon Strongbull
+- Pensive Minotaur
+- Peregrine Griffin
+- Perilous Shadow
+- Pestilent Kathari
+- Pestilent Wolf
+- Phantatog
+- Phantom Monster
+- Pharika's Chosen
+- Pharika's Cure
+- Pheres-Band Centaurs
+- Phyrexia's Core
+- Phyrexian Altar
+- Phyrexian Broodlings
+- Phyrexian Debaser
+- Phyrexian Defiler
+- Phyrexian Denouncer
+- Phyrexian Ghoul
+- Phyrexian Hulk
+- Phyrexian Lens
+- Phyrexian Plaguelord
+- Phyrexian Tower
+- Phyrexian Tribute
+- Phyrexian Vault
+- Phyrexian Walker
+- Phytoburst
+- Pierce the Sky
+- Pilgrim of the Fires
+- Pili-Pala
+- Pillage
+- Pillar Launch
+- Pillarfield Ox
+- Pincher Beetles
+- Pinnacle of Rage
+- Pit Trap
+- Pitiless Gorgon
+- Pitiless Pontiff
+- Pixie Queen
+- Plague Spores
+- Plague Witch
+- Plagued Rusalka
+- Plains
+- Plateau
+- Plated Crusher
+- Plated Seastrider
+- Plated Slagwurm
+- Plated Spider
+- Plated Wurm
+- Playful Shove
+- Plover Knights
+- Plumeveil
+- Plummet
+- Poison Arrow
+- Poison Dart Frog
+- Poison the Blade
+- Poison the Well
+- Porcelain Legionnaire
+- Portcullis Vine
+- Pouncing Cheetah
+- Power Matrix
+- Power Word Kill
+- Prakhata Club Security
+- Prakhata Pillar-Bug
+- Precise Strike
+- Precision Bolt
+- Predator's Strike
+- Predator, Flagship
+- Press the Advantage
+- Pressure Point
+- Priest of Iroas
+- Primal Huntbeast
+- Primeval Shambler
+- Primordial Wurm
+- Princess Lucrezia
+- Prismatic Lens
+- Prismite
+- Pristine Talisman
+- Prized Griffin
+- Prizefighter Construct
+- Prodigal Pyromancer
+- Prodigal Sorcerer
+- Prosperity
+- Protection Magic
+- Prowling Caracal
+- Pseudodragon Familiar
+- Psychotic Fury
+- Pull Under
+- Puncture Bolt
+- Purge
+- Putrefy
+- Pygmy Razorback
+- Pyre Charger
+- Pyrite Spellbomb
+- Pyroclastic Elemental
+- Pyromantic Pilgrim
+- Python
+- Qilin's Blessing
+- Quagmire Druid
+- Quakestrider Ceratops
+- Quaketusk Boar
+- Queen's Bay Soldier
+- Quick Study
+- Quicksand
+- Quicksilver, Pietro Maximoff
+- Quiet Purity
+- Quilled Slagwurm
+- Quilled Wolf
+- Rabid Rats
+- Raccoon Rallier
+- Rack and Ruin
+- Radiant Strike
+- Rage Weaver
+- Ragefire
+- Raging Bull
+- Raging Cougar
+- Raging Goblin
+- Raging Kavu
+- Raging Minotaur
+- Raging Poltergeist
+- Raging Redcap
+- Rain of Salt
+- Rain of Tears
+- Rakdos Cluestone
+- Rakdos Ickspitter
+- Rakdos Locket
+- Rakdos Ragemutt
+- Rakdos Shred-Freak
+- Rakdos Signet
+- Rakdos Trumpeter
+- Ramirez DePietro
+- Ramunap Ruins
+- Ranger's Guile
+- Raptor Companion
+- Rath's Edge
+- Rathi Trapper
+- Rats of Rath
+- Ravenous Baloth
+- Ravenous Bloodseeker
+- Ravenous Harpy
+- Ravenous Intruder
+- Ravine Raider
+- Ray of Dissolution
+- Raze
+- Razorfield Thresher
+- Razorfin Hunter
+- Razorfoot Griffin
+- Razortip Whip
+- Reach Through Mists
+- Reach of Shadows
+- Reap What Is Sown
+- Rearing Embermare
+- Rebellious Strike
+- Rebuke
+- Reckless Abandon
+- Reckless Assault
+- Reckless Barbarian
+- Reckless Rage
+- Reckless Reveler
+- Reckless Spite
+- Reclaiming Vines
+- Redwood Treefolk
+- Refocus
+- Refuse to Yield
+- Regal Unicorn
+- Regathan Firecat
+- Relentless Hunter
+- Relic Barrier
+- Relic Crush
+- Relic Sloth
+- Rend Flesh
+- Renegade Demon
+- Renegade Troops
+- Repel the Darkness
+- Repulsor Rays
+- Resistance Skywarden
+- Resolute Rider
+- Resolute Watchdog
+- Resupply
+- Retrieval Agent
+- Return to the Earth
+- Revitalize
+- Reviving Dose
+- Rhox Brute
+- Rhox War Monk
+- Rib Cage Spider
+- Ridged Kusite
+- Ridgeline Rager
+- Ridgetop Raptor
+- Rig for War
+- Righteous Blow
+- Righteousness
+- Ring of the Lucii
+- Riot Devils
+- Rip-Clan Crasher
+- Ripchain Razorkin
+- Ripscale Predator
+- Riptide Turtle
+- Rise to the Challenge
+- Risen Sanctuary
+- Rishadan Port
+- Risky Shortcut
+- Rith's Attendant
+- Ritual of Rejuvenation
+- Riven Turnbull
+- River Heralds' Boon
+- River Hoopoe
+- River Kaijin
+- Riverguard's Reflexes
+- Riverpyre Verge
+- Riveteers Initiate
+- Roast
+- Roc Hunter
+- Roc of Kher Ridges
+- Rod of Ruin
+- Ronom Unicorn
+- Roofstalker Wight
+- Rootbreaker Wurm
+- Rootrider Faun
+- Rootwater Hunter
+- Rorix Bladewing
+- Rotted Hulk
+- Rotted Hystrix
+- Rotting Fensnake
+- Rotting Mastodon
+- Rowan Treefolk
+- Royal Assassin
+- Royal Falcon
+- Rubble Slinger
+- Rubbleback Rhino
+- Rugged Prairie
+- Ruination Wurm
+- Ruinous Gremlin
+- Ruins Recluse
+- Rumbling Baloth
+- Rummaging Goblin
+- Run Amok
+- Rune-Cervin Rider
+- Runeclaw Bear
+- Rush of Adrenaline
+- Rush of Vitality
+- Russet Wolves
+- Rust Monster
+- Rustwing Falcon
+- Ruthless Disposal
+- Saberclaw Golem
+- Sabertooth Wyvern
+- Sabretooth Tiger
+- Sacellum Archers
+- Sacred Armory
+- Sacred Nectar
+- Sacred White Deer
+- Sacred Wolf
+- Safehold Sentry
+- Sage of Lat-Nam
+- Saltblast
+- Saltfield Recluse
+- Sanctify
+- Sanctuary Cat
+- Sandblast
+- Sandstone Deadfall
+- Sandstone Warrior
+- Sangrite Surge
+- Sarcomite Myr
+- Sarkhan's Catharsis
+- Sarpadian Simulacrum
+- Satyr Rambler
+- Savage Gorilla
+- Savage Surge
+- Savai Sabertooth
+- Savannah
+- Savannah Lions
+- Scalding Cauldron
+- Scalding Devil
+- Scaldkin
+- Scaled Behemoth
+- Scaled Wurm
+- Scar
+- Scarland Thrinax
+- Scarlet Witch, Wanda Maximoff
+- Scarwood Goblins
+- Scathe Zombies
+- Scavenger Folk
+- Scepter of Dominance
+- Scepter of Insight
+- Scholar of Athreos
+- School of the Unseen
+- Scion of Glaciers
+- Scion of Ugin
+- Scorched Rusalka
+- Scorching Shot
+- Scorching Spear
+- Scoria Elemental
+- Scorpion's Sting
+- Scrap Compactor
+- Scrapyard Steelbreaker
+- Screaming Fury
+- Scrounger of Souls
+- Scrubland
+- Scryb Sprites
+- Sea Eagle
+- Sea Scryer
+- Sea Spirit
+- Seacoast Drake
+- Seagraf Skaab
+- Seal of Cleansing
+- Seal of Doom
+- Seal of Fire
+- Seal of Primordium
+- Seal of Strength
+- Sear
+- Searchlight Geist
+- Searing Flesh
+- Searing Spear
+- Searing Wind
+- Seashell Cameo
+- Seaside Haven
+- Seasoned Hallowblade
+- Seat of the Synod
+- Sedge Scorpion
+- Seedcradle Witch
+- Seeds of Strength
+- Seeker of Skybreak
+- Seething Pathblazer
+- Segovian Angel
+- Seismic Assault
+- Seismic Mage
+- Seismic Spike
+- Seize the Initiative
+- Selesnya Cluestone
+- Selesnya Locket
+- Selesnya Signet
+- Selfless Savior
+- Selhoff Entomber
+- Senate Courier
+- Sentinel Spider
+- Sentinels of Glen Elendra
+- Sephiroth's Intervention
+- Seraph of Dawn
+- Seraph of the Suns
+- Serpent's Gift
+- Serpentine Kavu
+- Serra Advocate
+- Serra Angel
+- Serra Sphinx
+- Serra Zealot
+- Serum Powder
+- Sewn-Eye Drake
+- Shadow Glider
+- Shadowblood Egg
+- Shadowblood Ridge
+- Shadowcloak Vampire
+- Shambling Strider
+- Shape the Sands
+- Shaper Guildmage
+- Shard Volley
+- Shatter
+- Shatterskull Giant
+- Shatterskull Recruit
+- Shauku's Minion
+- She-Hulk, Jennifer Walters
+- Shell Skulkin
+- Shepherd of the Lost
+- Shield Mate
+- Shimmering Grotto
+- Shining Aerosaur
+- Shivan Dragon
+- Shivan Gorge
+- Shivan Harvest
+- Shivan Hellkite
+- Shivan Reef
+- Shock
+- Shock Troops
+- Shocking Grasp
+- Shore Keeper
+- Shore Up
+- Shorecomber Crab
+- Show of Valor
+- Shrapnel Blast
+- Shredding Winds
+- Shriekdiver
+- Shrike Force
+- Shrink
+- Shu Elite Infantry
+- Shu Foot Soldiers
+- Sick and Tired
+- Sickbay Orderly
+- Siege Mastodon
+- Sigardian Priest
+- Sign in Blood
+- Signpost Scarecrow
+- Silent Artisan
+- Silent Attendant
+- Silent Clearing
+- Silent Dart
+- Silent Observer
+- Silk Net
+- Silkbind Faerie
+- Silver Erne
+- Silver Myr
+- Silverback Ape
+- Silverbeak Griffin
+- Silverclaw Griffin
+- Silvercoat Lion
+- Silverstrike
+- Simian Brawler
+- Simic Cluestone
+- Simic Locket
+- Simic Ragworm
+- Simic Signet
+- Simic Sky Swallower
+- Sinkhole
+- Sip of Hemlock
+- Sir Shandlar of Eberyn
+- Sisay's Ring
+- Sisters of the Flame
+- Sivitri Scarzam
+- Sizzle
+- Skarrg, the Rage Pits
+- Skeletal Crocodile
+- Skeletal Snake
+- Skillful Lunge
+- Skirge Familiar
+- Skirk Prospector
+- Skirsdag Cultist
+- Skirsdag Flayer
+- Skirsdag Supplicant
+- Skittering Heartstopper
+- Skulduggery
+- Skull Catapult
+- Skull of Ramos
+- Skullmead Cauldron
+- Skulltap
+- Sky Ruin Drake
+- Sky Spirit
+- Sky Terror
+- Sky Weaver
+- Skyblade of the Legion
+- Skycloud Egg
+- Skycloud Expanse
+- Skyhunter Patrol
+- Skyhunter Prowler
+- Skyhunter Skirmisher
+- Skyknight Legionnaire
+- Skyline Predator
+- Skyraker Giant
+- Skyship Stalker
+- Skyshooter
+- Skyshroud Archer
+- Skyshroud Elf
+- Skyshroud Falcon
+- Skyshroud Troopers
+- Skyshroud Vampire
+- Skysnare Spider
+- Skyspear Cavalry
+- Skyswirl Harrier
+- Skyway Sniper
+- Slash Panther
+- Slash of Talons
+- Slaughter Cry
+- Slay
+- Slayers' Stronghold
+- Sledding Otter-Penguin
+- Slice in Twain
+- Slingshot Goblin
+- Slinking Skirge
+- Slippery Bogle
+- Sliver Construct
+- Slobad, Goblin Tinkerer
+- Smash
+- Smash to Smithereens
+- Smaug's Fury
+- Smelt
+- Smokespew Invoker
+- Snakeskin Veil
+- Snapping Drake
+- Snare Thopter
+- Snare the Skies
+- Snow-Covered Forest
+- Snow-Covered Island
+- Snow-Covered Mountain
+- Snow-Covered Plains
+- Snow-Covered Swamp
+- Snow-Covered Wastes
+- Soaring Drake
+- Sokka, Wolf Cove's Protector
+- Sol Ring
+- Soldier On
+- Soldier Replica
+- Solemn Offering
+- Soliton
+- Songbird, Sonic Screamer
+- Soothing Balm
+- Sootstoke Kindler
+- Sorcerer of the Fang
+- Sorin's Thirst
+- Sorin's Vengeance
+- Soul Feast
+- Soul Shred
+- Soul of the Rapids
+- Soulbound Guardians
+- Souldrinker
+- Soulmender
+- Soulreaper of Mogis
+- Southern Elephant
+- Southern Paladin
+- Sovereign's Bite
+- Spatial Contortion
+- Specter of the Fens
+- Spectral Sailor
+- Sphinx of Magosi
+- Sphinx's Revelation
+- Spidery Grasp
+- Spike Jester
+- Spiked Baloth
+- Spin Out
+- Spinal Villain
+- Spined Karok
+- Spined Thopter
+- Spined Wurm
+- Spinning Wheel
+- Spire Monitor
+- Spire of Industry
+- Spirit Weaver
+- Spiteflame Witch
+- Spiteful Blow
+- Spock, Logical Choice
+- Spontaneous Flight
+- Sporecap Spider
+- Spotted Griffin
+- Spreading Rot
+- Spring of Eternal Peace
+- Springjaw Trap
+- Springsage Ritual
+- Squall Drifter
+- Squire
+- Squirrelanoids
+- Stab
+- Stabbing Pain
+- Staff of Domination
+- Staff of Zegon
+- Staggering Size
+- Stalking Assassin
+- Stalking Bloodsucker
+- Stampeding Rhino
+- Standing Stones
+- Standing Troops
+- Starfleet Crew
+- Starlight Invoker
+- Starlit Angel
+- Starnheim Memento
+- Starved Rusalka
+- Staunch Shieldmate
+- Steadfast Guard
+- Steadfast Paladin
+- Steady Aim
+- Steam Spitter
+- Steel Wall
+- Steeple Creeper
+- Steeple Roc
+- Stensia Bloodhall
+- Sterling Keykeeper
+- Stern Constable
+- Steward of Valeron
+- Stinging Barrier
+- Stolen Grain
+- Stomp and Howl
+- Stomper Cub
+- Stone Golem
+- Stone Haven Medic
+- Stone Kavu
+- Stone Rain
+- Stonefare Crocodile
+- Stonehorn Chanter
+- Stonewood Invoker
+- Stonework Puma
+- Stony Strength
+- Storm Crow
+- Storm Front
+- Storm Shaman
+- Storm Spirit
+- Storm of Steel
+- Stormcloud Spirit
+- Stormfront Pegasus
+- Stormrider Spirit
+- Stormscape Apprentice
+- Story Seeker
+- Strafe
+- Strangle
+- Strangling Spores
+- Straw Soldiers
+- Stream Hopper
+- Stream of Acid
+- Stream of Life
+- Streetbreaker Wurm
+- Strip Mine
+- Stroke of Genius
+- Stronghold Assassin
+- Stun Sniper
+- Succumb to Temptation
+- Succumb to the Cold
+- Sudden Spinnerets
+- Sudden Strength
+- Sudden Strike
+- Sugar Rush
+- Sulfurous Springs
+- Sultai Banner
+- Summit Prowler
+- Sun Sentinel
+- Sun-Collared Raptor
+- Sunastian Falconer
+- Sunbaked Canyon
+- Sunbeam Spellbomb
+- Sunbillow Verge
+- Sunblade Angel
+- Sunder from Within
+- Sundial, Dawn Tyrant
+- Sungrace Pegasus
+- Sungrass Egg
+- Sungrass Prairie
+- Sunhome, Fortress of the Legion
+- Sunken Ruins
+- Sunlance
+- Sunmane Pegasus
+- Sunscorched Divide
+- Sunset Strikemaster
+- Sunspire Griffin
+- Suntail Hawk
+- Sure Strike
+- Surge of Righteousness
+- Surly Farrier
+- Sustenance
+- Swab Goblin
+- Swallowing Plague
+- Swamp
+- Swelter
+- Swift Justice
+- Swift Response
+- Swift Spinner
+- Swiftblade Vindicator
+- Swooping Lookout
+- Sword Dancer
+- Swordwise Centaur
+- Sworn Guardian
+- Sylvan Caryatid
+- Sylvan Safekeeper
+- Sylvok Replica
+- Symbiosis
+- Synchronized Strike
+- Syndicate Trafficker
+- Syphon Fuel
+- Tablet of Compleation
+- Taiga
+- Tainted Field
+- Tainted Isle
+- Tainted Peak
+- Tainted Wood
+- Tajuru Blightblade
+- Tajuru Pathwarden
+- Tajuru Snarecaster
+- Take Up the Shield
+- Take Vengeance
+- Talarian Hook Spider
+- Talas Air Ship
+- Talas Merchant
+- Talas Scout
+- Talisman of Conviction
+- Talisman of Creativity
+- Talisman of Curiosity
+- Talisman of Dominance
+- Talisman of Hierarchy
+- Talisman of Impulse
+- Talisman of Indulgence
+- Talisman of Progress
+- Talisman of Resilience
+- Talisman of Unity
+- Talon Trooper
+- Talonrend
+- Talruum Minotaur
+- Tamiyo's Safekeeping
+- Tandem Tactics
+- Tangle Mantis
+- Tangle Spider
+- Tanglebloom
+- Taoist Hermit
+- Tar Pitcher
+- Tar Snare
+- Tarfire
+- Tarnished Citadel
+- Tasseled Dromedary
+- Taste of Blood
+- Tattered Apparition
+- Taxi Driver
+- Teeterpeak Ambusher
+- Telim'Tor's Darts
+- Tempest Drake
+- Temple Bell
+- Temur Banner
+- Tenement Crasher
+- Terashi's Cry
+- Terminate
+- Terrain Elemental
+- Terrian, World Tyrant
+- Territorial Roc
+- Terror
+- Terror of the Fairgrounds
+- Tethermage's Advantage
+- Thallid Soothsayer
+- Thaumatog
+- The Fabulous Frog-Man
+- The Lady of the Mountain
+- The Terror of Serpent's Pass
+- The Whizzer, Classic Speedster
+- Thermal Navigator
+- Thermopod
+- Third Path Savant
+- Thirsting Shade
+- Thornhide Wolves
+- Thornling
+- Thornscape Apprentice
+- Thornspire Verge
+- Thornweald Archer
+- Thornwind Faeries
+- Those Who Serve
+- Thraben Purebloods
+- Thraben Valiant
+- Thran Dynamo
+- Thrashing Brontodon
+- Three Tree Rootweaver
+- Thrill of Possibility
+- Thriss, Nantuko Primus
+- Throttle
+- Thunder Spirit
+- Thunder Strike
+- Thunder Wall
+- Thundering Giant
+- Thundering Rebuke
+- Thundering Tanadon
+- Thunderscape Apprentice
+- Ticked Off
+- Ticket Turbotubes
+- Tidal Surge
+- Tidehollow Strix
+- Tidings
+- Tigereye Cameo
+- Tireless Tribe
+- Titanic Growth
+- Titanium Golem
+- Tobias Andrion
+- Tolarian Scholar
+- Tonic Peddler
+- Tooth of Ramos
+- Tor Giant
+- Tor Wauki
+- Torch Courier
+- Torch Drake
+- Torch Fiend
+- Tormented Angel
+- Tormenting Voice
+- Torsten Von Ursus
+- Touch of Brilliance
+- Touchstone
+- Tower Drake
+- Tower Gargoyle
+- Tower of Calamities
+- Tower of Champions
+- Tower of Eons
+- Tower of Fortunes
+- Towering Indrik
+- Towering Thunderfist
+- Towering Viewpoint
+- Trailblazing Historian
+- Trained Armodon
+- Trained Caracal
+- Trained Jackal
+- Trained Orgg
+- Training Compound
+- Tranquilize
+- Transdimensional Bovine
+- Traveling Minister
+- Traveling Philosopher
+- Tread Upon
+- Treasure Trove
+- Tree Monkey
+- Tree of Tales
+- Treetop Snarespinner
+- Trench Wurm
+- Trenching Steed
+- Treva's Attendant
+- Trip Noose
+- Triton Shorethief
+- Trokin High Guard
+- Troll-Horn Cameo
+- Tropical Island
+- Trostani, Three Whispers
+- Truefire Paladin
+- Tuknir Deathlock
+- Tundra
+- Tundra Wall
+- Tundra Wolves
+- Tune the Narrative
+- Tunnel
+- Turn to Dust
+- Turtle-Seals
+- Tusked Colossodon
+- Twigwalker
+- Twilight Mire
+- Twilight Panther
+- Twinscroll Shaman
+- Two-Headed Cerberus
+- Two-Headed Zombie
+- Tymora's Invoker
+- Typhoid Rats
+- Tyrant's Machine
+- Tyrox, Saurid Tyrant
+- Tyrranax
+- Tyvar's Stand
+- Uktabi Faerie
+- Ukud Cobra
+- Ulcerate
+- Ulrich's Kindred
+- Unbender Tine
+- Unburied Earthcarver
+- Uncaged Fury
+- Uncanny Speed
+- Undead Minotaur
+- Undercity Necrolisk
+- Underdark Basilisk
+- Underground River
+- Underground Sea
+- Undergrowth Leopard
+- Unfriendly Fire
+- Unholy Officiant
+- Universal Solvent
+- Unknown Shores
+- Unleash Shell
+- Unlikely Aid
+- Unnatural Predation
+- Unnatural Speed
+- Unraveling Mummy
+- Unrooted Ancestor
+- Unspeakable Symbol
+- Unstable Obelisk
+- Untamed Might
+- Unyaro Bee Sting
+- Unyaro Bees
+- Unyielding Krumar
+- Updraft Elemental
+- Ur-Golem's Eye
+- Urborg Elf
+- Urgent Exorcism
+- Urn of Godfire
+- Ursapine
+- Utopia Tree
+- Valakut Invoker
+- Valiant Guard
+- Vampire Aristocrat
+- Vampire Champion
+- Vampire Hounds
+- Vampire Neonate
+- Vampire Nighthawk
+- Vampire Noble
+- Vampire Opportunist
+- Vampire Revenant
+- Vampire of the Dire Moon
+- Vampiric Feast
+- Vampiric Rites
+- Vampiric Touch
+- Vanquish
+- Vassal Soul
+- Vastwood Gorger
+- Vault Skirge
+- Vault Skyward
+- Vault of Whispers
+- Vectis Silencers
+- Veiled Shade
+- Venerable Lammasu
+- Vengeance
+- Venomthrope
+- Venser's Sliver
+- Verdant Automaton
+- Verdigris
+- Vermin Gorger
+- Vernadi Shieldmate
+- Vesper Ghoul
+- Vessel of Volatility
+- Veteran Cathar
+- Veteran Cavalier
+- Veteran's Reflexes
+- Vexing Gull
+- Vial of Dragonfire
+- Vial of Poison
+- Viashino Fangtail
+- Viashino Grappler
+- Viashino Runner
+- Viashino Slasher
+- Viashino Spearhunter
+- Viashino Warrior
+- Viashivan Dragon
+- Vibrant Outburst
+- Vicious Hunger
+- Victim of Night
+- Victorious Destruction
+- Vigilant Baloth
+- Vigilant Drake
+- Village Rites
+- Vindicate
+- Vine Trellis
+- Vines of the Recluse
+- Violent Ultimatum
+- Viridescent Bog
+- Viridian Acolyte
+- Viridian Scout
+- Viridian Zealot
+- Visara the Dreadful
+- Vision Skeins
+- Vivisection
+- Vizkopa Vampire
+- Vizzerdrix
+- Vodalian Soldiers
+- Voiceless Spirit
+- Void Helix
+- Volcanic Dragon
+- Volcanic Geyser
+- Volcanic Hammer
+- Volcanic Island
+- Volcanic Rambler
+- Volcanic Upheaval
+- Volcano Imp
+- Voltaic Construct
+- Voltaic Key
+- Volunteer Militia
+- Vona, Butcher of Magan
+- Voracious Null
+- Voracious Varmint
+- Vorstclaw
+- Voyaging Satyr
+- Vulpine Goliath
+- Vulshok Berserker
+- Vulshok Replica
+- Vulshok Sorcerer
+- Walk the Plank
+- Walking Corpse
+- Wall of Air
+- Wall of Blood
+- Wall of Denial
+- Wall of Earth
+- Wall of Faith
+- Wall of Fire
+- Wall of Granite
+- Wall of Heat
+- Wall of Ice
+- Wall of Lava
+- Wall of Mist
+- Wall of Mulch
+- Wall of Opposition
+- Wall of Razors
+- Wall of Spears
+- Wall of Stone
+- Wall of Swords
+- Wall of Tanglecord
+- Wall of Torches
+- Wall of Vines
+- Wall of Water
+- Wall of Wood
+- Wallop
+- Wanderer's Intervention
+- Wandering Ones
+- Wandering Tombshell
+- War Chariot
+- War Mammoth
+- War-Torch Goblin
+- Warclamp Mastiff
+- Warden of Geometries
+- Wardscale Crocodile
+- Warleader's Helix
+- Warpath Ghoul
+- Warriors of Wakanda
+- Warship Flight Crew
+- Warship Scout
+- Wary Okapi
+- Wasp Lancer
+- Waste Away
+- Wasteland
+- Wastes
+- Wastewood Verge
+- Watchwolf
+- Water Elemental
+- Water Servant
+- Watercourser
+- Waterlogged Grove
+- Wave Elemental
+- Wayward Giant
+- Weaponize the Monsters
+- Weaselback Redcap
+- Weave Fate
+- Weaver of Currents
+- Wei Infantry
+- Welder Automaton
+- Weldfast Monitor
+- Western Paladin
+- Westfold Rider
+- Wetland Sambar
+- Whip Sergeant
+- Whiptail Wurm
+- Whiptongue Frog
+- Whirling Strike
+- Whisperer of the Wilds
+- Whispergear Sneak
+- Whitesun's Passage
+- Wicked Pact
+- Wicked Reward
+- Wicker Witch
+- Wielding the Green Dragon
+- Wild Cantor
+- Wild Ceratok
+- Wild Colos
+- Wild Elephant
+- Wild Griffin
+- Wild Guess
+- Wild Jhovall
+- Wilderness Hypnotist
+- Wildheart Invoker
+- Wildsize
+- Wildwood Patrol
+- Willow Elf
+- Willow Faerie
+- Willowrush Verge
+- Wilt-Leaf Cavaliers
+- Wily Bandar
+- Wind Dancer
+- Wind Drake
+- Wind Sail
+- Wind Spirit
+- Wind Strider
+- Windborne Charge
+- Windseeker Centaur
+- Wing Snare
+- Winged Coatl
+- Winter's Grasp
+- Winter's Intervention
+- Wirewood Elf
+- Wirewood Lodge
+- Wishcoin Crab
+- Witch's Cauldron
+- Witch's Familiar
+- Witch's Web
+- Withering Torment
+- Withstand Death
+- Wizards' School
+- Woodcutter's Grit
+- Wooded Bastion
+- Woodland Druid
+- Woodland Mystic
+- Woodland Patrol
+- Woolly Thoctar
+- Worf, Chief Tactical Officer
+- Wose Pathfinder
+- Wrecking Ball
+- Wrecking Crew
+- Wring Flesh
+- Wu Infantry
+- Wyluli Wolf
+- Xenobotanist
+- Xira Arien
+- Yargle and Multani
+- Yargle, Glutton of Urborg
+- Yargle, Goliath of Otaria
+- Yavimaya Ancients
+- Yavimaya Coast
+- Yavimaya Wurm
+- Yoked Ox
+- Yotian Medic
+- Yotian Soldier
+- Youthful Knight
+- Zap
+- Zarichi Tiger
+- Zealot of the God-Pharaoh
+- Zealous Guardian
+- Zealous Strike
+- Zephid
+- Zephyr Charge
+- Zephyr Falcon
+- Zephyr Sprite
+- Zetalpa, Primal Dawn
+- Zhao, the Seething Flame
+- Zof Shade
+- Zombie Goliath
+- Zookeeper Mechan
+- Zuko's Offense
+- Zuran Orb
+- Zuran Spellcaster
+
+</details>

@@ -1,0 +1,105 @@
+# Status der Regeln aus Forge_Rules_Engine.xlsx / Forge_Rules/*.xlsx.
+# Wird von tools/sync_regelstatus.py in die xlsx-Dateien und nach docs/03-regelstand.md übertragen.
+# Spalten: Kategorie;Regel;Status;Tests;Hinweis
+# Status: ja = umgesetzt + CR-Regeltests (xlsx: TRUE) | teilweise = Teilumfang (xlsx: FALSE) | n/a = außerhalb des Scopes (xlsx: n/a)
+# Nicht aufgeführte Regeln sind offen.
+Turn Structure;Untap step;teilweise;turn_structure::untap_step_untaps_active_players_permanents;Enttappen + Zugbeginn-Kontrolle fertig; Phasing fehlt
+Turn Structure;Upkeep step;ja;turn_structure::steps_in_order_and_combat_skips_without_attackers;Trigger „zu Beginn des Versorgungssegments“ kommen mit dem Trigger-System
+Turn Structure;Draw step;ja;turn_structure::draw_step_draws_and_first_player_skips_first_draw;inkl. CR 103.8a
+Turn Structure;Precombat main phase;teilweise;spells::land_play_once_per_turn_sorcery_timing;Länder/Hexereien fertig; Saga-Kapitelmarken fehlen
+Turn Structure;Beginning of combat step;ja;turn_structure::steps_in_order_and_combat_skips_without_attackers;
+Turn Structure;Declare attackers step;teilweise;combat::summoning_sickness_haste_defender;nur Spieler als Verteidiger; Planeswalker/Battles, Angriffsbedingungen/-kosten fehlen
+Turn Structure;Declare blockers step;teilweise;combat::flying_needs_flying_or_reach_to_block;Flying/Reach/Menace; weitere Blockbeschränkungen (Statics) fehlen
+Turn Structure;First strike damage step;ja;combat::first_strike_kills_before_regular_damage;
+Turn Structure;Combat damage step;ja;combat::trample_assigns_excess_to_player;Regeln ab Foundations (keine Schadenszuweisungsreihenfolge)
+Turn Structure;End of combat step;ja;turn_structure::steps_in_order_and_combat_skips_without_attackers;
+Turn Structure;Postcombat main phase;teilweise;turn_structure::steps_in_order_and_combat_skips_without_attackers;wie Precombat main phase
+Turn Structure;End step;ja;turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects;
+Turn Structure;Cleanup step;ja;turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects;inkl. CR 514.3a (erneuter Cleanup)
+Turn Structure;Priority and stack;ja;turn_structure::stack_resolves_last_in_first_out;CR 117, 405, 608 inkl. Fizzle (608.2b)
+Turn Structure;Layer system;teilweise;spells::draw_gain_lose_life_and_pump;nur Layer 6 (Fähigkeiten hinzufügen) und 7c
+Turn Structure;Mulligan;ja;turn_structure::london_mulligan;London-Mulligan; freier Mulligan (Multiplayer/Commander) fehlt noch
+State-Based Action;CR 704.5a;ja;sba::cr_704_5a_zero_life_loses;
+State-Based Action;CR 704.5b;ja;sba::cr_704_5b_draw_from_empty_library_loses;
+State-Based Action;CR 704.5c;ja;sba::cr_704_5c_ten_poison_loses;
+State-Based Action;CR 704.5d;ja;sba::cr_704_5d_token_outside_battlefield_ceases_to_exist;Spell-Kopien folgen mit Copy-Effekten
+State-Based Action;CR 704.5f;ja;sba::cr_704_5f_zero_toughness_dies_even_if_indestructible;
+State-Based Action;CR 704.5g;ja;sba::cr_704_5g_lethal_damage_destroys_but_not_indestructible;Regeneration fehlt
+State-Based Action;CR 704.5h;ja;sba::cr_704_5h_deathtouch_damage_destroys;
+State-Based Action;CR 704.5i;ja;sba::cr_704_5i_planeswalker_without_loyalty;
+State-Based Action;CR 704.5j;ja;sba::cr_704_5j_legend_rule_controller_chooses;
+State-Based Action;CR 704.5k;ja;sba::cr_704_5k_world_rule_newest_stays;
+State-Based Action;CR 704.5q;ja;sba::cr_704_5q_plus_and_minus_counters_annihilate;
+State-Based Action;CR 704.5u;n/a;;Space Sculptor (Unstable)
+State-Based Action;CR 704.5v;ja;sba::cr_704_5v_battle_without_defense;
+State-Based Action;Contraption;n/a;;Unstable
+State-Based Action;Scheme;n/a;;Archenemy
+Keyword;Deathtouch;ja;combat::deathtouch_lethal_is_one_for_damage_assignment;
+Keyword;Defender;ja;combat::summoning_sickness_haste_defender;
+Keyword;Double Strike;ja;combat::double_strike_deals_damage_twice;
+Keyword;First Strike;ja;combat::first_strike_kills_before_regular_damage;
+Keyword;Flash;ja;spells::flash_allows_instant_speed_casting;
+Keyword;Flying;ja;combat::flying_needs_flying_or_reach_to_block;
+Keyword;Haste;ja;combat::summoning_sickness_haste_defender;
+Keyword;Hexproof;teilweise;spells::hexproof_only_blocks_opponents;„Hexproof from …“ fehlt
+Keyword;Indestructible;ja;spells::destroy_respects_indestructible;
+Keyword;Lifelink;ja;combat::deathtouch_and_lifelink_in_combat;
+Keyword;Menace;ja;combat::menace_needs_two_blockers;
+Keyword;Reach;ja;combat::flying_needs_flying_or_reach_to_block;
+Keyword;Shroud;ja;spells::shroud_blocks_all_targeting;
+Keyword;Trample;teilweise;combat::trample_assigns_excess_to_player;Trample über Planeswalker fehlt
+Keyword;Vigilance;ja;combat::vigilance_does_not_tap;
+Keyword;Double agenda;n/a;;Conspiracy-Draft
+Keyword;Hidden agenda;n/a;;Conspiracy-Draft
+Keyword;Space sculptor;n/a;;Unstable
+Keyword;Starting intensity;n/a;;Alchemy
+Cost;Mana cost;ja;spells::x_spell;inkl. Hybrid, Phyrexian, {2/W}, X; Snow-Bezahlung nur aus Pool
+Cost;Add mana;teilweise;spells::manual_mana_payment_and_cancel;Mana-Fähigkeiten mit Produced$ (fest, Any, Combo Farbe)
+Cost;{T};ja;spells::activated_ability_with_tap_cost_uses_stack_and_sickness;
+Cost;{Q};ja;spells::untap_symbol_cost;
+Cost;Sac;ja;spells::sacrifice_self_cost;Sac<1/CARDNAME> und Sac<n/Typ>
+Cost;Discard;teilweise;;Discard<n/Typ>; Hand/Random fehlen
+Cost;PayLife;ja;spells::phyrexian_mana_with_life;
+Cost;PayShards;n/a;;Adventure-Modus
+Effect (ApiType);DealDamage;teilweise;spells::bolt_face_and_creature_and_fizzle;Grundform; siehe docs/generated/unterstuetzung.md
+Effect (ApiType);Draw;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
+Effect (ApiType);GainLife;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
+Effect (ApiType);LoseLife;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
+Effect (ApiType);Destroy;teilweise;spells::destroy_respects_indestructible;Grundform; Regeneration fehlt
+Effect (ApiType);Pump;teilweise;spells::draw_gain_lose_life_and_pump;NumAtt/NumDef/KW bis Zugende
+Effect (ApiType);Mana;teilweise;spells::manual_mana_payment_and_cancel;
+Effect (ApiType);Tap;teilweise;;Grundform
+Effect (ApiType);Untap;teilweise;;Grundform
+Effect (ApiType);PutCounter;teilweise;sba::cr_704_5q_plus_and_minus_counters_annihilate;Grundform
+Effect (ApiType);Abandon;n/a;;Archenemy
+Effect (ApiType);SetInMotion;n/a;;Archenemy
+Effect (ApiType);AdvanceCrank;n/a;;Unstable
+Effect (ApiType);AssembleContraption;n/a;;Unstable
+Effect (ApiType);ChaosEnsues;n/a;;Planechase
+Effect (ApiType);Planeswalk;n/a;;Planechase
+Effect (ApiType);RollPlanarDice;n/a;;Planechase
+Effect (ApiType);RunChaos;n/a;;Planechase
+Effect (ApiType);Draft;n/a;;Conspiracy-Draft
+Effect (ApiType);OpenAttraction;n/a;;Unfinity
+Effect (ApiType);PutSticker;n/a;;Unfinity
+Effect (ApiType);ChooseSector;n/a;;Unstable
+Effect (ApiType);Seek;n/a;;Alchemy
+Effect (ApiType);LosePerpetual;n/a;;Alchemy
+Effect (ApiType);Intensify;n/a;;Alchemy
+Effect (ApiType);Heist;n/a;;Alchemy
+Trigger;Abandoned;n/a;;Archenemy
+Trigger;SetInMotion;n/a;;Archenemy
+Trigger;ChaosEnsues;n/a;;Planechase
+Trigger;PlanarDice;n/a;;Planechase
+Trigger;PlaneswalkedFrom;n/a;;Planechase
+Trigger;PlaneswalkedTo;n/a;;Planechase
+Trigger;CrankContraption;n/a;;Unstable
+Trigger;VisitAttraction;n/a;;Unfinity
+Trigger;StickerPlaced;n/a;;Unfinity
+Trigger;SeekAll;n/a;;Alchemy
+Trigger;ConjureAll;n/a;;Alchemy
+Replacement Effect;AssembleContraption;n/a;;Unstable
+Replacement Effect;PlanarDiceResult;n/a;;Planechase
+Replacement Effect;Planeswalk;n/a;;Planechase
+Replacement Effect;RollPlanarDice;n/a;;Planechase
+Replacement Effect;SetInMotion;n/a;;Archenemy
