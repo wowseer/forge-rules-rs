@@ -306,8 +306,10 @@ impl GameState {
         if self.card(c).zone != Some(Zone::Battlefield) {
             return false;
         }
+        let player = self.card(c).controller;
         self.push_event(crate::state::Event::Sacrificed(c));
         self.move_card(c, Zone::Graveyard, true);
+        self.fire(crate::triggers::TriggerEvent::Sacrificed { old: c, player });
         true
     }
 

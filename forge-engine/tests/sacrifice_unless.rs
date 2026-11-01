@@ -251,3 +251,36 @@ fn defined_remembered_follows_card_to_new_zone() {
     assert_eq!(count(d.g(), "Grizzly Bears", Zone::Hand), 1);
     assert_eq!(count(d.g(), "Grizzly Bears", Zone::Graveyard), 0);
 }
+
+#[test]
+fn sacrificed_trigger_only_for_own_sacrifices_not_destroy() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Swamp", P1, Zone::Battlefield, 3);
+    put_n(&db, &mut g, "Plains", P1, Zone::Battlefield, 4);
+    put(&db, &mut g, "Sac Watcher Lite", P1, Zone::Battlefield);
+    let ib = put(&db, &mut g, "Innocent Blood", P1, Zone::Hand);
+    let mine = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    let theirs = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(ib, &[]);
+    d.pass_all();
+    d.submit(Choice::Cards(vec![mine]));
+    d.submit(Choice::Cards(vec![theirs]));
+    // nur das eigene Opfer löst aus (ValidPlayer$ You)
+    assert_eq!(d.g().stack.len(), 1);
+    d.pass_all();
+    assert_eq!(d.g().player(P1).hand.len(), 1);
+}
+
+#[test]
+fn self_sacrifice_as_cost_triggers_from_lki() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    let m = put(&db, &mut g, "Martyr Lite", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.act(forge_engine::decision::Action::Activate(m, 0));
+    // Fähigkeit und Trigger („wenn du ~ opferst“) liegen auf dem Stapel
+    assert_eq!(d.g().stack.len(), 2);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().player(P1).life, 24);
+}

@@ -49,6 +49,20 @@ pub enum TriggerKind {
         valid_card: Option<ValidSpec>,
         valid_activator: Option<ValidSpec>,
     },
+    /// `Mode$ AttackersDeclared` – Angreifer wurden deklariert (CR 508.1m).
+    AttackersDeclared {
+        attacking_player: Option<ValidSpec>,
+        attacked_target: Option<ValidSpec>,
+        /// `ValidAttackers$` + `ValidAttackersAmount$` (Standard `GE1`).
+        valid_attackers: Option<(ValidSpec, crate::expr::Compare)>,
+        /// `Mode$ AttackersDeclaredOneTarget`: je angegriffenem Ziel einmal.
+        one_target: bool,
+    },
+    /// `Mode$ Sacrificed` – eine bleibende Karte wurde geopfert (CR 701.21).
+    Sacrificed {
+        valid_card: Option<ValidSpec>,
+        valid_player: Option<ValidSpec>,
+    },
     /// `Mode$ DamageDone` – Schaden wurde zugefügt.
     DamageDone {
         valid_source: Option<ValidSpec>,
@@ -82,6 +96,8 @@ pub struct TriggerInfo {
     pub player: Option<PlayerId>,
     pub source: Option<CardId>,
     pub target: Option<Target>,
+    /// Angreifender Spieler (`TriggeredAttackingPlayer`).
+    pub attacking_player: Option<PlayerId>,
 }
 
 /// Ein Spielereignis, das Trigger auslösen kann.
@@ -110,6 +126,18 @@ pub enum TriggerEvent {
         target: Target,
         amount: u32,
         combat: bool,
+    },
+    /// Alle Angreifer eines Spielers mit ihren Verteidigern (einmal je Kampf).
+    AttackersDeclared {
+        player: PlayerId,
+        attackers: Vec<(CardId, PlayerId)>,
+        /// Variante je Ziel (alle `attackers` greifen dasselbe Ziel an).
+        one_target: bool,
+    },
+    /// `old` ist das geopferte Objekt (LKI), `player` wer geopfert hat.
+    Sacrificed {
+        old: CardId,
+        player: PlayerId,
     },
 }
 
@@ -221,6 +249,32 @@ pub fn compile_trigger(
         "SpellCast" => TriggerKind::SpellCast {
             valid_card: valid("ValidCard", &mut used)?,
             valid_activator: valid("ValidActivatingPlayer", &mut used)?,
+        },
+        "AttackersDeclared" | "AttackersDeclaredOneTarget" => {
+            used.push("ValidAttackersAmount");
+            let valid_attackers = match valid("ValidAttackers", &mut used)? {
+                Some(v) => Some((
+                    v,
+                    crate::expr::Compare::parse(
+                        face,
+                        p.get("ValidAttackersAmount").unwrap_or("GE1"),
+                    )?,
+                )),
+                None if p.has("ValidAttackersAmount") => {
+                    return Err(unsupported("ValidAttackersAmount", "ohne ValidAttackers"));
+                }
+                None => None,
+            };
+            TriggerKind::AttackersDeclared {
+                attacking_player: valid("AttackingPlayer", &mut used)?,
+                attacked_target: valid("AttackedTarget", &mut used)?,
+                valid_attackers,
+                one_target: t.mode == "AttackersDeclaredOneTarget",
+            }
+        }
+        "Sacrificed" => TriggerKind::Sacrificed {
+            valid_card: valid("ValidCard", &mut used)?,
+            valid_player: valid("ValidPlayer", &mut used)?,
         },
         "DamageDone" => {
             used.push("CombatDamage");
@@ -377,6 +431,7 @@ impl GameState {
                         card: Some(*attacker),
                         card_lki: Some(*attacker),
                         player: Some(*defender),
+                        attacking_player: Some(self.card(*attacker).controller),
                         ..Default::default()
                     })
             }
@@ -402,6 +457,87 @@ impl GameState {
                 Some(TriggerInfo {
                     card: Some(*card),
                     card_lki: Some(*card),
+                    player: Some(*player),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::AttackersDeclared {
+                    attacking_player,
+                    attacked_target,
+                    valid_attackers,
+                    one_target,
+                },
+                TriggerEvent::AttackersDeclared {
+                    player,
+                    attackers,
+                    one_target: ev_one,
+                },
+            ) => {
+                if one_target != ev_one {
+                    return None;
+                }
+                if attacking_player
+                    .as_ref()
+                    .is_some_and(|v| !self.player_matches(*player, v, controller))
+                {
+                    return None;
+                }
+                // Java matchesValidParam auf einer Sammlung: einer genügt.
+                if let Some(v) = attacked_target
+                    && !attackers
+                        .iter()
+                        .any(|(_, d)| self.player_matches(*d, v, controller))
+                {
+                    return None;
+                }
+                if let Some((v, cmp)) = valid_attackers {
+                    let n = attackers
+                        .iter()
+                        .filter(|(c, _)| self.card_matches(*c, v, source, controller))
+                        .count() as i32;
+                    let ectx = crate::expr::EvalCtx {
+                        source,
+                        controller,
+                        x: 0,
+                    };
+                    if !cmp.holds(n, self.eval(&cmp.rhs, &ectx)) {
+                        return None;
+                    }
+                }
+                Some(TriggerInfo {
+                    attacking_player: Some(*player),
+                    target: one_target
+                        .then(|| attackers.first().map(|(_, d)| Target::Player(*d)))
+                        .flatten(),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::Sacrificed {
+                    valid_card,
+                    valid_player,
+                },
+                TriggerEvent::Sacrificed { old, player },
+            ) => {
+                if let Some(v) = valid_card {
+                    // Eigenschaften des geopferten Objekts (LKI); `Self` auch,
+                    // wenn die Quelle sich selbst opfert.
+                    let ok = self.card_matches(*old, v, source, controller)
+                        || (source == *old && self.card_matches(*old, v, *old, controller));
+                    if !ok {
+                        return None;
+                    }
+                }
+                if valid_player
+                    .as_ref()
+                    .is_some_and(|v| !self.player_matches(*player, v, controller))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*old),
+                    card_lki: Some(*old),
                     player: Some(*player),
                     ..Default::default()
                 })
@@ -447,6 +583,7 @@ impl GameState {
                     source: Some(*dsrc),
                     target: Some(*target),
                     player,
+                    ..Default::default()
                 })
             }
             _ => None,
@@ -462,12 +599,16 @@ impl GameState {
             .filter(|c| !c.compiled().triggers.is_empty())
             .filter_map(|c| c.zone.map(|z| (c.id, z)))
             .collect();
-        if let TriggerEvent::ChangesZone {
-            old,
-            from: Some(Zone::Battlefield),
-            ..
-        } = &ev
-        {
+        let left_battlefield = match &ev {
+            TriggerEvent::ChangesZone {
+                old,
+                from: Some(Zone::Battlefield),
+                ..
+            }
+            | TriggerEvent::Sacrificed { old, .. } => Some(old),
+            _ => None,
+        };
+        if let Some(old) = left_battlefield {
             let mut lki: Vec<CardId> = self.lki_battlefield.clone().unwrap_or_default();
             lki.push(*old);
             for id in lki {

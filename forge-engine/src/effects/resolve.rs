@@ -105,6 +105,13 @@ impl GameState {
                 .into_iter()
                 .map(Target::Card)
                 .collect(),
+            Defined::TriggeredAttackingPlayer => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.attacking_player)
+                .map(Target::Player)
+                .into_iter()
+                .collect(),
             Defined::RememberedLki => self
                 .card(ctx.source)
                 .remembered

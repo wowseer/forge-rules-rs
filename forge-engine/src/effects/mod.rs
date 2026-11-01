@@ -44,6 +44,8 @@ pub enum Defined {
     TriggeredPlayer,
     TriggeredTarget,
     TriggeredSource,
+    /// Angreifender Spieler aus dem Trigger-Kontext.
+    TriggeredAttackingPlayer,
     /// Von der Quelle gemerkte Objekte in ihrem aktuellen Zustand (`Remembered`,
     /// Java `game.getCardState`) …
     Remembered,
@@ -510,7 +512,8 @@ impl<'a> Ctx<'a> {
                     Defined::TriggeredCardController
                 }
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
-                "TriggeredTarget" => Defined::TriggeredTarget,
+                "TriggeredTarget" | "TriggeredAttackedTarget" => Defined::TriggeredTarget,
+                "TriggeredAttackingPlayer" => Defined::TriggeredAttackingPlayer,
                 "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
                 // Gemerkt werden bisher nur Karten (`CardObj::remembered`); bei
                 // Spieler-Effekten wäre das Ergebnis still leer.

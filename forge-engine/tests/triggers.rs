@@ -189,3 +189,41 @@ fn trigger_targets_chosen_on_stack_and_removed_without_targets() {
     assert!(d.g().stack.is_empty());
     assert!(matches!(d.decision(), Decision::Priority { .. }));
 }
+
+#[test]
+fn attackers_declared_once_with_minimum_amount() {
+    // CR 508.1m: einmal je Angriffsdeklaration, nicht je Angreifer
+    for (n, expect) in [(1usize, false), (2, true), (3, true)] {
+        let (db, mut g) = game_at(Step::BeginCombat, 10);
+        put(&db, &mut g, "War Horn Lite", P1, Zone::Battlefield);
+        put(&db, &mut g, "War Horn Lite", P2, Zone::Battlefield);
+        let atk: Vec<_> = (0..n)
+            .map(|_| put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield))
+            .collect();
+        let mut d = Driver::new(g);
+        d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
+        d.submit(Choice::Attackers(atk.iter().map(|c| (*c, P2)).collect()));
+        assert_eq!(
+            d.g().stack.len(),
+            usize::from(expect),
+            "n={n}: nur P1s Horn"
+        );
+        d.pass_all();
+        let (l1, l2) = (d.g().player(P1).life, d.g().player(P2).life);
+        assert_eq!((l1, l2), if expect { (21, 19) } else { (20, 20) }, "n={n}");
+    }
+}
+
+#[test]
+fn attackers_declared_one_target_per_attacked_player() {
+    let (db, mut g) = game_at(Step::BeginCombat, 10);
+    put(&db, &mut g, "Raid Banner Lite", P1, Zone::Battlefield);
+    let a = put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
+    let b = put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
+    d.submit(Choice::Attackers(vec![(a, P2), (b, P2)]));
+    assert_eq!(d.g().stack.len(), 1, "einmal je angegriffenem Spieler");
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 19, "TriggeredAttackedTarget");
+}

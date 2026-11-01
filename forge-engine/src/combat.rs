@@ -170,6 +170,25 @@ impl GameState {
                 defender: *d,
             });
         }
+        if !chosen.is_empty() {
+            // Java PhaseHandler: erst je angegriffenem Ziel, dann insgesamt.
+            for def in self.players_from(self.active) {
+                let of: Vec<(CardId, PlayerId)> =
+                    chosen.iter().copied().filter(|(_, d)| *d == def).collect();
+                if !of.is_empty() {
+                    self.fire(crate::triggers::TriggerEvent::AttackersDeclared {
+                        player: self.active,
+                        attackers: of,
+                        one_target: true,
+                    });
+                }
+            }
+            self.fire(crate::triggers::TriggerEvent::AttackersDeclared {
+                player: self.active,
+                attackers: chosen.clone(),
+                one_target: false,
+            });
+        }
         self.push_event(Event::AttackersDeclared(chosen));
         Ok(())
     }
