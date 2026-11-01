@@ -388,6 +388,8 @@ pub struct GameState {
     pub pending_triggers: Vec<crate::triggers::PendingTrigger>,
     /// Während gleichzeitiger Zonenwechsel: Battlefield davor (CR 603.10a).
     pub lki_battlefield: Option<Vec<CardId>>,
+    /// Verzögerte Trigger (CR 603.7), in Erzeugungsreihenfolge.
+    pub delayed_triggers: Vec<crate::triggers::DelayedTrigger>,
     pub log: Vec<Event>,
     /// Token-Definitionen (`res/tokenscripts`), nach Skriptname.
     pub token_defs: Arc<std::collections::HashMap<String, Arc<Def>>>,
@@ -826,6 +828,7 @@ impl GameState {
             repeat_cleanup: false,
             pending_triggers: Vec::new(),
             lki_battlefield: None,
+            delayed_triggers: Vec::new(),
             log: Vec::new(),
             token_defs: Arc::default(),
             rules: rules.clone(),

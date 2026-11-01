@@ -98,6 +98,21 @@ pub struct TriggerInfo {
     pub target: Option<Target>,
     /// Angreifender Spieler (`TriggeredAttackingPlayer`).
     pub attacking_player: Option<PlayerId>,
+    /// Vom verzögerten Trigger gemerkte Objekte (`DelayTriggerRemembered…`).
+    pub delay_remembered: Vec<Target>,
+}
+
+/// Verzögerter Trigger (CR 603.7), angelegt vom Effekt `DelayedTrigger`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DelayedTrigger {
+    pub trigger: Arc<CompiledTrigger>,
+    pub source: CardId,
+    pub controller: PlayerId,
+    pub remembered: Vec<Target>,
+    /// aktiv ab diesem Zug …
+    pub from_turn: u32,
+    /// … und bis einschließlich diesem Zug (`None` = bis zum Auslösen).
+    pub until_turn: Option<u32>,
 }
 
 /// Ein Spielereignis, das Trigger auslösen kann.
@@ -645,6 +660,33 @@ impl GameState {
                         info,
                     });
                 }
+            }
+        }
+        // CR 603.7c: verzögerte Trigger lösen nur einmal aus.
+        let mut i = 0;
+        while i < self.delayed_triggers.len() {
+            let d = &self.delayed_triggers[i];
+            let active = self.turn >= d.from_turn && d.until_turn.is_none_or(|u| self.turn <= u);
+            let ectx = crate::expr::EvalCtx {
+                source: d.source,
+                controller: d.controller,
+                x: 0,
+            };
+            let hit = active
+                .then(|| self.trigger_matches(&d.trigger, d.source, d.controller, &ev))
+                .flatten()
+                .filter(|_| self.check_conditions(&d.trigger.conditions, &ectx));
+            if let Some(mut info) = hit {
+                let d = self.delayed_triggers.remove(i);
+                info.delay_remembered = d.remembered;
+                found.push(PendingTrigger {
+                    trigger: d.trigger,
+                    source: d.source,
+                    controller: d.controller,
+                    info,
+                });
+            } else {
+                i += 1;
             }
         }
         self.pending_triggers.extend(found);

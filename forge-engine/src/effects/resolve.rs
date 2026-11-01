@@ -105,6 +105,24 @@ impl GameState {
                 .into_iter()
                 .map(Target::Card)
                 .collect(),
+            Defined::DelayTriggerRememberedLki => ctx
+                .trig
+                .as_ref()
+                .map(|t| t.delay_remembered.clone())
+                .unwrap_or_default(),
+            Defined::DelayTriggerRemembered => ctx
+                .trig
+                .as_ref()
+                .map(|t| {
+                    t.delay_remembered
+                        .iter()
+                        .map(|x| match x {
+                            Target::Card(c) => Target::Card(self.current_object(*c)),
+                            p => *p,
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
             Defined::TriggeredAttackingPlayer => ctx
                 .trig
                 .as_ref()
@@ -456,6 +474,29 @@ impl GameState {
                     self.stack.remove(pos);
                     self.move_card(card, Zone::Graveyard, true);
                 }
+            }
+            Effect::DelayedTrigger {
+                trigger,
+                remember,
+                scope,
+            } => {
+                let remembered = match remember {
+                    Some(d) => self.resolve_defined(*d, targets, ctx),
+                    None => Vec::new(),
+                };
+                let (from_turn, until_turn) = match scope {
+                    super::DelayScope::Until => (self.turn, None),
+                    super::DelayScope::ThisTurn => (self.turn, Some(self.turn)),
+                    super::DelayScope::NextTurn => (self.turn + 1, Some(self.turn + 1)),
+                };
+                self.delayed_triggers.push(crate::triggers::DelayedTrigger {
+                    trigger: trigger.clone(),
+                    source: ctx.source,
+                    controller: ctx.controller,
+                    remembered,
+                    from_turn,
+                    until_turn,
+                });
             }
             Effect::Cleanup {
                 what,

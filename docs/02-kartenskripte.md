@@ -97,6 +97,15 @@ CompiledAbility {
   folgt `moved_to` wie Java `getCardState`; nur bei Karten-Effekten), `RememberedLKI`
   (Objekt wie gemerkt), `ConditionDefined$ Remembered[LKI]` + `ConditionPresent$`,
   SVar `Remembered$Amount`. `Cleanup | ClearRemembered$ True` leert die Liste.
+- `DelayedTrigger`: alle Parameter außer den Effekt-Parametern (`RememberObjects$`,
+  `ThisTurn$`, `NextTurn$`, `Condition…`, Kosten/Ziele, `SubAbility$`) bilden einen Trigger,
+  der wie ein `T:`-Trigger kompiliert wird (`compile_trigger`). Er liegt in
+  `GameState::delayed_triggers`, ist an keine Zone gebunden und löst einmal aus (CR 603.7c).
+  `ThisTurn$` endet im Cleanup, `NextTurn$` gilt nur im nächsten Zug. Gemerkte Objekte
+  (auch Spieler) liest die Execute-Fähigkeit über `DelayTriggerRemembered` (folgt
+  `moved_to`) bzw. `DelayTriggerRememberedLKI`.
+- Trigger `Sacrificed`, `AttackersDeclared`, `AttackersDeclaredOneTarget`
+  (`TriggeredAttackingPlayer`, `TriggeredAttackedTarget`).
 
 ## Token und modale Fähigkeiten
 

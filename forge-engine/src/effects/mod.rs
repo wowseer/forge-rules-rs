@@ -12,7 +12,7 @@ pub mod resolve;
 use crate::cost::{Cost, CostError};
 use crate::keyword::Keyword;
 use crate::valid::{ValidError, ValidSpec};
-use forge_script::{AbilityKind, CardFace, ScriptAbility};
+use forge_script::{AbilityKind, CardFace, ScriptAbility, ScriptTrigger};
 use forge_types::Color;
 use std::fmt;
 use std::sync::Arc;
@@ -44,6 +44,10 @@ pub enum Defined {
     TriggeredPlayer,
     TriggeredTarget,
     TriggeredSource,
+    /// Vom verzögerten Trigger gemerkte Objekte, aktueller Zustand …
+    DelayTriggerRemembered,
+    /// … bzw. wie gemerkt (`DelayTriggerRememberedLKI`).
+    DelayTriggerRememberedLki,
     /// Angreifender Spieler aus dem Trigger-Kontext.
     TriggeredAttackingPlayer,
     /// Von der Quelle gemerkte Objekte in ihrem aktuellen Zustand (`Remembered`,
@@ -205,6 +209,13 @@ pub enum Effect {
     /// Zauber neutralisieren (`Counter`, CR 701.5). „Es sei denn, … zahlt“
     /// regelt das allgemeine [`UnlessSpec`] der Fähigkeit.
     Counter,
+    /// Verzögerten Trigger anlegen (`DelayedTrigger`, CR 603.7): löst beim
+    /// nächsten passenden Ereignis einmal aus.
+    DelayedTrigger {
+        trigger: Arc<crate::triggers::CompiledTrigger>,
+        remember: Option<Defined>,
+        scope: DelayScope,
+    },
     /// Gemerkte Objekte vergessen (`Cleanup`): `ClearRemembered$`.
     Cleanup {
         what: Defined,
@@ -251,6 +262,17 @@ pub enum Effect {
         place: ZonePlacement,
         shuffle: bool,
     },
+}
+
+/// Wann ein verzögerter Trigger aktiv ist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DelayScope {
+    /// bis er ausgelöst hat
+    Until,
+    /// `ThisTurn$`: nur in diesem Zug
+    ThisTurn,
+    /// `NextTurn$`: nur im nächsten Zug
+    NextTurn,
 }
 
 /// Synthetische Definition eines Effektobjekts; Gleichheit = dieselbe Definition.
@@ -436,12 +458,15 @@ const CARD_APIS: &[&str] = &[
     "Untap",
     "Regenerate",
     "Cleanup",
+    "DelayedTrigger",
 ];
 
 struct Ctx<'a> {
     face: &'a CardFace,
     ab: &'a ScriptAbility,
     used: Vec<&'static str>,
+    /// Übrige Parameter prüft ein anderer Compiler (DelayedTrigger → Trigger).
+    rest_checked_elsewhere: bool,
 }
 
 impl<'a> Ctx<'a> {
@@ -512,8 +537,12 @@ impl<'a> Ctx<'a> {
                     Defined::TriggeredCardController
                 }
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
-                "TriggeredTarget" | "TriggeredAttackedTarget" => Defined::TriggeredTarget,
+                "TriggeredTarget" | "TriggeredTargetLKICopy" | "TriggeredAttackedTarget" => {
+                    Defined::TriggeredTarget
+                }
                 "TriggeredAttackingPlayer" => Defined::TriggeredAttackingPlayer,
+                "DelayTriggerRemembered" => Defined::DelayTriggerRemembered,
+                "DelayTriggerRememberedLKI" => Defined::DelayTriggerRememberedLki,
                 "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
                 // Gemerkt werden bisher nur Karten (`CardObj::remembered`); bei
                 // Spieler-Effekten wäre das Ergebnis still leer.
@@ -775,6 +804,7 @@ fn compile_depth(
         face,
         ab,
         used: Vec::new(),
+        rest_checked_elsewhere: false,
     };
     let api = ab.api.as_str();
 
@@ -976,6 +1006,7 @@ fn compile_depth(
             }
             Effect::Counter
         }
+        "DelayedTrigger" => compile_delayed(&mut c, face)?,
         "Cleanup" => {
             let clear_remembered = c.get("ClearRemembered").is_some();
             // Diese Zustände erzeugt die Engine (noch) nicht; Leeren ist daher
@@ -1259,7 +1290,15 @@ fn compile_depth(
 
     // Alle übrigen Parameter müssen neutral sein.
     for (k, v) in ab.params.iter() {
-        let known = c.used.iter().any(|u| u.eq_ignore_ascii_case(k))
+        // Bei DelayedTrigger prüft compile_trigger die Trigger-Parameter; die
+        // Effekt-Parameter (Bedingungen, Kosten …) müssen hier gelesen sein.
+        let elsewhere = c.rest_checked_elsewhere
+            && !k.starts_with("Condition")
+            && !DELAYED_EFFECT_KEYS
+                .iter()
+                .any(|e| e.eq_ignore_ascii_case(k));
+        let known = elsewhere
+            || c.used.iter().any(|u| u.eq_ignore_ascii_case(k))
             || NEUTRAL_PARAMS.iter().any(|n| n.eq_ignore_ascii_case(k));
         if !known {
             return Err(c.unsupported(k, v));
@@ -1277,6 +1316,73 @@ fn compile_depth(
         sorcery_speed,
         conditions,
         unless,
+    })
+}
+
+/// Parameter, die zum `DelayedTrigger`-Effekt selbst gehören (nicht zum Trigger).
+const DELAYED_EFFECT_KEYS: &[&str] = &[
+    "DB",
+    "SP",
+    "AB",
+    "SpellDescription",
+    "StackDescription",
+    "Cost",
+    "RememberObjects",
+    "ThisTurn",
+    "NextTurn",
+    "SubAbility",
+    "AILogic",
+    "ValidTgts",
+    "TgtPrompt",
+    "TargetMin",
+    "TargetMax",
+    "TgtZone",
+    "UnlessCost",
+    "UnlessPayer",
+    "UnlessSwitched",
+    "UnlessResolveSubs",
+];
+
+/// `DelayedTrigger` (Java `DelayedTriggerEffect`): die übrigen Parameter
+/// bilden einen Trigger, der wie ein `T:`-Trigger kompiliert wird.
+fn compile_delayed(c: &mut Ctx, face: &CardFace) -> Result<Effect, CompileError> {
+    let mut params = forge_script::ParamMap::default();
+    for (k, v) in c.ab.params.iter() {
+        let effect_level = DELAYED_EFFECT_KEYS
+            .iter()
+            .any(|e| e.eq_ignore_ascii_case(k))
+            || k.starts_with("Condition");
+        if !effect_level {
+            params.insert(k, v);
+        }
+    }
+    if !params.has("TriggerDescription")
+        && let Some(d) = c.ab.params.get("SpellDescription")
+    {
+        params.insert("TriggerDescription", d);
+    }
+    let st = ScriptTrigger::parse(params).map_err(|_| CompileError::MissingParam {
+        api: "DelayedTrigger".into(),
+        key: "Mode",
+    })?;
+    let trigger = Arc::new(crate::triggers::compile_trigger(face, &st)?);
+    let remember = match c.ab.params.get("RememberObjects") {
+        Some(_) => Some(c.defined_key("RememberObjects", Defined::SelfCard)?),
+        None => None,
+    };
+    let this_turn = c.get("ThisTurn").is_some();
+    let next_turn = c.get("NextTurn").is_some();
+    let scope = match (this_turn, next_turn) {
+        (false, false) => DelayScope::Until,
+        (true, false) => DelayScope::ThisTurn,
+        (false, true) => DelayScope::NextTurn,
+        (true, true) => return Err(c.unsupported("NextTurn", "mit ThisTurn")),
+    };
+    c.rest_checked_elsewhere = true;
+    Ok(Effect::DelayedTrigger {
+        trigger,
+        remember,
+        scope,
     })
 }
 
