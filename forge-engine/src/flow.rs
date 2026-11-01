@@ -121,6 +121,10 @@ impl GameState {
             return Ok(());
         }
         self.push_event(Event::StepBegan(self.step));
+        self.fire(crate::triggers::TriggerEvent::StepBegan {
+            step: self.step,
+            active: ap,
+        });
         let mut gets_priority = self.step.has_priority();
         match self.step {
             Step::Untap => {
@@ -202,7 +206,8 @@ impl GameState {
                 self.effects
                     .retain(|e| e.duration != Duration::UntilEndOfTurn);
                 // CR 514.3a: SBA/Trigger → doch Priorität und neuer Cleanup
-                if self.check_state_based_actions(ch)? {
+                let sba = self.check_state_based_actions(ch)?;
+                if sba || !self.pending_triggers.is_empty() {
                     gets_priority = true;
                     self.repeat_cleanup = true;
                 }
@@ -222,6 +227,10 @@ impl GameState {
     /// CR 117: Priorität. Vor jeder Vergabe werden SBAs geprüft (CR 117.5).
     fn priority(&mut self, p: PlayerId, passes: u8, ch: &mut Choices) -> Res<()> {
         if self.check_state_based_actions(ch)? {
+            return Ok(());
+        }
+        // CR 117.5: danach ausgelöste Trigger auf den Stapel, dann erneut prüfen.
+        if self.put_triggers_on_stack(ch)? {
             return Ok(());
         }
         if !self.player(p).is_in_game() {

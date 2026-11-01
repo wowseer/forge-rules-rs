@@ -177,7 +177,7 @@ impl GameState {
     }
 
     /// CR 601.2c: Ziele für jede Fähigkeit der Kette wählen.
-    fn choose_targets(
+    pub(crate) fn choose_targets(
         &mut self,
         p: PlayerId,
         source: CardId,
@@ -251,6 +251,11 @@ impl GameState {
             player: p,
             card: on_stack,
         });
+        // CR 601.2i: Zauber ist gewirkt → „whenever … cast“-Trigger
+        self.fire(crate::triggers::TriggerEvent::SpellCast {
+            card: on_stack,
+            player: p,
+        });
         Ok(())
     }
 
@@ -311,6 +316,7 @@ impl GameState {
             source,
             controller: p,
             x: 0,
+            trig: None,
         };
         self.apply_chain(ab, &[], &ctx, ch)
     }

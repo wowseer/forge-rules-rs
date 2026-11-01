@@ -19,6 +19,8 @@ pub struct CompiledFace {
     pub spell: Option<Arc<CompiledAbility>>,
     /// Aktivierte Fähigkeiten inkl. Mana-Fähigkeiten.
     pub activated: Vec<Arc<CompiledAbility>>,
+    /// Ausgelöste Fähigkeiten (`T:`).
+    pub triggers: Vec<Arc<crate::triggers::CompiledTrigger>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,6 +67,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         keywords: Vec::new(),
         spell: None,
         activated: basic_land_mana(face),
+        triggers: Vec::new(),
     };
     for k in &face.keywords {
         let kw = Keyword::parse(k);
@@ -95,7 +98,10 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         unsupported.push("bleibende Karte mit SP$-Fähigkeit".into());
     }
     for t in &face.triggers {
-        unsupported.push(format!("Trigger: {}", t.mode));
+        match crate::triggers::compile_trigger(face, t) {
+            Ok(c) => out.triggers.push(Arc::new(c)),
+            Err(e) => unsupported.push(format!("Trigger: {} ({e})", t.mode)),
+        }
     }
     for s in &face.statics {
         unsupported.push(format!("Static: {}", s.mode));

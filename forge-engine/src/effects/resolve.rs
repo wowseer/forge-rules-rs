@@ -16,6 +16,8 @@ pub struct ResolveCtx {
     pub source: CardId,
     pub controller: PlayerId,
     pub x: u32,
+    /// Bei ausgelösten Fähigkeiten: Wissen zum Auslösezeitpunkt.
+    pub trig: Option<crate::triggers::TriggerInfo>,
 }
 
 impl GameState {
@@ -51,6 +53,47 @@ impl GameState {
                 .opponents(ctx.controller)
                 .into_iter()
                 .map(Target::Player)
+                .collect(),
+            Defined::TriggeredCard => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.card)
+                .map(Target::Card)
+                .into_iter()
+                .collect(),
+            Defined::TriggeredCardLki => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.card_lki.or(t.card))
+                .map(Target::Card)
+                .into_iter()
+                .collect(),
+            Defined::TriggeredCardController => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.card_lki.or(t.card))
+                .map(|c| Target::Player(self.card(c).controller))
+                .into_iter()
+                .collect(),
+            Defined::TriggeredPlayer => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.player)
+                .map(Target::Player)
+                .into_iter()
+                .collect(),
+            Defined::TriggeredTarget => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.target)
+                .into_iter()
+                .collect(),
+            Defined::TriggeredSource => ctx
+                .trig
+                .as_ref()
+                .and_then(|t| t.source)
+                .map(Target::Card)
+                .into_iter()
                 .collect(),
         }
     }
@@ -219,10 +262,15 @@ impl GameState {
         let Some(item) = self.stack.last().cloned() else {
             return Ok(());
         };
+        let (trig, optional) = match &item.kind {
+            StackKind::Trigger { info, optional, .. } => (Some(info.clone()), *optional),
+            _ => (None, false),
+        };
         let ctx = ResolveCtx {
             source: item.source,
             controller: item.controller,
             x: item.x,
+            trig,
         };
 
         // CR 608.2b: Ziele erneut prüfen.
@@ -256,7 +304,19 @@ impl GameState {
         if fizzle {
             self.push_event(Event::Fizzled { item: item.id });
         } else {
-            if let Some(ab) = &item.ability {
+            // „You may“ wird beim Auflösen entschieden.
+            let declined = optional
+                && matches!(
+                    ch.ask(Decision::OptionalTrigger {
+                        player: item.controller,
+                        description: match &item.kind {
+                            StackKind::Trigger { description, .. } => description.clone(),
+                            _ => String::new(),
+                        },
+                    })?,
+                    Choice::No
+                );
+            if let (Some(ab), false) = (&item.ability, declined) {
                 self.apply_chain(ab, &legal_targets, &ctx, ch)?;
             }
             self.push_event(Event::Resolved { item: item.id });

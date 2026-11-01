@@ -176,6 +176,8 @@ impl GameState {
         }
         to_graveyard.sort();
         to_graveyard.dedup();
+        // CR 603.10a: alle gleichzeitig Sterbenden „sehen“ einander.
+        self.lki_battlefield = Some(self.battlefield.clone());
         for id in to_graveyard {
             if self.card(id).zone == Some(Zone::Battlefield) {
                 self.put_into_graveyard(id);
@@ -187,6 +189,7 @@ impl GameState {
                 performed = true;
             }
         }
+        self.lki_battlefield = None;
 
         // Spielende (CR 104.2a): nur noch ein Spieler übrig.
         let remaining: Vec<PlayerId> = self

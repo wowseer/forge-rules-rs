@@ -13,14 +13,14 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
 | Keyword | 198 | 13 | 2 | 4 |
-| Trigger | 137 | 0 | 0 | 11 |
+| Trigger | 137 | 0 | 5 | 11 |
 | Replacement Effect | 35 | 0 | 0 | 5 |
 | Static Ability | 90 | 0 | 0 | 0 |
 | Effect (ApiType) | 188 | 0 | 10 | 16 |
 | Cost | 42 | 5 | 2 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 12 | 0 | 3 |
-| **Summe** | **729** | **40** | **20** | **40** |
+| **Summe** | **729** | **40** | **25** | **40** |
 
 ## Keyword
 
@@ -53,18 +53,23 @@ Offen (183): Absorb, Affinity, Afflict, Afterlife, Aftermath, Amplify, Annihilat
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Abandoned | ⚪ n/a |  | Archenemy | trigger/TriggerAbandoned.java |
+| Attacks | 🟡 teilweise | `triggers::attack_trigger_with_triggered_player` | Bedingungen (Alone, Attacked …) fehlen | trigger/TriggerAttacks.java |
+| ChangesZone | 🟡 teilweise | `triggers::dies_trigger_looks_back_in_time` | Grundform inkl. Rückblick (603.10a) und gleichzeitiger Tode | trigger/TriggerChangesZone.java |
 | ChaosEnsues | ⚪ n/a |  | Planechase | trigger/TriggerChaosEnsues.java |
 | ConjureAll | ⚪ n/a |  | Alchemy | trigger/TriggerConjureAll.java |
 | CrankContraption | ⚪ n/a |  | Unstable | trigger/TriggerCrankContraption.java |
+| DamageDone | 🟡 teilweise | `triggers::combat_damage_trigger` | ValidSource/ValidTarget/CombatDamage | trigger/TriggerDamageDone.java |
+| Phase | 🟡 teilweise | `triggers::upkeep_trigger_with_sub_ability` | Phase$ als Liste einzelner Schritte | trigger/TriggerPhase.java |
 | PlanarDice | ⚪ n/a |  | Planechase | trigger/TriggerPlanarDice.java |
 | PlaneswalkedFrom | ⚪ n/a |  | Planechase | trigger/TriggerPlaneswalkedFrom.java |
 | PlaneswalkedTo | ⚪ n/a |  | Planechase | trigger/TriggerPlaneswalkedTo.java |
 | SeekAll | ⚪ n/a |  | Alchemy | trigger/TriggerSeekAll.java |
 | SetInMotion | ⚪ n/a |  | Archenemy | trigger/TriggerSetInMotion.java |
+| SpellCast | 🟡 teilweise | `triggers::spell_cast_trigger_resolves_before_spell` | ValidCard/ValidActivatingPlayer | trigger/TriggerSpellAbilityCastOrCopy.java |
 | StickerPlaced | ⚪ n/a |  | Unfinity | trigger/TriggerStickerPlaced.java |
 | VisitAttraction | ⚪ n/a |  | Unfinity | trigger/TriggerVisitAttraction.java |
 
-Offen (137): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlocked, AttackerBlockedOnce, AttackerBlockedByCreature, AttackersDeclared, AttackersDeclaredOneTarget, AttackerUnblocked, AttackerUnblockedOnce, Attacks, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTarget, BecomesTargetOnce, BlockersDeclared, Blocks, CaseSolved, Championed, ChangesController, ChangesZone, ChangesZoneAll, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterAdded, CounterAddedOnce, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, Cycled, DamageAll, DamageDealtOnce, DamageDone, DamageDoneOnce, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, Discarded, DiscardedAll, Discover, Drawn, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeGained, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, Phase, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, Sacrificed, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCast, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, Taps, TapsForMana, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, TurnFaceUp, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
+Offen (132): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlocked, AttackerBlockedOnce, AttackerBlockedByCreature, AttackersDeclared, AttackersDeclaredOneTarget, AttackerUnblocked, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTarget, BecomesTargetOnce, BlockersDeclared, Blocks, CaseSolved, Championed, ChangesController, ChangesZoneAll, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterAdded, CounterAddedOnce, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, Cycled, DamageAll, DamageDealtOnce, DamageDoneOnce, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, Discarded, DiscardedAll, Discover, Drawn, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeGained, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, Sacrificed, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, Taps, TapsForMana, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, TurnFaceUp, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
 
 ## Replacement Effect
 
@@ -138,7 +143,7 @@ Offen (35): tapXType, untapXType, Draw, DamageYou, GainLife, PayEnergy, Exile, E
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Untap step | 🟡 teilweise | `turn_structure::untap_step_untaps_active_players_permanents` | Enttappen + Zugbeginn-Kontrolle fertig | phase/PhaseType.java (UNTAP) |
-| Upkeep step | ✅ ja | `turn_structure::steps_in_order_and_combat_skips_without_attackers` | Trigger „zu Beginn des Versorgungssegments“ kommen mit dem Trigger-System | phase/PhaseType.java (UPKEEP) |
+| Upkeep step | ✅ ja | `triggers::upkeep_trigger_with_sub_ability` | inkl. „zu Beginn des Versorgungssegments“-Trigger | phase/PhaseType.java (UPKEEP) |
 | Draw step | ✅ ja | `turn_structure::draw_step_draws_and_first_player_skips_first_draw` | inkl. CR 103.8a | phase/PhaseType.java (DRAW) |
 | Precombat main phase | 🟡 teilweise | `spells::land_play_once_per_turn_sorcery_timing` | Länder/Hexereien fertig | phase/PhaseType.java (MAIN1) |
 | Beginning of combat step | ✅ ja | `turn_structure::steps_in_order_and_combat_skips_without_attackers` |  | phase/PhaseType.java (COMBAT_BEGIN) |

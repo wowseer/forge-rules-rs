@@ -98,6 +98,12 @@ impl GameState {
                 self.card_mut(*c).tapped = true;
             }
         }
+        for (c, d) in &chosen {
+            self.fire(crate::triggers::TriggerEvent::Attacks {
+                attacker: *c,
+                defender: *d,
+            });
+        }
         self.push_event(Event::AttackersDeclared(chosen));
         Ok(())
     }
@@ -268,7 +274,7 @@ impl GameState {
         }
         // CR 510.2: gleichzeitig
         for (src, tgt, n) in assignments {
-            self.deal_damage(src, tgt, n);
+            self.deal_damage_ex(src, tgt, n, true);
         }
         Ok(())
     }

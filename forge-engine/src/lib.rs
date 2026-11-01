@@ -21,6 +21,7 @@ pub mod sba;
 pub mod simple_ai;
 pub mod state;
 pub mod targeting;
+pub mod triggers;
 pub mod turn;
 pub mod valid;
 pub mod zone;

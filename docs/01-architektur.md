@@ -102,10 +102,30 @@ Der Test `turn_structure::deterministic_with_same_seed` prüft das.
 | `casting` | legale Aktionen, Land spielen, wirken, aktivieren, Kosten und Mana bezahlen, Auto-Bezahlung | 117, 305, 601, 602, 605 |
 | `combat` | Angreifer, Blocker, Kampfschaden | 506–511 |
 | `sba` | zustandsbasierte Aktionen | 704 |
+| `triggers` | Trigger kompilieren (`T:`), Ereignisse (`fire`), Rückblick beim Verlassen des Battlefields, APNAP-Stapeln, optionale Trigger | 603 |
 | `flow` | Aufbau, Mulligan, Schritte, Priorität | 103, 117, 500–514 |
 | `engine` | Treiber, `Controller`-Trait, `run_game` | – |
 | `simple_ai` | seedbare Zufalls-KI für Lasttests (kein Ersatz für `forge-ai`) | – |
 | `bin/support-report` | Bericht: Anteil unterstützter Karten im Zielpool | – |
+
+## Trigger (CR 603)
+
+Spielaktionen melden Ereignisse (`TriggerEvent`: Zonenwechsel, Schrittbeginn,
+Angriff, Zauber gewirkt, Schaden) über `GameState::fire`. Dort werden **sofort**
+alle Trigger in ihren aktiven Zonen geprüft und als `PendingTrigger` mit dem
+Wissen zum Ereigniszeitpunkt (`TriggerInfo`) vorgemerkt. Für das Verlassen des
+Battlefields zählen auch das alte Objekt und – bei gleichzeitigen Zonenwechseln
+der SBAs – das ganze vorherige Battlefield (`lki_battlefield`, CR 603.10a).
+Bevor jemand Priorität bekommt, legt `put_triggers_on_stack` sie in
+APNAP-Reihenfolge auf den Stapel; mehrere eigene Trigger ordnet der Spieler
+(`Decision::OrderTriggers`). Ziele werden dabei gewählt; ohne legale Ziele
+entfällt der Trigger (603.3d). „You may“ (`OptionalDecider$ You`) wird beim
+Auflösen gefragt (`Decision::OptionalTrigger`). Effekte erreichen den Kontext
+über `Defined$ Triggered…`.
+
+Aktive Zonen wie in Java: `TriggerZones$`, sonst Battlefield; Selbst-ETB
+(`ValidCard$ Card.Self`, `Origin$ Any`) aktiv in der Zielzone, Verlassen des
+Battlefields immer Battlefield.
 
 ## Layer-System (Stand)
 

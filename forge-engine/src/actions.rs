@@ -109,6 +109,12 @@ impl GameState {
             from,
             to,
         });
+        self.fire(crate::triggers::TriggerEvent::ChangesZone {
+            old: id,
+            new: new_id,
+            from,
+            to,
+        });
         new_id
     }
 
@@ -163,6 +169,11 @@ impl GameState {
     /// Schaden zufügen (CR 120). Behandelt Lifelink (CR 702.15) und
     /// Deathtouch-Markierung (CR 702.2) sowie Schaden an Planeswalkern/Battles.
     pub fn deal_damage(&mut self, source: CardId, target: Target, amount: u32) {
+        self.deal_damage_ex(source, target, amount, false);
+    }
+
+    /// Wie [`GameState::deal_damage`], `combat` = Kampfschaden (für Trigger).
+    pub fn deal_damage_ex(&mut self, source: CardId, target: Target, amount: u32, combat: bool) {
         if amount == 0 {
             return;
         }
@@ -204,6 +215,12 @@ impl GameState {
             source,
             target,
             amount,
+        });
+        self.fire(crate::triggers::TriggerEvent::DamageDone {
+            source,
+            target,
+            amount,
+            combat,
         });
         if src.has(&Keyword::Lifelink) {
             let ctrl = self.card(source).controller;

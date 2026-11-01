@@ -108,6 +108,16 @@ pub enum Decision {
         min: u32,
         max: u32,
     },
+    /// CR 603.3b: eigene gleichzeitig ausgelöste Trigger ordnen.
+    OrderTriggers {
+        player: PlayerId,
+        descriptions: Vec<String>,
+    },
+    /// „You may“-Trigger beim Auflösen (OptionalDecider$ You).
+    OptionalTrigger {
+        player: PlayerId,
+        description: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -137,6 +147,8 @@ pub enum Choice {
     /// optional gefolgt vom Schaden an den Spieler (Trample).
     Damage(Vec<u32>),
     Cards(Vec<CardId>),
+    /// Permutation der Indizes (z. B. Trigger-Reihenfolge; erstes Element kommt zuerst auf den Stapel).
+    Order(Vec<usize>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -172,7 +184,9 @@ impl Decision {
             | Decision::DeclareAttackers { player, .. }
             | Decision::DeclareBlockers { player, .. }
             | Decision::AssignCombatDamage { player, .. }
-            | Decision::ChooseCards { player, .. } => *player,
+            | Decision::ChooseCards { player, .. }
+            | Decision::OrderTriggers { player, .. }
+            | Decision::OptionalTrigger { player, .. } => *player,
         }
     }
 
@@ -311,6 +325,15 @@ impl Decision {
                 }
                 Ok(())
             }
+            (Decision::OrderTriggers { descriptions, .. }, Choice::Order(o)) => {
+                let mut sorted = o.clone();
+                sorted.sort_unstable();
+                if sorted != (0..descriptions.len()).collect::<Vec<_>>() {
+                    return err("Reihenfolge muss jede Position genau einmal enthalten");
+                }
+                Ok(())
+            }
+            (Decision::OptionalTrigger { .. }, Choice::Yes | Choice::No) => Ok(()),
             (d, c) => err(format!("{c:?} passt nicht zu {d:?}")),
         }
     }

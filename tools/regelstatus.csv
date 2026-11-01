@@ -4,7 +4,7 @@
 # Status: ja = umgesetzt + CR-Regeltests (xlsx: TRUE) | teilweise = Teilumfang (xlsx: FALSE) | n/a = außerhalb des Scopes (xlsx: n/a)
 # Nicht aufgeführte Regeln sind offen.
 Turn Structure;Untap step;teilweise;turn_structure::untap_step_untaps_active_players_permanents;Enttappen + Zugbeginn-Kontrolle fertig; Phasing fehlt
-Turn Structure;Upkeep step;ja;turn_structure::steps_in_order_and_combat_skips_without_attackers;Trigger „zu Beginn des Versorgungssegments“ kommen mit dem Trigger-System
+Turn Structure;Upkeep step;ja;triggers::upkeep_trigger_with_sub_ability;inkl. „zu Beginn des Versorgungssegments“-Trigger
 Turn Structure;Draw step;ja;turn_structure::draw_step_draws_and_first_player_skips_first_draw;inkl. CR 103.8a
 Turn Structure;Precombat main phase;teilweise;spells::land_play_once_per_turn_sorcery_timing;Länder/Hexereien fertig; Saga-Kapitelmarken fehlen
 Turn Structure;Beginning of combat step;ja;turn_structure::steps_in_order_and_combat_skips_without_attackers;
@@ -16,7 +16,7 @@ Turn Structure;End of combat step;ja;turn_structure::steps_in_order_and_combat_s
 Turn Structure;Postcombat main phase;teilweise;turn_structure::steps_in_order_and_combat_skips_without_attackers;wie Precombat main phase
 Turn Structure;End step;ja;turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects;
 Turn Structure;Cleanup step;ja;turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects;inkl. CR 514.3a (erneuter Cleanup)
-Turn Structure;Priority and stack;ja;turn_structure::stack_resolves_last_in_first_out;CR 117, 405, 608 inkl. Fizzle (608.2b)
+Turn Structure;Priority and stack;ja;turn_structure::stack_resolves_last_in_first_out;CR 117, 405, 608 inkl. Fizzle (608.2b); Trigger nach APNAP (603.3b)
 Turn Structure;Layer system;teilweise;spells::draw_gain_lose_life_and_pump;nur Layer 6 (Fähigkeiten hinzufügen) und 7c
 Turn Structure;Mulligan;ja;turn_structure::london_mulligan;London-Mulligan; freier Mulligan (Multiplayer/Commander) fehlt noch
 State-Based Action;CR 704.5a;ja;sba::cr_704_5a_zero_life_loses;
@@ -103,3 +103,8 @@ Replacement Effect;PlanarDiceResult;n/a;;Planechase
 Replacement Effect;Planeswalk;n/a;;Planechase
 Replacement Effect;RollPlanarDice;n/a;;Planechase
 Replacement Effect;SetInMotion;n/a;;Archenemy
+Trigger;ChangesZone;teilweise;triggers::dies_trigger_looks_back_in_time;Grundform inkl. Rückblick (603.10a) und gleichzeitiger Tode; Bedingungen (IsPresent, CheckSVar …) fehlen
+Trigger;Phase;teilweise;triggers::upkeep_trigger_with_sub_ability;Phase$ als Liste einzelner Schritte; Bedingungen fehlen
+Trigger;Attacks;teilweise;triggers::attack_trigger_with_triggered_player;Bedingungen (Alone, Attacked …) fehlen
+Trigger;SpellCast;teilweise;triggers::spell_cast_trigger_resolves_before_spell;ValidCard/ValidActivatingPlayer; TargetsValid, ActivatorThisTurnCast fehlen
+Trigger;DamageDone;teilweise;triggers::combat_damage_trigger;ValidSource/ValidTarget/CombatDamage

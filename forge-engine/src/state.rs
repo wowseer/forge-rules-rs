@@ -157,8 +157,14 @@ pub struct ContinuousEffect {
 pub enum StackKind {
     /// Zauberspruch; `card` ist das Kartenobjekt in der Stack-Zone.
     Spell { card: CardId },
-    /// Aktivierte (später: ausgelöste) Fähigkeit von `source`.
+    /// Aktivierte Fähigkeit von `source`.
     Ability,
+    /// Ausgelöste Fähigkeit (CR 603) mit dem Wissen zum Auslösezeitpunkt.
+    Trigger {
+        info: crate::triggers::TriggerInfo,
+        optional: bool,
+        description: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -331,6 +337,10 @@ pub struct GameState {
     pub winner: Option<Option<PlayerId>>,
     /// CR 514.3a: Cleanup wiederholen
     pub repeat_cleanup: bool,
+    /// Ausgelöste, noch nicht auf den Stapel gelegte Trigger (CR 603.3).
+    pub pending_triggers: Vec<crate::triggers::PendingTrigger>,
+    /// Während gleichzeitiger Zonenwechsel: Battlefield davor (CR 603.10a).
+    pub lki_battlefield: Option<Vec<CardId>>,
     pub log: Vec<Event>,
 }
 
@@ -519,6 +529,8 @@ impl GameState {
             starting_player: start,
             winner: None,
             repeat_cleanup: false,
+            pending_triggers: Vec::new(),
+            lki_battlefield: None,
             log: Vec::new(),
             rules: rules.clone(),
         };

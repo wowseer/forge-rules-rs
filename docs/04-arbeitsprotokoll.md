@@ -5,6 +5,36 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-01 – Sitzung 2: Branch `rust-godot`, Trigger-System
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Branch `rust-godot`, Repo auf Rust-Engine + Referenzen reduziert | ✅ (Ziel: Neubau in Godot) |
+| Auto-Commit-Hook (`.claude/hooks/autocommit.sh`, lokal) | ✅ |
+| Trigger-System (CR 603): ChangesZone, Phase, Attacks, SpellCast, DamageDone | ✅ Grundformen |
+| Rückblick beim Verlassen des Battlefields inkl. gleichzeitiger Tode | ✅ |
+| APNAP, Trigger ordnen, Ziele beim Stapeln, optionale Trigger | ✅ |
+| Tests | 95 (9 neue Trigger-Tests), 1.000 Zufallspartien ohne Absturz |
+| Unterstützte Karten im Zielpool | 3.738 von 32.336 (11,6 %, vorher 8,4 %), Pauper 22,2 % |
+
+### Entscheidungen
+
+- Trigger werden **zum Ereigniszeitpunkt** geprüft (nicht erst vor der Priorität), damit
+  „last known information“ ohne Kopien funktioniert: das alte Objekt bleibt in der Arena.
+- Bedingungen wie `IsPresent$`, `CheckSVar$`, `Static$` machen die Karte vorerst „nicht
+  unterstützt“, statt falsch zu triggern.
+
+### Nächste Schritte
+
+1. Effekt **ChangeZone/ChangeZoneAll** (1.045 Karten fehlt nur dieser Baustein, dazu 435 über Trigger).
+2. **Static Continuous** + Layer-System (1.046).
+3. **Charm** (modale Zauber), **Token**, **Effect**, **Discard**, **Counter**, **PumpAll**.
+4. Trigger-Bedingungen (`IsPresent`, `CheckSVar`) und `Count$`-Ausdrücke.
+
+---
+
 ## 2026-11-01 – Sitzung 1: Fundament, Parser, Engine-Kern
 
 ### Ergebnis

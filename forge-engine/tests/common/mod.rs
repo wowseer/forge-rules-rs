@@ -50,6 +50,15 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Silhana Lite\nManaCost:G\nTypes:Creature Elf\nPT:2/2\nK:Shroud\nOracle:\n",
     "Name:Mogg Fanatic Lite\nManaCost:R\nTypes:Creature Goblin\nPT:1/1\nA:AB$ DealDamage | Cost$ Sac<1/CARDNAME> | ValidTgts$ Any | NumDmg$ 1 | SpellDescription$ x\nOracle:\n",
     "Name:Untap Monk Lite\nManaCost:W\nTypes:Creature Human Monk\nPT:1/1\nA:AB$ GainLife | Cost$ Q | LifeAmount$ 2 | SpellDescription$ x\nOracle:\n",
+    "Name:Elvish Visionary\nManaCost:1 G\nTypes:Creature Elf Shaman\nPT:1/1\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigDraw | TriggerDescription$ When CARDNAME enters, draw a card.\nSVar:TrigDraw:DB$ Draw | NumCards$ 1\nOracle:\n",
+    "Name:Salve Bearer Lite\nManaCost:1 W\nTypes:Creature Human\nPT:1/1\nT:Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Card.Self | Execute$ TrigGain | TriggerDescription$ When CARDNAME dies, you gain 2 life.\nSVar:TrigGain:DB$ GainLife | LifeAmount$ 2\nOracle:\n",
+    "Name:Blood Artist Lite\nManaCost:1 B\nTypes:Creature Vampire\nPT:0/1\nT:Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Creature | TriggerZones$ Battlefield | Execute$ TrigDrain | TriggerDescription$ Whenever CARDNAME or another creature dies, target player loses 1 life.\nSVar:TrigDrain:DB$ LoseLife | ValidTgts$ Player | LifeAmount$ 1\nOracle:\n",
+    "Name:Phyrexian Arena Lite\nManaCost:1 B B\nTypes:Enchantment\nT:Mode$ Phase | Phase$ Upkeep | ValidPlayer$ You | TriggerZones$ Battlefield | Execute$ TrigDraw | TriggerDescription$ At the beginning of your upkeep, you draw a card and you lose 1 life.\nSVar:TrigDraw:DB$ Draw | NumCards$ 1 | SubAbility$ DBLose\nSVar:DBLose:DB$ LoseLife | LifeAmount$ 1\nOracle:\n",
+    "Name:Optional Upkeep Lite\nManaCost:1\nTypes:Artifact\nT:Mode$ Phase | Phase$ Upkeep | ValidPlayer$ Player | TriggerZones$ Battlefield | OptionalDecider$ You | Execute$ TrigGain | TriggerDescription$ At the beginning of each upkeep, you may gain 1 life.\nSVar:TrigGain:DB$ GainLife | LifeAmount$ 1\nOracle:\n",
+    "Name:Attack Drummer Lite\nManaCost:1 R\nTypes:Creature Goblin\nPT:2/2\nT:Mode$ Attacks | ValidCard$ Card.Self | Execute$ TrigDmg | TriggerDescription$ Whenever CARDNAME attacks, it deals 1 damage to defending player.\nSVar:TrigDmg:DB$ DealDamage | Defined$ TriggeredPlayer | NumDmg$ 1\nOracle:\n",
+    "Name:Firebrand Lite\nManaCost:1 R\nTypes:Creature Human Wizard\nPT:1/3\nT:Mode$ SpellCast | ValidCard$ Card.nonCreature | ValidActivatingPlayer$ You | TriggerZones$ Battlefield | Execute$ TrigDmg | TriggerDescription$ Whenever you cast a noncreature spell, CARDNAME deals 1 damage to each opponent.\nSVar:TrigDmg:DB$ DealDamage | Defined$ Player.Opponent | NumDmg$ 1\nOracle:\n",
+    "Name:Ninja Lite\nManaCost:1 U\nTypes:Creature Human Ninja\nPT:1/1\nT:Mode$ DamageDone | ValidSource$ Card.Self | ValidTarget$ Player | CombatDamage$ True | Execute$ TrigDraw | TriggerDescription$ Whenever CARDNAME deals combat damage to a player, draw a card.\nSVar:TrigDraw:DB$ Draw | NumCards$ 1\nOracle:\n",
+    "Name:Shocking ETB Lite\nManaCost:2 R\nTypes:Creature Elemental\nPT:2/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigDmg | TriggerDescription$ When CARDNAME enters, it deals 2 damage to target creature an opponent controls.\nSVar:TrigDmg:DB$ DealDamage | ValidTgts$ Creature.OppCtrl | NumDmg$ 2\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
 ];
 
@@ -243,6 +252,10 @@ pub fn default_choice(d: &Decision) -> Choice {
         Decision::DeclareBlockers { .. } => Choice::Blocks(vec![]),
         Decision::PayMana { .. } => Choice::Pay(PayAction::AutoPay),
         Decision::PayLifeForPhyrexian { .. } => Choice::No,
+        Decision::OrderTriggers { descriptions, .. } => {
+            Choice::Order((0..descriptions.len()).collect())
+        }
+        Decision::OptionalTrigger { .. } => Choice::Yes,
         Decision::ChooseCards { options, min, .. } => {
             Choice::Cards(options[..*min as usize].to_vec())
         }

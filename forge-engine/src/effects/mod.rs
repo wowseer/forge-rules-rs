@@ -34,6 +34,14 @@ pub enum Defined {
     TargetedController,
     EachPlayer,
     EachOpponent,
+    /// Trigger-Kontext (CR 603): betroffenes Objekt nach dem Ereignis.
+    TriggeredCard,
+    /// … vor dem Ereignis (last known information).
+    TriggeredCardLki,
+    TriggeredCardController,
+    TriggeredPlayer,
+    TriggeredTarget,
+    TriggeredSource,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -265,6 +273,16 @@ impl<'a> Ctx<'a> {
                 "TargetedController" => Defined::TargetedController,
                 "Player" => Defined::EachPlayer,
                 "Player.Opponent" | "Opponent" => Defined::EachOpponent,
+                "TriggeredCard" | "TriggeredNewCardLKICopy" | "TriggeredAttacker" => {
+                    Defined::TriggeredCard
+                }
+                "TriggeredCardLKICopy" | "TriggeredAttackerLKICopy" => Defined::TriggeredCardLki,
+                "TriggeredCardController" | "TriggeredAttackerController" => {
+                    Defined::TriggeredCardController
+                }
+                "TriggeredPlayer" => Defined::TriggeredPlayer,
+                "TriggeredTarget" => Defined::TriggeredTarget,
+                "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
                 other => return Err(self.unsupported("Defined", other)),
             }),
         }

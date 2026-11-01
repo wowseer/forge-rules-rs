@@ -144,6 +144,10 @@ impl Controller for SimpleAi {
                 debug_assert_eq!(d.len(), blockers.len() + usize::from(trample_to.is_some()));
                 Choice::Damage(d)
             }
+            Decision::OrderTriggers { descriptions, .. } => {
+                Choice::Order((0..descriptions.len()).collect())
+            }
+            Decision::OptionalTrigger { .. } => Choice::Yes,
             Decision::ChooseCards {
                 options,
                 min,
