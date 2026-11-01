@@ -86,7 +86,8 @@ fn random_games_with_real_cards() {
             d
         };
         let decks = vec![("A".to_string(), deck()), ("B".to_string(), deck())];
-        let g = GameState::new(GameRules::default(), decks, seed, None);
+        let mut g = GameState::new(GameRules::default(), decks, seed, None);
+        g.token_defs = db.token_map();
         let mut e = Engine::new(g);
         let mut a = SimpleAi::new(seed);
         let mut b = SimpleAi::new(seed + 1000);

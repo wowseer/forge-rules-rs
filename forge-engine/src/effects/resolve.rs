@@ -249,6 +249,58 @@ impl GameState {
                     self.add_counters(c, counter, n);
                 }
             }
+            Effect::Token {
+                scripts,
+                amount,
+                owner,
+                tapped,
+                power,
+                toughness,
+            } => {
+                let n = self.amount(amount, ctx).max(0) as u32;
+                let p_override = power.as_ref().map(|a| self.amount(a, ctx));
+                let t_override = toughness.as_ref().map(|a| self.amount(a, ctx));
+                let owners = Self::players_of(&self.resolve_defined(*owner, targets, ctx));
+                for p in owners {
+                    for _ in 0..n {
+                        for s in scripts {
+                            let Some(def) = self.token_defs.get(s).cloned() else {
+                                continue;
+                            };
+                            let id = self.create_card(def, p, Zone::Battlefield, true);
+                            let face = self.card(id).face().clone();
+                            let o = self.card_mut(id);
+                            o.tapped = *tapped;
+                            if p_override.is_some() || t_override.is_some() {
+                                o.base_pt = Some((
+                                    p_override.unwrap_or(
+                                        face.power.as_ref().map(|x| x.base()).unwrap_or(0),
+                                    ),
+                                    t_override.unwrap_or(
+                                        face.toughness.as_ref().map(|x| x.base()).unwrap_or(0),
+                                    ),
+                                ));
+                            }
+                            // CR 111.1: Token kommt ins Spiel → ETB-Trigger
+                            self.push_event(crate::state::Event::ZoneChange {
+                                old: id,
+                                new: id,
+                                from: None,
+                                to: Zone::Battlefield,
+                            });
+                            self.fire(crate::triggers::TriggerEvent::ChangesZone {
+                                old: id,
+                                new: id,
+                                from: None,
+                                to: Zone::Battlefield,
+                            });
+                        }
+                    }
+                }
+            }
+            // Modale Fähigkeiten werden vor dem Stapeln aufgelöst (choose_modes);
+            // ein Charm ohne gewählte Modi tut nichts.
+            Effect::Charm(_) => {}
             Effect::ChangeZone {
                 what,
                 origin,

@@ -59,9 +59,21 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
   für 1.000 Partien), weil `chars()` dynamische Statics bei jeder Abfrage neu auswertet.
   Lösung später: Eigenschaften pro Zustandsversion cachen.
 
+### Nachtrag: Token und Charm
+
+- Token: Skripte aus `res/tokenscripts`, Besitzer/Controller, getappt, X/X-Werte, ETB-Trigger,
+  Treasure & Co. als Mana-Quelle; Token verschwinden außerhalb des Battlefields (704.5d).
+- Charm: Moduswahl beim Wirken/Aktivieren/Stapeln, Druckreihenfolge, Wiederholung erlaubt,
+  Modi ohne legale Ziele nicht wählbar.
+- Lasttest fand einen Fehler in der Test-KI (wiederholte Modi), behoben.
+- 8 neue Tests (131 gesamt), 1.000 Zufallspartien ohne Absturz.
+- Unterstützung: 17,4 % → **19,8 %** (Pauper 32,0 %, Modern 21,6 %).
+- Repo **github.com/wowseer/forge-rules-rs** eingerichtet; jeder Arbeitsschritt wird gepusht.
+
 ### Nächste Schritte
 
-1. **Token** (442 + 343 über Trigger), **Charm** (434), **Effect** (350), **Discard**, **PumpAll**, **Counter**.
+1. **Replacement-Effekte** (`Moved`: 404), **Effect** (367), **PumpAll** (313), **Discard** (288),
+   **Counter** (284), **Animate**, **ReduceCost**, **Dig**, **DamageAll**.
 2. **Replacement-Effekte** (`Moved`: 394, ETB getappt usw.).
 3. **Auren und Ausrüstung**: `Enchant`, `Attach`, `Equip`, `AffectedDefined$ Enchanted/Equipped`,
    SBA 704.5m/n/p.

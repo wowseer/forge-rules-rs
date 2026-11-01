@@ -166,6 +166,34 @@ impl CardDefinition {
         }
     }
 
+    /// Alle in Token-Effekten verwendeten Skriptnamen (inkl. Trigger und Charm-Modi).
+    pub fn token_refs(&self) -> Vec<String> {
+        fn walk(ab: &CompiledAbility, out: &mut Vec<String>) {
+            for a in ab.chain() {
+                match &a.effect {
+                    crate::effects::Effect::Token { scripts, .. } => {
+                        out.extend(scripts.iter().cloned())
+                    }
+                    crate::effects::Effect::Charm(spec) => {
+                        spec.choices.iter().for_each(|m| walk(m, out))
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let mut out = Vec::new();
+        for f in self.faces.iter().flatten() {
+            f.spell
+                .iter()
+                .chain(f.activated.iter())
+                .for_each(|a| walk(a, &mut out));
+            f.triggers.iter().for_each(|t| walk(&t.execute, &mut out));
+        }
+        out.sort();
+        out.dedup();
+        out
+    }
+
     pub fn is_supported(&self) -> bool {
         self.unsupported.is_empty()
     }
@@ -187,6 +215,8 @@ impl CardDefinition {
 #[derive(Debug, Clone, Default)]
 pub struct CardDb {
     by_name: HashMap<String, Arc<CardDefinition>>,
+    /// Token-Definitionen nach Skriptname (Dateiname ohne `.txt`).
+    tokens: Arc<HashMap<String, Arc<CardDefinition>>>,
 }
 
 impl CardDb {
@@ -223,12 +253,63 @@ impl CardDb {
         let reg = forge_script::corpus::load_type_registry(res)?;
         crate::valid::set_type_registry(reg.clone());
         let mut db = CardDb::default();
+        let mut tokens = HashMap::new();
+        for e in forge_script::corpus::parse_dir(&res.join("tokenscripts"), &reg)? {
+            if let (Ok(script), Some(stem)) = (e.result, e.path.file_stem()) {
+                tokens.insert(
+                    stem.to_string_lossy().into_owned(),
+                    Arc::new(CardDefinition::compile(script)),
+                );
+            }
+        }
+        db.tokens = Arc::new(tokens);
         for e in forge_script::corpus::parse_dir(&res.join("cardsfolder"), &reg)? {
             if let Ok(script) = e.result {
-                db.insert(CardDefinition::compile(script));
+                let mut def = CardDefinition::compile(script);
+                db.check_token_refs(&mut def);
+                db.insert(def);
             }
         }
         Ok(db)
+    }
+
+    /// Token-Definitionen (für `GameState::token_defs`).
+    pub fn token_map(&self) -> Arc<HashMap<String, Arc<CardDefinition>>> {
+        self.tokens.clone()
+    }
+
+    pub fn token(&self, name: &str) -> Option<&Arc<CardDefinition>> {
+        self.tokens.get(name)
+    }
+
+    /// Hilfsfunktion für Tests: Token-Skript unter Namen registrieren.
+    pub fn add_token_script(
+        &mut self,
+        name: &str,
+        text: &str,
+    ) -> Result<Arc<CardDefinition>, forge_script::ScriptError> {
+        let script = CardScript::parse(text, &forge_types::TypeRegistry::default())?;
+        let def = Arc::new(CardDefinition::compile(script));
+        Arc::make_mut(&mut self.tokens).insert(name.to_string(), def.clone());
+        Ok(def)
+    }
+
+    /// Unbekannte oder nicht unterstützte Token machen die Karte nicht spielbar.
+    pub fn check_token_refs(&self, def: &mut CardDefinition) {
+        let mut missing = Vec::new();
+        for name in def.token_refs() {
+            match self.tokens.get(&name) {
+                None => missing.push(format!("Token-Skript fehlt: {name}")),
+                Some(t) if !t.is_supported() => missing.push(format!(
+                    "Token nicht unterstützt: {name} ({})",
+                    t.unsupported.join("; ")
+                )),
+                _ => {}
+            }
+        }
+        def.unsupported.extend(missing);
+        def.unsupported.sort();
+        def.unsupported.dedup();
     }
 
     /// Hilfsfunktion für Tests: Karte direkt aus Skripttext.
@@ -237,7 +318,9 @@ impl CardDb {
         text: &str,
     ) -> Result<Arc<CardDefinition>, forge_script::ScriptError> {
         let script = CardScript::parse(text, &forge_types::TypeRegistry::default())?;
-        Ok(self.insert(CardDefinition::compile(script)))
+        let mut def = CardDefinition::compile(script);
+        self.check_token_refs(&mut def);
+        Ok(self.insert(def))
     }
 }
 

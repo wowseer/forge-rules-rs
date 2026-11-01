@@ -39,6 +39,15 @@ pub enum PayAction {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Decision {
+    /// CR 601.2b / 700.2: Modi eines modalen Zaubers wählen. `modes` = (Index, Text)
+    /// der wählbaren Modi (Modi ohne legale Ziele fehlen).
+    ChooseModes {
+        player: PlayerId,
+        modes: Vec<(usize, String)>,
+        min: u32,
+        max: u32,
+        can_repeat: bool,
+    },
     /// London-Mulligan (CR 103.5): behalten oder neu ziehen.
     Mulligan {
         player: PlayerId,
@@ -151,6 +160,8 @@ pub enum Choice {
     Cards(Vec<CardId>),
     /// Permutation der Indizes (z. B. Trigger-Reihenfolge; erstes Element kommt zuerst auf den Stapel).
     Order(Vec<usize>),
+    /// Gewählte Modi (Indizes aus `ChooseModes::modes`).
+    Modes(Vec<usize>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -188,7 +199,8 @@ impl Decision {
             | Decision::AssignCombatDamage { player, .. }
             | Decision::ChooseCards { player, .. }
             | Decision::OrderTriggers { player, .. }
-            | Decision::OptionalTrigger { player, .. } => *player,
+            | Decision::OptionalTrigger { player, .. }
+            | Decision::ChooseModes { player, .. } => *player,
         }
     }
 
@@ -336,6 +348,25 @@ impl Decision {
                 Ok(())
             }
             (Decision::OptionalTrigger { .. }, Choice::Yes | Choice::No) => Ok(()),
+            (
+                Decision::ChooseModes {
+                    modes,
+                    min,
+                    max,
+                    can_repeat,
+                    ..
+                },
+                Choice::Modes(m),
+            ) => {
+                let n = m.len() as u32;
+                if n < *min || n > *max || m.iter().any(|i| !modes.iter().any(|(x, _)| x == i)) {
+                    return err(format!("{min}..={max} wählbare Modi"));
+                }
+                if !can_repeat && !distinct(m) {
+                    return err("Modi dürfen sich nicht wiederholen");
+                }
+                Ok(())
+            }
             (d, c) => err(format!("{c:?} passt nicht zu {d:?}")),
         }
     }

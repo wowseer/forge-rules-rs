@@ -32,6 +32,7 @@ impl GameState {
             counters: Default::default(),
             timestamp: ts,
             moved_to: None,
+            base_pt: None,
         });
         self.zone_list_mut(zone, owner).push(id);
         id
@@ -84,6 +85,7 @@ impl GameState {
             counters: Default::default(),
             timestamp: ts,
             moved_to: None,
+            base_pt: None,
         });
         {
             let o = self.card_mut(id);

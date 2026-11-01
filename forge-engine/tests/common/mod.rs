@@ -82,11 +82,42 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Low Life Healer Lite\nManaCost:1 W\nTypes:Enchantment\nT:Mode$ Phase | Phase$ Upkeep | ValidPlayer$ You | TriggerZones$ Battlefield | CheckSVar$ L | SVarCompare$ LE10 | Execute$ TrigGain | TriggerDescription$ At the beginning of your upkeep, if you have 10 or less life, you gain 2 life.\nSVar:TrigGain:DB$ GainLife | LifeAmount$ 2\nSVar:L:Count$YourLifeTotal\nOracle:\n",
     "Name:Forest Insight Lite\nManaCost:1 G\nTypes:Sorcery\nA:SP$ GainLife | LifeAmount$ 1 | SubAbility$ DBDraw | SpellDescription$ Gain 1 life. If you control a Forest, draw a card.\nSVar:DBDraw:DB$ Draw | NumCards$ 1 | ConditionPresent$ Forest.YouCtrl | ConditionCompare$ GE1\nOracle:\n",
     "Name:Big Game Hunter Lite\nManaCost:B\nTypes:Instant\nA:SP$ Destroy | ValidTgts$ Creature.powerGE4 | SpellDescription$ Destroy target creature with power 4 or greater.\nOracle:\n",
+    "Name:Raise the Alarm\nManaCost:1 W\nTypes:Instant\nA:SP$ Token | TokenAmount$ 2 | TokenScript$ w_1_1_soldier | TokenOwner$ You | SpellDescription$ Create two 1/1 white Soldier creature tokens.\nOracle:\n",
+    "Name:Soul Warden Lite\nManaCost:W\nTypes:Creature Human Cleric\nPT:1/1\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Creature.Other | TriggerZones$ Battlefield | Execute$ TrigGain | TriggerDescription$ Whenever another creature enters, you gain 1 life.\nSVar:TrigGain:DB$ GainLife | LifeAmount$ 1\nOracle:\n",
+    "Name:Beast Within\nManaCost:2 G\nTypes:Instant\nA:SP$ Destroy | ValidTgts$ Permanent | SubAbility$ DBToken | SpellDescription$ Destroy target permanent. Its controller creates a 3/3 green Beast creature token.\nSVar:DBToken:DB$ Token | TokenScript$ g_3_3_beast | TokenOwner$ TargetedController | TokenTapped$ True\nOracle:\n",
+    "Name:Hydra Birth Lite\nManaCost:X G\nTypes:Sorcery\nA:SP$ Token | TokenScript$ g_x_x_hydra | TokenPower$ X | TokenToughness$ X | SpellDescription$ Create an X/X green Hydra creature token.\nSVar:X:Count$xPaid\nOracle:\n",
+    "Name:Treasure Map Lite\nManaCost:1\nTypes:Sorcery\nA:SP$ Token | TokenScript$ c_a_treasure_sac | SpellDescription$ Create a Treasure token.\nOracle:\n",
+    "Name:Triple Charm Lite\nManaCost:U\nTypes:Instant\nA:SP$ Charm | Choices$ DBBounce,DBDraw,DBGain | CharmNum$ 2\nSVar:DBBounce:DB$ ChangeZone | Origin$ Battlefield | Destination$ Hand | ValidTgts$ Creature | SpellDescription$ Return target creature to its owner's hand.\nSVar:DBDraw:DB$ Draw | NumCards$ 1 | SpellDescription$ Draw a card.\nSVar:DBGain:DB$ GainLife | LifeAmount$ 3 | SpellDescription$ You gain 3 life.\nOracle:\n",
+    "Name:Target Only Charm Lite\nManaCost:R\nTypes:Instant\nA:SP$ Charm | Choices$ DBShock,DBKill\nSVar:DBShock:DB$ DealDamage | ValidTgts$ Creature | NumDmg$ 2 | SpellDescription$ 2 damage to target creature.\nSVar:DBKill:DB$ Destroy | ValidTgts$ Artifact | SpellDescription$ Destroy target artifact.\nOracle:\n",
+    "Name:Modal Trigger Lite\nManaCost:1 G\nTypes:Creature Elf\nPT:1/1\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigCharm | TriggerDescription$ When CARDNAME enters, choose one — Draw a card; or gain 2 life.\nSVar:TrigCharm:DB$ Charm | Choices$ DBDraw,DBGain\nSVar:DBDraw:DB$ Draw | NumCards$ 1 | SpellDescription$ Draw a card.\nSVar:DBGain:DB$ GainLife | LifeAmount$ 2 | SpellDescription$ Gain 2 life.\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
+];
+
+pub const TOKENS: &[(&str, &str)] = &[
+    (
+        "w_1_1_soldier",
+        "Name:Soldier Token\nManaCost:no cost\nColors:white\nTypes:Creature Soldier\nPT:1/1\nOracle:\n",
+    ),
+    (
+        "g_3_3_beast",
+        "Name:Beast Token\nManaCost:no cost\nColors:green\nTypes:Creature Beast\nPT:3/3\nOracle:\n",
+    ),
+    (
+        "g_x_x_hydra",
+        "Name:Hydra Token\nManaCost:no cost\nColors:green\nTypes:Creature Hydra\nPT:0/0\nOracle:\n",
+    ),
+    (
+        "c_a_treasure_sac",
+        "Name:Treasure Token\nManaCost:no cost\nTypes:Artifact Treasure\nA:AB$ Mana | Cost$ T Sac<1/CARDNAME/this token> | Produced$ Any | Amount$ 1 | SpellDescription$ Add one mana of any color.\nOracle:\n",
+    ),
 ];
 
 pub fn db() -> CardDb {
     let mut db = CardDb::default();
+    for (name, text) in TOKENS {
+        let t = db.add_token_script(name, text).expect("Token-Skript parst");
+        assert!(t.is_supported(), "Token {name}: {:?}", t.unsupported);
+    }
     for s in SCRIPTS {
         let d = db.add_script(s).expect("Testskript parst");
         let pw_or_battle = d
@@ -117,6 +148,7 @@ pub fn game_at(step: Step, lib_size: usize) -> (CardDb, GameState) {
     for p in &mut g.players {
         p.kept_hand = true;
     }
+    g.token_defs = db.token_map();
     g.turn = 2;
     g.active = P1;
     g.step = step;
@@ -275,6 +307,22 @@ pub fn default_choice(d: &Decision) -> Choice {
         Decision::DeclareBlockers { .. } => Choice::Blocks(vec![]),
         Decision::PayMana { .. } => Choice::Pay(PayAction::AutoPay),
         Decision::PayLifeForPhyrexian { .. } => Choice::No,
+        Decision::ChooseModes {
+            modes,
+            min,
+            max,
+            can_repeat,
+            ..
+        } => {
+            let k = (*min).max(1).min(*max) as usize;
+            // mit CanRepeatModes notfalls Modi wiederholen
+            let pick: Vec<usize> = if *can_repeat {
+                modes.iter().cycle().take(k).map(|(i, _)| *i).collect()
+            } else {
+                modes.iter().take(k).map(|(i, _)| *i).collect()
+            };
+            Choice::Modes(pick)
+        }
         Decision::OrderTriggers { descriptions, .. } => {
             Choice::Order((0..descriptions.len()).collect())
         }

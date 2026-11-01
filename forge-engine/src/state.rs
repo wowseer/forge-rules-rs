@@ -120,6 +120,8 @@ pub struct CardObj {
     pub timestamp: u64,
     /// Nachfolger nach Zonenwechsel.
     pub moved_to: Option<CardId>,
+    /// Basis-Stärke/-Widerstandskraft eines Tokens mit festgelegten Werten (`TokenPower$`).
+    pub base_pt: Option<(i32, i32)>,
 }
 
 impl CardObj {
@@ -344,6 +346,8 @@ pub struct GameState {
     /// Während gleichzeitiger Zonenwechsel: Battlefield davor (CR 603.10a).
     pub lki_battlefield: Option<Vec<CardId>>,
     pub log: Vec<Event>,
+    /// Token-Definitionen (`res/tokenscripts`), nach Skriptname.
+    pub token_defs: Arc<std::collections::HashMap<String, Arc<Def>>>,
 }
 
 /// Ergebnis eines Abbruchs innerhalb eines atomaren Schritts.
@@ -465,8 +469,14 @@ impl GameState {
             types: face.types.clone(),
             colors: face.color(),
             mana_cost: face.mana_cost.clone(),
-            power: face.power.as_ref().map(|p| p.base()),
-            toughness: face.toughness.as_ref().map(|t| t.base()),
+            power: c
+                .base_pt
+                .map(|b| b.0)
+                .or_else(|| face.power.as_ref().map(|p| p.base())),
+            toughness: c
+                .base_pt
+                .map(|b| b.1)
+                .or_else(|| face.toughness.as_ref().map(|t| t.base())),
             keywords: compiled.keywords.clone(),
         };
 
@@ -664,6 +674,7 @@ impl GameState {
             pending_triggers: Vec::new(),
             lki_battlefield: None,
             log: Vec::new(),
+            token_defs: Arc::default(),
             rules: rules.clone(),
         };
         for (i, (name, deck)) in decks.into_iter().enumerate() {

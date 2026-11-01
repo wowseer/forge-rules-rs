@@ -83,6 +83,17 @@ CompiledAbility {
   geprüft; unbekannte Wörter machen die Karte „nicht unterstützt“.
 - Filter (`ValidTgts$`, `Sac<1/Creature.Other>`) werden mit `valid::ValidSpec` geparst.
 
+## Token und modale Fähigkeiten
+
+- `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,
+  auch als Liste). `CardDb::load` lädt diese Skripte; Karten mit fehlenden oder nicht
+  unterstützten Token gelten als nicht unterstützt (`check_token_refs`). Im Spiel stehen
+  sie über `GameState::token_defs` bereit. Token lösen beim Erzeugen ETB-Trigger aus.
+- `Charm`: `Choices$` nennt SVars mit den Modi. Beim Wirken (bzw. bei Triggern beim
+  Stapeln) fragt `Decision::ChooseModes` nach den Modi; nur Modi mit legalen Zielen sind
+  wählbar (CR 700.2a). Die gewählten Modi werden in **Druckreihenfolge** zu einer
+  Fähigkeitskette zusammengesetzt (CR 700.2), danach wie jede Kette gestapelt.
+
 ## Neue Effekte hinzufügen (Checkliste)
 
 1. Java-Quelle lesen: Pfad steht in der xlsx-Spalte „Java Source“

@@ -534,16 +534,12 @@ impl GameState {
             }
             for t in mine {
                 let ab = t.trigger.execute.clone();
-                // CR 603.3d: ohne legale Ziele wird der Trigger entfernt.
-                let has_targets = ab.chain().iter().all(|a| match &a.target {
-                    Some(spec) => {
-                        spec.min == 0 || !self.target_candidates(spec, t.source, p).is_empty()
-                    }
-                    None => true,
-                });
-                if !has_targets {
+                // CR 603.3d: ohne legale Ziele (bzw. wählbare Modi) wird der Trigger entfernt.
+                if !self.has_targets_for(&ab, t.source, p) {
                     continue;
                 }
+                // CR 603.3c: Modi beim Stapeln wählen
+                let ab = self.choose_modes(p, t.source, &ab, ch)?;
                 let targets = self.choose_targets(p, t.source, &ab, ch)?;
                 let id = self.next_stack_id;
                 self.next_stack_id += 1;

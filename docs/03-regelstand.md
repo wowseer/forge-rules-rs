@@ -16,11 +16,11 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Trigger | 137 | 0 | 5 | 11 |
 | Replacement Effect | 35 | 0 | 0 | 5 |
 | Static Ability | 90 | 0 | 1 | 0 |
-| Effect (ApiType) | 188 | 0 | 12 | 16 |
+| Effect (ApiType) | 188 | 0 | 14 | 16 |
 | Cost | 42 | 5 | 2 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 12 | 0 | 3 |
-| **Summe** | **729** | **40** | **28** | **40** |
+| **Summe** | **729** | **40** | **30** | **40** |
 
 ## Keyword
 
@@ -101,6 +101,7 @@ Offen (89): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | ChangeZone | 🟡 teilweise | `change_zone::search_library_tapped_then_shuffle` | Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1 | ability/effects/ChangeZoneEffect.java |
 | ChangeZoneAll | 🟡 teilweise | `change_zone::change_zone_all_bounces_everything` | ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger) | ability/effects/ChangeZoneAllEffect.java |
 | ChaosEnsues | ⚪ n/a |  | Planechase | ability/effects/ChaosEnsuesEffect.java |
+| Charm | 🟡 teilweise | `tokens_charm::charm_choose_two_resolve_in_printed_order` | CharmNum/MinCharmNum, CanRepeatModes, nur Modi mit legalen Zielen, Druckreihenfolge, bei Triggern beim Stapeln | ability/effects/CharmEffect.java |
 | ChooseSector | ⚪ n/a |  | Unstable | ability/effects/ChooseSectorEffect.java |
 | DealDamage | 🟡 teilweise | `spells::bolt_face_and_creature_and_fizzle` | Grundform | ability/effects/DamageDealEffect.java |
 | Destroy | 🟡 teilweise | `spells::destroy_respects_indestructible` | Grundform | ability/effects/DestroyEffect.java |
@@ -122,9 +123,10 @@ Offen (89): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Seek | ⚪ n/a |  | Alchemy | ability/effects/SeekEffect.java |
 | SetInMotion | ⚪ n/a |  | Archenemy | ability/effects/SetInMotionEffect.java |
 | Tap | 🟡 teilweise |  | Grundform | ability/effects/TapEffect.java |
+| Token | 🟡 teilweise | `tokens_charm::tokens_enter_and_trigger_etb` | TokenScript (Liste), TokenAmount, TokenOwner, TokenTapped, TokenPower/Toughness | ability/effects/TokenEffect.java |
 | Untap | 🟡 teilweise |  | Grundform | ability/effects/UntapEffect.java |
 
-Offen (176): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, Animate, AnimateAll, Attach, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, Charm, ChooseCard, ChooseColor, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ChooseSource, ChooseType, ClaimThePrize, Clash, ClassLevelUp, Cleanup, Cloak, Clone, Connive, CopyPermanent, CopySpellAbility, ControlSpell, ControlPlayer, Counter, DamageAll, Detain, DayTime, Debuff, DelayedTrigger, DestroyAll, Dig, DigMultiple, DigUntil, Discard, Discover, DrainMana, EachDamage, Earthbend, Effect, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, Fight, FlipCoin, FlipOntoBattlefield, Fog, GainControl, GainControlVariant, GainOwnership, GameDrawn, GenericChoice, Goad, Haunt, HealDamage, Investigate, ImmediateTrigger, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, Mill, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PeekAndReveal, PermanentCreature, PermanentNoncreature, Phases, Play, PlayLandVariant, Poison, PreventDamage, Proliferate, Protection, ProtectionAll, PumpAll, PutCounterAll, Radiation, Recruit, RearrangeTopOfLibrary, Regenerate, Regeneration, RemoveCounter, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, RepeatEach, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, Sacrifice, SacrificeAll, Scry, SetLife, SetState, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, Surveil, SwitchBlock, TakeInitiative, TapAll, TapOrUntap, TapOrUntapAll, TimeTravel, Token, TwoPiles, Unattach, UnlockDoor, UntapAll, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
+Offen (174): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, Animate, AnimateAll, Attach, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseCard, ChooseColor, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ChooseSource, ChooseType, ClaimThePrize, Clash, ClassLevelUp, Cleanup, Cloak, Clone, Connive, CopyPermanent, CopySpellAbility, ControlSpell, ControlPlayer, Counter, DamageAll, Detain, DayTime, Debuff, DelayedTrigger, DestroyAll, Dig, DigMultiple, DigUntil, Discard, Discover, DrainMana, EachDamage, Earthbend, Effect, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, Fight, FlipCoin, FlipOntoBattlefield, Fog, GainControl, GainControlVariant, GainOwnership, GameDrawn, GenericChoice, Goad, Haunt, HealDamage, Investigate, ImmediateTrigger, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, Mill, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PeekAndReveal, PermanentCreature, PermanentNoncreature, Phases, Play, PlayLandVariant, Poison, PreventDamage, Proliferate, Protection, ProtectionAll, PumpAll, PutCounterAll, Radiation, Recruit, RearrangeTopOfLibrary, Regenerate, Regeneration, RemoveCounter, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, RepeatEach, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, Sacrifice, SacrificeAll, Scry, SetLife, SetState, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, Surveil, SwitchBlock, TakeInitiative, TapAll, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, UntapAll, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
 
 ## Cost
 

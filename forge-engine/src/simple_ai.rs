@@ -144,6 +144,22 @@ impl Controller for SimpleAi {
                 debug_assert_eq!(d.len(), blockers.len() + usize::from(trample_to.is_some()));
                 Choice::Damage(d)
             }
+            Decision::ChooseModes {
+                modes,
+                min,
+                max,
+                can_repeat,
+                ..
+            } => {
+                let k = (*min).max(1).min(*max) as usize;
+                // mit CanRepeatModes notfalls Modi wiederholen
+                let pick: Vec<usize> = if *can_repeat {
+                    modes.iter().cycle().take(k).map(|(i, _)| *i).collect()
+                } else {
+                    modes.iter().take(k).map(|(i, _)| *i).collect()
+                };
+                Choice::Modes(pick)
+            }
             Decision::OrderTriggers { descriptions, .. } => {
                 Choice::Order((0..descriptions.len()).collect())
             }

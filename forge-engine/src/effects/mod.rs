@@ -124,6 +124,18 @@ pub enum Effect {
         place: ZonePlacement,
         shuffle: bool,
     },
+    /// Spielsteine erzeugen (`Token`, CR 111). Skriptnamen aus `res/tokenscripts`.
+    Token {
+        scripts: Vec<String>,
+        amount: Amount,
+        owner: Defined,
+        tapped: bool,
+        power: Option<Amount>,
+        toughness: Option<Amount>,
+    },
+    /// Platzhalter für modale Fähigkeiten; wird vor dem Stapeln durch die
+    /// gewählten Modi ersetzt (`GameState::choose_modes`).
+    Charm(CharmSpec),
     /// Alle passenden Karten der Ursprungszonen bewegen (`ChangeZoneAll`).
     ChangeZoneAll {
         origin: Vec<crate::zone::Zone>,
@@ -132,6 +144,15 @@ pub enum Effect {
         place: ZonePlacement,
         shuffle: bool,
     },
+}
+
+/// Modaler Effekt (`Charm`, CR 700.2): Modi werden beim Wirken/Stapeln gewählt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CharmSpec {
+    pub choices: Vec<Arc<CompiledAbility>>,
+    pub num: u32,
+    pub min: u32,
+    pub can_repeat: bool,
 }
 
 /// Wie ein Objekt in der Zielzone ankommt.
@@ -289,8 +310,17 @@ impl<'a> Ctx<'a> {
     }
 
     fn defined(&mut self, default: Defined) -> Result<Defined, CompileError> {
+        self.defined_key("Defined", default)
+    }
+
+    /// Wie `defined`, aber für einen anderen Schlüssel (z. B. `TokenOwner$`).
+    fn defined_key(
+        &mut self,
+        key: &'static str,
+        default: Defined,
+    ) -> Result<Defined, CompileError> {
         let has_tgt = self.ab.params.has("ValidTgts");
-        match self.get("Defined") {
+        match self.get(key) {
             None if has_tgt => Ok(Defined::Targeted),
             // Java (AbilityUtils.getDefinedCards): ohne Defined$ ist „Self“ gemeint.
             None if default == Defined::Targeted => Ok(Defined::SelfCard),
@@ -314,7 +344,7 @@ impl<'a> Ctx<'a> {
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
                 "TriggeredTarget" => Defined::TriggeredTarget,
                 "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
-                other => return Err(self.unsupported("Defined", other)),
+                other => return Err(self.unsupported(key, other)),
             }),
         }
     }
@@ -586,6 +616,79 @@ fn compile_depth(
             }
         }
         "ChangeZone" | "ChangeZoneAll" => compile_change_zone(&mut c, api)?,
+        "Token" => {
+            let scripts_s = c.get("TokenScript").ok_or(CompileError::MissingParam {
+                api: api.into(),
+                key: "TokenScript",
+            })?;
+            let scripts = scripts_s
+                .split(',')
+                .map(|t| t.trim().to_string())
+                .filter(|t| !t.is_empty())
+                .collect();
+            let amount = c.amount("TokenAmount", Some(1))?;
+            let owner = c.defined_key("TokenOwner", Defined::You)?;
+            let tapped = c
+                .get("TokenTapped")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let power = match c.get("TokenPower") {
+                Some(v) => Some(c.amount_value("TokenPower", v)?),
+                None => None,
+            };
+            let toughness = match c.get("TokenToughness") {
+                Some(v) => Some(c.amount_value("TokenToughness", v)?),
+                None => None,
+            };
+            Effect::Token {
+                scripts,
+                amount,
+                owner,
+                tapped,
+                power,
+                toughness,
+            }
+        }
+        "Charm" => {
+            // Modi werden beim Wirken gewählt; als Unterfähigkeit nicht unterstützt.
+            if depth > 0 {
+                return Err(c.unsupported("Charm", "als Unterfähigkeit"));
+            }
+            let choices_s = c.get("Choices").ok_or(CompileError::MissingParam {
+                api: api.into(),
+                key: "Choices",
+            })?;
+            let mut choices = Vec::new();
+            for name in choices_s.split(',').map(str::trim) {
+                let sv = face
+                    .svar(name)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+                let sub_ab = ScriptAbility::from_svar(sv)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+                    .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+                choices.push(Arc::new(compile_depth(face, &sub_ab, depth + 1)?));
+            }
+            let num = match c.get("CharmNum") {
+                Some(v) => v.trim().parse().map_err(|_| c.unsupported("CharmNum", v))?,
+                None => 1,
+            };
+            let min = match c.get("MinCharmNum") {
+                Some(v) => v
+                    .trim()
+                    .parse()
+                    .map_err(|_| c.unsupported("MinCharmNum", v))?,
+                None => num,
+            };
+            let can_repeat = c
+                .get("CanRepeatModes")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            c.get("AdditionalDescription");
+            Effect::Charm(CharmSpec {
+                choices,
+                num,
+                min,
+                can_repeat,
+            })
+        }
         other => return Err(CompileError::UnsupportedApi(other.to_string())),
     };
 
@@ -627,6 +730,18 @@ fn compile_depth(
         sorcery_speed,
         conditions,
     })
+}
+
+impl CompiledAbility {
+    /// Hängt `next` als letzte Unterfähigkeit an eine Kopie von `self` an.
+    pub fn append(&self, next: Arc<CompiledAbility>) -> CompiledAbility {
+        let mut me = self.clone();
+        me.sub = Some(match &self.sub {
+            Some(s) => Arc::new(s.append(next)),
+            None => next,
+        });
+        me
+    }
 }
 
 #[cfg(test)]

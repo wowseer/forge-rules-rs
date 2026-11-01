@@ -83,11 +83,89 @@ impl GameState {
     }
 
     /// Sind für jede Fähigkeit der Kette mit Pflichtzielen Ziele vorhanden?
-    fn has_targets_for(&self, ab: &CompiledAbility, source: CardId, p: PlayerId) -> bool {
+    /// Bei modalen Fähigkeiten: genug Modi mit legalen Zielen (CR 700.2a)?
+    pub(crate) fn has_targets_for(
+        &self,
+        ab: &CompiledAbility,
+        source: CardId,
+        p: PlayerId,
+    ) -> bool {
+        if let crate::effects::Effect::Charm(spec) = &ab.effect {
+            let feasible = spec
+                .choices
+                .iter()
+                .filter(|m| self.has_targets_for(m, source, p))
+                .count() as u32;
+            return feasible >= spec.min.max(1).min(spec.choices.len() as u32)
+                || (spec.can_repeat && feasible > 0);
+        }
         ab.chain().iter().all(|a| match &a.target {
             Some(spec) => spec.min == 0 || !self.target_candidates(spec, source, p).is_empty(),
             None => true,
         })
+    }
+
+    /// CR 601.2b / 603.3c: Modi wählen; liefert die zusammengesetzte Kette der
+    /// gewählten Modi in Druckreihenfolge (CR 700.2). Nicht-modale Fähigkeiten
+    /// werden unverändert zurückgegeben.
+    pub(crate) fn choose_modes(
+        &mut self,
+        p: PlayerId,
+        source: CardId,
+        ab: &Arc<CompiledAbility>,
+        ch: &mut Choices,
+    ) -> Res<Arc<CompiledAbility>> {
+        let crate::effects::Effect::Charm(spec) = &ab.effect else {
+            return Ok(ab.clone());
+        };
+        let modes: Vec<(usize, String)> = spec
+            .choices
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| self.has_targets_for(m, source, p))
+            .map(|(i, m)| (i, m.description.clone()))
+            .collect();
+        let max = if spec.can_repeat {
+            spec.num
+        } else {
+            spec.num.min(modes.len() as u32)
+        };
+        let min = spec.min.min(max);
+        if max == 0 || (modes.len() as u32) < min.min(1) {
+            return Err(Interrupt::Cancelled);
+        }
+        let mut chosen = match ch.ask(Decision::ChooseModes {
+            player: p,
+            modes,
+            min,
+            max,
+            can_repeat: spec.can_repeat,
+        })? {
+            Choice::Modes(m) => m,
+            _ => return Err(Interrupt::Cancelled),
+        };
+        chosen.sort_unstable();
+        let mut iter = chosen.into_iter().map(|i| spec.choices[i].clone());
+        let Some(first) = iter.next() else {
+            // null Modi (MinCharmNum$ 0): nur die Unterfähigkeit des Charms selbst
+            return Ok(Arc::new(CompiledAbility {
+                effect: crate::effects::Effect::Charm(crate::effects::CharmSpec {
+                    choices: vec![],
+                    num: 0,
+                    min: 0,
+                    can_repeat: false,
+                }),
+                ..(**ab).clone()
+            }));
+        };
+        let mut built: CompiledAbility = (*first).clone();
+        for m in iter {
+            built = built.append(m);
+        }
+        if let Some(sub) = &ab.sub {
+            built = built.append(sub.clone());
+        }
+        Ok(Arc::new(built))
     }
 
     /// Alle legalen Prioritätsaktionen von `p` (CR 117.1).
@@ -230,6 +308,11 @@ impl GameState {
         } else {
             0
         };
+        // 601.2b: Modi
+        let spell_ab = match spell_ab {
+            Some(ab) => Some(self.choose_modes(p, on_stack, &ab, ch)?),
+            None => None,
+        };
         // 601.2c
         let targets = match &spell_ab {
             Some(ab) => self.choose_targets(p, on_stack, ab, ch)?,
@@ -280,6 +363,7 @@ impl GameState {
         } else {
             0
         };
+        let ab = self.choose_modes(p, source, &ab, ch)?;
         let targets = self.choose_targets(p, source, &ab, ch)?;
         self.pay_nonmana_costs(p, source, &cost, ch)?;
         if cost.mana.is_some() {
