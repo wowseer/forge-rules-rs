@@ -135,3 +135,76 @@ Effect (ApiType);Mill;teilweise;library_regen_animate::mill_target_player;NumCar
 Effect (ApiType);Dig;teilweise;library_regen_animate::dig_one_to_hand_rest_bottom;DigNum, ChangeNum (auch All), ChangeValid, Destination(2), LibraryPosition(2), Optional; RememberChanged, Tapped fehlen
 Effect (ApiType);Regenerate;ja;library_regen_animate::regenerate_replaces_destruction;inkl. SBA-Zerstörung, NoRegen bei Destroy/DestroyAll
 Effect (ApiType);Animate;teilweise;library_regen_animate::animate_land_until_end_of_turn;Power/Toughness, Types, RemoveCreatureTypes, Keywords, Colors/OverwriteColors, Duration Permanent; Triggers, statische Fähigkeiten, RemoveCardTypes fehlen
+Combat Rule;Attack legality;ja;combat::summoning_sickness_haste_defender, combat_restrictions::cant_attack;getappt/Einsatzbereitschaft/CantAttack
+Combat Rule;Summoning sickness;ja;combat::summoning_sickness_haste_defender, spells::activated_ability_with_tap_cost_uses_stack_and_sickness;
+Combat Rule;Attack requirements;teilweise;combat_restrictions::must_attack_if_able;MustAttack geprüft, keine Maximierung über mehrere Anforderungen
+Combat Rule;Attack targets;teilweise;;nur Spieler; Planeswalker/Battles als Angriffsziel fehlen
+Combat Rule;Block legality;ja;combat::blocked_creatures_trade, combat_restrictions::cant_block;
+Combat Rule;Evasion;teilweise;combat::flying_needs_flying_or_reach_to_block, combat::menace_needs_two_blockers, combat_restrictions::unblockable;Flying/Reach/Menace/CantBlockBy; Landwalk, Shadow, Fear, Intimidate fehlen
+Combat Rule;Minimum blockers;ja;combat::menace_needs_two_blockers;
+Combat Rule;Damage assignment order;teilweise;combat::deathtouch_lethal_is_one_for_damage_assignment;tödlicher Schaden vor Weitergabe; freie Verteilung auf mehrere Blocker vereinfacht
+Combat Rule;Combat damage assignment;ja;combat::blocked_creatures_trade, combat::unblocked_attacker_damages_player_and_taps;
+Combat Rule;Trample;ja;combat::trample_assigns_excess_to_player, combat::trample_with_removed_blocker_hits_player;
+Combat Rule;Simultaneous combat damage;ja;combat::blocked_creatures_trade;
+Combat Rule;Removal from combat;teilweise;combat::blocked_attacker_without_trample_deals_no_damage_if_blocker_removed;Verlassen des Battlefields; Kontrollwechsel/Effekte fehlen
+Mana Rule;Mana pool;ja;spells::manual_mana_payment_and_cancel;
+Mana Rule;Mana emptying;ja;spells::mana_pool_empties_between_steps;
+Mana Rule;Mana burn;n/a;;alte Regel, in keinem Zielformat
+Mana Rule;Paying mana costs;ja;spells::manual_mana_payment_and_cancel, mana_pool::pays_colored_and_generic;
+Mana Rule;Generic mana;ja;mana_pool::pays_colored_and_generic;
+Mana Rule;Hybrid mana;ja;mana_pool::hybrid_backtracking;
+Mana Rule;Phyrexian mana;ja;spells::phyrexian_mana_with_life;
+Mana Rule;Snow mana;teilweise;;Schnee-Mana wird im Pool geführt, ohne Regeltest
+Mana Rule;Colorless mana;teilweise;;{C} nur mit farblosem Mana, ohne Regeltest
+Mana Rule;X costs;ja;spells::x_spell;
+Mana Rule;Mana refund;ja;spells::manual_mana_payment_and_cancel;
+Zone;Hand;ja;turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects;
+Zone;Library;ja;change_zone::search_library_tapped_then_shuffle, change_zone::library_bottom;
+Zone;Graveyard;teilweise;mass_discard_counter::target_player_chooses_discard;Reihenfolge im Friedhof ohne eigenen Test
+Zone;Battlefield;ja;spells::creature_spell_resolves_onto_battlefield_with_summoning_sickness;
+Zone;Exile;ja;replacements::rest_in_peace_redirects_to_exile_and_no_dies_trigger;
+Zone;Command;teilweise;effects_objects::effect_trigger_fires_from_command_zone;Effektobjekte; Commander/Emblem/Dungeon fehlen
+Zone;Stack;ja;turn_structure::stack_resolves_last_in_first_out;
+Zone;Ante;n/a;;Ante ausgeschlossen
+Zone;SchemeDeck;n/a;;Archenemy
+Zone;PlanarDeck;n/a;;Planechase
+Zone;AttractionDeck;n/a;;Un-Sets
+Zone;Junkyard;n/a;;Un-Sets
+Zone;ContraptionDeck;n/a;;Un-Sets
+Zone;StickerSheets;n/a;;Un-Sets
+Zone;Subgame;n/a;;Shahrazad, in keinem Zielformat legal
+Mulligan;London;ja;turn_structure::london_mulligan;
+Mulligan;Vancouver;n/a;;nicht in den Zielformaten
+Mulligan;Paris;n/a;;nicht in den Zielformaten
+Mulligan;Original;n/a;;nicht in den Zielformaten
+Mulligan;Houston;n/a;;nicht in den Zielformaten
+Game Variant;Constructed;teilweise;;Partien laufen; Format-Legalität der Decks fehlt
+Game Variant;Sealed;n/a;;kein Zielformat
+Game Variant;CommanderDraft;n/a;;kein Zielformat
+Game Variant;Winston;n/a;;kein Zielformat
+Game Variant;Gauntlet;n/a;;ausgeschlossen
+Game Variant;Tournament;n/a;;Turnierverwaltung, nicht Teil der Engine
+Game Variant;CommanderGauntlet;n/a;;ausgeschlossen
+Game Variant;Quest;n/a;;ausgeschlossen
+Game Variant;QuestCommander;n/a;;ausgeschlossen
+Game Variant;QuestDraft;n/a;;ausgeschlossen
+Game Variant;PlanarConquest;n/a;;ausgeschlossen
+Game Variant;Adventure;n/a;;ausgeschlossen
+Game Variant;AdventureEvent;n/a;;ausgeschlossen
+Game Variant;Puzzle;n/a;;nur als Testfälle, nicht als Spielmodus
+Game Variant;DeckManager;n/a;;keine Spielregeln
+Game Variant;Vanguard;n/a;;ausgeschlossen
+Game Variant;Oathbreaker;n/a;;ausgeschlossen
+Game Variant;TinyLeaders;n/a;;kein Zielformat
+Game Variant;Brawl;n/a;;ausgeschlossen
+Game Variant;Planeswalker;n/a;;Forge-Variante, ausgeschlossen
+Game Variant;Planechase;n/a;;ausgeschlossen
+Game Variant;Archenemy;n/a;;ausgeschlossen
+Game Variant;ArchenemyRumble;n/a;;ausgeschlossen
+Game Variant;MomirBasic;n/a;;ausgeschlossen
+Game Variant;MoJhoSto;n/a;;ausgeschlossen
+Game Rule Option;Mana burn option;n/a;;alte Regel
+Game Rule Option;Order combatants;n/a;;Regel vor Foundations, Zielformate nutzen die aktuelle
+Game Rule Option;Poison counters to lose;teilweise;sba::cr_704_5c_ten_poison_loses;fest 10, nicht konfigurierbar
+Game Rule Option;Play for ante;n/a;;Ante ausgeschlossen
+Game Rule Option;Ante rarity matching;n/a;;Ante ausgeschlossen

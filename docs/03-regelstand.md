@@ -20,13 +20,13 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Cost | 42 | 5 | 2 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 14 | 1 | 3 |
-| Combat Rule | 26 | 0 | 0 | 0 |
-| Mana Rule | 15 | 0 | 0 | 0 |
-| Zone | 20 | 0 | 0 | 0 |
-| Mulligan | 6 | 0 | 0 | 0 |
-| Game Variant | 27 | 0 | 0 | 0 |
-| Game Rule Option | 7 | 0 | 0 | 0 |
-| **Summe** | **830** | **45** | **47** | **40** |
+| Combat Rule | 26 | 7 | 5 | 0 |
+| Mana Rule | 14 | 8 | 2 | 1 |
+| Zone | 12 | 5 | 2 | 8 |
+| Mulligan | 2 | 1 | 0 | 4 |
+| Game Variant | 3 | 0 | 1 | 24 |
+| Game Rule Option | 3 | 0 | 1 | 4 |
+| **Summe** | **789** | **66** | **58** | **81** |
 
 ## Keyword
 
@@ -218,40 +218,113 @@ Offen (8): CR 704.5r, CR 704.5s, CR 704.5t, CR 704.5w/x, CR 704.5y, CR 704.5z, C
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| Attack legality | ✅ ja | `combat::summoning_sickness_haste_defender, combat_restrictions::cant_attack` | getappt/Einsatzbereitschaft/CantAttack | combat/CombatUtil.java (canAttack) |
+| Summoning sickness | ✅ ja | `combat::summoning_sickness_haste_defender, spells::activated_ability_with_tap_cost_uses_stack_and_sickness` |  | combat/CombatUtil.java (isAttackerSick) |
+| Attack requirements | 🟡 teilweise | `combat_restrictions::must_attack_if_able` | MustAttack geprüft, keine Maximierung über mehrere Anforderungen | combat/AttackRequirement.java, AttackConstraints.java |
+| Attack targets | 🟡 teilweise |  | nur Spieler | combat/CombatUtil.java (getAllPossibleDefenders) |
+| Block legality | ✅ ja | `combat::blocked_creatures_trade, combat_restrictions::cant_block` |  | combat/CombatUtil.java (canBlock) |
+| Evasion | 🟡 teilweise | `combat::flying_needs_flying_or_reach_to_block, combat::menace_needs_two_blockers, combat_restrictions::unblockable` | Flying/Reach/Menace/CantBlockBy | combat/CombatUtil.java (canBeBlocked) |
+| Minimum blockers | ✅ ja | `combat::menace_needs_two_blockers` |  | combat/CombatUtil.java (getMinNumBlockersForAttacker) |
+| Damage assignment order | 🟡 teilweise | `combat::deathtouch_lethal_is_one_for_damage_assignment` | tödlicher Schaden vor Weitergabe | combat/Combat.java (orderBlockersForDamageAssignment) |
+| Combat damage assignment | ✅ ja | `combat::blocked_creatures_trade, combat::unblocked_attacker_damages_player_and_taps` |  | combat/Combat.java (assignCombatDamage) |
+| Trample | ✅ ja | `combat::trample_assigns_excess_to_player, combat::trample_with_removed_blocker_hits_player` |  | combat/Combat.java (assignAttackersDamage) |
+| Simultaneous combat damage | ✅ ja | `combat::blocked_creatures_trade` |  | combat/Combat.java (dealAssignedDamage) |
+| Removal from combat | 🟡 teilweise | `combat::blocked_attacker_without_trample_deals_no_damage_if_blocker_removed` | Verlassen des Battlefields | combat/Combat.java (removeFromCombat) |
 
-Offen (26): Attack legality, Summoning sickness, Attack requirements, Attack restrictions, Attack restriction: ONLY_ALONE, Attack restriction: NOT_ALONE, Attack restriction: NEED_TWO_OTHERS, Attack restriction: NEED_GREATER_POWER, Attack restriction: NEED_BLACK_OR_GREEN, Attack restriction: NEVER, Global attack restrictions, Attack costs, Attack targets, Block legality, Evasion, Block requirements, Block costs, Minimum blockers, Banding, Damage assignment order, Combat damage assignment, Trample, Simultaneous combat damage, Removal from combat, Combat LKI, Multiple combat phases
+Offen (14): Attack restrictions, Attack restriction: ONLY_ALONE, Attack restriction: NOT_ALONE, Attack restriction: NEED_TWO_OTHERS, Attack restriction: NEED_GREATER_POWER, Attack restriction: NEED_BLACK_OR_GREEN, Attack restriction: NEVER, Global attack restrictions, Attack costs, Block requirements, Block costs, Banding, Combat LKI, Multiple combat phases
 
 ## Mana Rule
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| Mana pool | ✅ ja | `spells::manual_mana_payment_and_cancel` |  | mana/ManaPool.java |
+| Mana emptying | ✅ ja | `spells::mana_pool_empties_between_steps` |  | mana/ManaPool.java (clearPool, willManaBeLostAtEndOfPhase) |
+| Mana burn | ⚪ n/a |  | alte Regel, in keinem Zielformat | mana/ManaPool.java (hasBurn), GameRules.java |
+| Paying mana costs | ✅ ja | `spells::manual_mana_payment_and_cancel, mana_pool::pays_colored_and_generic` |  | mana/ManaCostBeingPaid.java (payMana, payManaFromAbility) |
+| Generic mana | ✅ ja | `mana_pool::pays_colored_and_generic` |  | mana/ManaCostBeingPaid.java (getGenericManaAmount) |
+| Hybrid mana | ✅ ja | `mana_pool::hybrid_backtracking` |  | mana/ManaCostBeingPaid.java (canPayForShardWithColor) |
+| Phyrexian mana | ✅ ja | `spells::phyrexian_mana_with_life` |  | mana/ManaCostBeingPaid.java (payPhyrexian) |
+| Snow mana | 🟡 teilweise |  | Schnee-Mana wird im Pool geführt, ohne Regeltest | mana/Mana.java |
+| Colorless mana | 🟡 teilweise |  | {C} nur mit farblosem Mana, ohne Regeltest | mana/ManaCostBeingPaid.java |
+| X costs | ✅ ja | `spells::x_spell` |  | mana/ManaCostBeingPaid.java (getXcounter, setXManaCostPaid) |
+| Mana refund | ✅ ja | `spells::manual_mana_payment_and_cancel` |  | mana/ManaRefundService.java |
 
-Offen (15): Mana pool, Mana emptying, Mana burn, Paying mana costs, Generic mana, Hybrid mana, Phyrexian mana, Snow mana, Colorless mana, X costs, Mana restrictions, Mana conversion, Convoke payment, Sunburst, Mana refund
+Offen (4): Mana restrictions, Mana conversion, Convoke payment, Sunburst
 
 ## Zone
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| Hand | ✅ ja | `turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects` |  | zone/ZoneType.java (Hand) |
+| Library | ✅ ja | `change_zone::search_library_tapped_then_shuffle, change_zone::library_bottom` |  | zone/ZoneType.java (Library) |
+| Graveyard | 🟡 teilweise | `mass_discard_counter::target_player_chooses_discard` | Reihenfolge im Friedhof ohne eigenen Test | zone/ZoneType.java (Graveyard) |
+| Battlefield | ✅ ja | `spells::creature_spell_resolves_onto_battlefield_with_summoning_sickness` |  | zone/ZoneType.java (Battlefield) |
+| Exile | ✅ ja | `replacements::rest_in_peace_redirects_to_exile_and_no_dies_trigger` |  | zone/ZoneType.java (Exile) |
+| Command | 🟡 teilweise | `effects_objects::effect_trigger_fires_from_command_zone` | Effektobjekte | zone/ZoneType.java (Command) |
+| Stack | ✅ ja | `turn_structure::stack_resolves_last_in_first_out` |  | zone/ZoneType.java (Stack) |
+| Ante | ⚪ n/a |  | Ante ausgeschlossen | zone/ZoneType.java (Ante) |
+| SchemeDeck | ⚪ n/a |  | Archenemy | zone/ZoneType.java (SchemeDeck) |
+| PlanarDeck | ⚪ n/a |  | Planechase | zone/ZoneType.java (PlanarDeck) |
+| AttractionDeck | ⚪ n/a |  | Un-Sets | zone/ZoneType.java (AttractionDeck) |
+| Junkyard | ⚪ n/a |  | Un-Sets | zone/ZoneType.java (Junkyard) |
+| ContraptionDeck | ⚪ n/a |  | Un-Sets | zone/ZoneType.java (ContraptionDeck) |
+| StickerSheets | ⚪ n/a |  | Un-Sets | zone/ZoneType.java (StickerSheets) |
+| Subgame | ⚪ n/a |  | Shahrazad, in keinem Zielformat legal | zone/ZoneType.java (Subgame) |
 
-Offen (20): Hand, Library, Graveyard, Battlefield, Exile, Flashback, Command, Stack, Sideboard, Ante, Merged, SchemeDeck, PlanarDeck, AttractionDeck, Junkyard, ContraptionDeck, StickerSheets, Subgame, ExtraHand, None
+Offen (5): Flashback, Sideboard, Merged, ExtraHand, None
 
 ## Mulligan
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| London | ✅ ja | `turn_structure::london_mulligan` |  | mulligan/LondonMulligan.java |
+| Vancouver | ⚪ n/a |  | nicht in den Zielformaten | mulligan/VancouverMulligan.java |
+| Paris | ⚪ n/a |  | nicht in den Zielformaten | mulligan/ParisMulligan.java |
+| Original | ⚪ n/a |  | nicht in den Zielformaten | mulligan/OriginalMulligan.java |
+| Houston | ⚪ n/a |  | nicht in den Zielformaten | mulligan/HoustonMulligan.java |
 
-Offen (6): London, Vancouver, Paris, Original, Houston, Free first mulligan
+Offen (1): Free first mulligan
 
 ## Game Variant
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| Constructed | 🟡 teilweise |  | Partien laufen | GameType.java (Constructed) |
+| Sealed | ⚪ n/a |  | kein Zielformat | GameType.java (Sealed) |
+| CommanderDraft | ⚪ n/a |  | kein Zielformat | GameType.java (CommanderDraft) |
+| Winston | ⚪ n/a |  | kein Zielformat | GameType.java (Winston) |
+| Gauntlet | ⚪ n/a |  | ausgeschlossen | GameType.java (Gauntlet) |
+| Tournament | ⚪ n/a |  | Turnierverwaltung, nicht Teil der Engine | GameType.java (Tournament) |
+| CommanderGauntlet | ⚪ n/a |  | ausgeschlossen | GameType.java (CommanderGauntlet) |
+| Quest | ⚪ n/a |  | ausgeschlossen | GameType.java (Quest) |
+| QuestCommander | ⚪ n/a |  | ausgeschlossen | GameType.java (QuestCommander) |
+| QuestDraft | ⚪ n/a |  | ausgeschlossen | GameType.java (QuestDraft) |
+| PlanarConquest | ⚪ n/a |  | ausgeschlossen | GameType.java (PlanarConquest) |
+| Adventure | ⚪ n/a |  | ausgeschlossen | GameType.java (Adventure) |
+| AdventureEvent | ⚪ n/a |  | ausgeschlossen | GameType.java (AdventureEvent) |
+| Puzzle | ⚪ n/a |  | nur als Testfälle, nicht als Spielmodus | GameType.java (Puzzle) |
+| DeckManager | ⚪ n/a |  | keine Spielregeln | GameType.java (DeckManager) |
+| Vanguard | ⚪ n/a |  | ausgeschlossen | GameType.java (Vanguard) |
+| Oathbreaker | ⚪ n/a |  | ausgeschlossen | GameType.java (Oathbreaker) |
+| TinyLeaders | ⚪ n/a |  | kein Zielformat | GameType.java (TinyLeaders) |
+| Brawl | ⚪ n/a |  | ausgeschlossen | GameType.java (Brawl) |
+| Planeswalker | ⚪ n/a |  | Forge-Variante, ausgeschlossen | GameType.java (Planeswalker) |
+| Planechase | ⚪ n/a |  | ausgeschlossen | GameType.java (Planechase) |
+| Archenemy | ⚪ n/a |  | ausgeschlossen | GameType.java (Archenemy) |
+| ArchenemyRumble | ⚪ n/a |  | ausgeschlossen | GameType.java (ArchenemyRumble) |
+| MomirBasic | ⚪ n/a |  | ausgeschlossen | GameType.java (MomirBasic) |
+| MoJhoSto | ⚪ n/a |  | ausgeschlossen | GameType.java (MoJhoSto) |
 
-Offen (27): Constructed, Sealed, Draft, CommanderDraft, Winston, Gauntlet, Tournament, CommanderGauntlet, Quest, QuestCommander, QuestDraft, PlanarConquest, Adventure, AdventureEvent, Puzzle, DeckManager, Vanguard, Commander, Oathbreaker, TinyLeaders, Brawl, Planeswalker, Planechase, Archenemy, ArchenemyRumble, MomirBasic, MoJhoSto
+Offen (2): Draft, Commander
 
 ## Game Rule Option
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| Mana burn option | ⚪ n/a |  | alte Regel | GameRules.java (hasManaBurn) |
+| Order combatants | ⚪ n/a |  | Regel vor Foundations, Zielformate nutzen die aktuelle | GameRules.java (hasOrderCombatants) |
+| Poison counters to lose | 🟡 teilweise | `sba::cr_704_5c_ten_poison_loses` | fest 10, nicht konfigurierbar | GameRules.java (getPoisonCountersToLose) |
+| Play for ante | ⚪ n/a |  | Ante ausgeschlossen | GameRules.java (useAnte) |
+| Ante rarity matching | ⚪ n/a |  | Ante ausgeschlossen | GameRules.java (getMatchAnteRarity, getAnteIncludeBasicLands) |
 
-Offen (7): Mana burn option, Order combatants, Poison counters to lose, Games per match, Play for ante, Ante rarity matching, Applied variants
+Offen (2): Games per match, Applied variants
