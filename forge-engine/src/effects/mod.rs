@@ -48,6 +48,8 @@ pub enum Defined {
     DelayTriggerRemembered,
     /// … bzw. wie gemerkt (`DelayTriggerRememberedLKI`).
     DelayTriggerRememberedLki,
+    /// Alle betroffenen Objekte eines Sammel-Triggers (`TriggeredCards`).
+    TriggeredCards,
     /// Angreifender Spieler aus dem Trigger-Kontext.
     TriggeredAttackingPlayer,
     /// Von der Quelle gemerkte Objekte in ihrem aktuellen Zustand (`Remembered`,
@@ -572,6 +574,7 @@ impl<'a> Ctx<'a> {
                 }
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
                 "TriggeredBlocker" | "TriggeredBlockerLKICopy" => Defined::TriggeredCard,
+                "TriggeredCards" | "TriggeredCardsLKICopy" => Defined::TriggeredCards,
                 "TriggeredDefendingPlayer" => Defined::TriggeredPlayer,
                 "TriggeredTarget" | "TriggeredTargetLKICopy" | "TriggeredAttackedTarget" => {
                     Defined::TriggeredTarget

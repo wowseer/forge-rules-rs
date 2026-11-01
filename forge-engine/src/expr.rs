@@ -71,6 +71,8 @@ pub enum ObjRef {
     Remembered,
     /// `TriggeredCard`
     TriggeredCard,
+    /// `TriggeredCards` (Sammel-Trigger)
+    TriggeredCards,
     /// `TargetedPlayer`
     TargetedPlayer,
     /// `TriggeredPlayer`
@@ -83,6 +85,7 @@ impl ObjRef {
             "Targeted" | "ParentTargeted" => ObjRef::Targeted,
             "Remembered" => ObjRef::Remembered,
             "TriggeredCard" => ObjRef::TriggeredCard,
+            "TriggeredCards" => ObjRef::TriggeredCards,
             "TargetedPlayer" => ObjRef::TargetedPlayer,
             "TriggeredPlayer" => ObjRef::TriggeredPlayer,
             _ => return None,
@@ -602,6 +605,7 @@ impl GameState {
                 }
                 self.card(ctx.source).remembered.clone()
             }
+            ObjRef::TriggeredCards => ctx.trig.map(|t| t.cards.clone()).unwrap_or_default(),
             // Nach Verlassen des Battlefields zählt das alte Objekt (LKI).
             _ => ctx
                 .trig

@@ -176,6 +176,12 @@ impl GameState {
             from,
             to,
         });
+        match self.zone_batch.as_mut() {
+            Some(b) => b.push((id, new_id, from, to)),
+            None => self.fire(crate::triggers::TriggerEvent::ChangesZoneAll {
+                moves: vec![(id, new_id, from, to)],
+            }),
+        }
         new_id
     }
 
@@ -382,6 +388,27 @@ impl GameState {
             if !k && self.card(e.card).zone == Some(Zone::Battlefield) {
                 self.apply_control(e.card);
             }
+        }
+    }
+
+    /// Bündelt Zonenwechsel (Java `CardZoneTable`) bis zum passenden
+    /// [`GameState::end_zone_batch`]; dann löst `ChangesZoneAll` einmal aus.
+    pub fn begin_zone_batch(&mut self) {
+        self.zone_batch_depth += 1;
+        if self.zone_batch.is_none() {
+            self.zone_batch = Some(Vec::new());
+        }
+    }
+
+    pub fn end_zone_batch(&mut self) {
+        self.zone_batch_depth = self.zone_batch_depth.saturating_sub(1);
+        if self.zone_batch_depth > 0 {
+            return;
+        }
+        if let Some(moves) = self.zone_batch.take()
+            && !moves.is_empty()
+        {
+            self.fire(crate::triggers::TriggerEvent::ChangesZoneAll { moves });
         }
     }
 

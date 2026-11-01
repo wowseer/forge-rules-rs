@@ -188,7 +188,8 @@ impl GameState {
         }
 
         drop(cache);
-        // --- Ausführen ---
+        // --- Ausführen --- (gleichzeitig: ein Zonenwechsel-Ereignis)
+        self.begin_zone_batch();
         for (p, reason) in losers {
             self.player_mut(p).lost = Some(reason);
             self.push_event(Event::PlayerLost { player: p, reason });
@@ -231,6 +232,7 @@ impl GameState {
             }
         }
         self.lki_battlefield = None;
+        self.end_zone_batch();
 
         // Spielende (CR 104.2a): nur noch ein Spieler übrig.
         let remaining: Vec<PlayerId> = self

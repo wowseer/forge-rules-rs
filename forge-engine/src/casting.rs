@@ -464,6 +464,19 @@ impl GameState {
         if !self.can_pay_nonmana(cost, source, p) {
             return Err(Interrupt::Cancelled);
         }
+        self.begin_zone_batch();
+        let r = self.pay_nonmana_parts(p, source, cost, ch);
+        self.end_zone_batch();
+        r
+    }
+
+    fn pay_nonmana_parts(
+        &mut self,
+        p: PlayerId,
+        source: CardId,
+        cost: &Cost,
+        ch: &mut Choices,
+    ) -> Res<()> {
         for part in &cost.parts {
             match part {
                 CostPart::Tap => {

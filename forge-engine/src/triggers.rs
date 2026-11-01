@@ -58,6 +58,13 @@ pub enum TriggerKind {
         /// `Mode$ AttackersDeclaredOneTarget`: je angegriffenem Ziel einmal.
         one_target: bool,
     },
+    /// `Mode$ ChangesZoneAll` – ein oder mehrere Objekte wechselten gleichzeitig die Zone.
+    ChangesZoneAll {
+        origin: Option<Vec<Zone>>,
+        destination: Option<Vec<Zone>>,
+        valid_cards: Option<ValidSpec>,
+        valid_amount: Option<crate::expr::Compare>,
+    },
     /// `Mode$ DamageDoneOnce` – ein Empfänger erhielt gleichzeitig Schaden.
     DamageDoneOnce {
         valid_target: Option<ValidSpec>,
@@ -136,6 +143,8 @@ pub struct TriggerInfo {
     pub attacking_player: Option<PlayerId>,
     /// Vom verzögerten Trigger gemerkte Objekte (`DelayTriggerRemembered…`).
     pub delay_remembered: Vec<Target>,
+    /// Betroffene Objekte bei Sammel-Triggern (`TriggeredCards`).
+    pub cards: Vec<CardId>,
 }
 
 /// Verzögerter Trigger (CR 603.7), angelegt vom Effekt `DelayedTrigger`.
@@ -187,6 +196,10 @@ pub enum TriggerEvent {
         attackers: Vec<(CardId, Target)>,
         /// Variante je Ziel (alle `attackers` greifen dasselbe Ziel an).
         one_target: bool,
+    },
+    /// Gleichzeitige Zonenwechsel (alt, neu, von, nach).
+    ChangesZoneAll {
+        moves: Vec<crate::state::ZoneMove>,
     },
     /// Gleichzeitiger Schaden an einen Empfänger (Quellen mit Mengen).
     DamageDoneOnce {
@@ -356,6 +369,27 @@ pub fn compile_trigger(
                 attacked_target: valid("AttackedTarget", &mut used)?,
                 valid_attackers,
                 one_target: t.mode == "AttackersDeclaredOneTarget",
+            }
+        }
+        "ChangesZoneAll" => {
+            used.extend(["Origin", "Destination", "ValidAmount"]);
+            let origin = match p.get("Origin") {
+                Some(o) => zones(o).map_err(|z| unsupported("Origin", &z))?,
+                None => None,
+            };
+            let destination = match p.get("Destination") {
+                Some(d) => zones(d).map_err(|z| unsupported("Destination", &z))?,
+                None => None,
+            };
+            let valid_amount = match p.get("ValidAmount") {
+                Some(a) => Some(crate::expr::Compare::parse(face, a)?),
+                None => None,
+            };
+            TriggerKind::ChangesZoneAll {
+                origin,
+                destination,
+                valid_cards: valid("ValidCards", &mut used)?,
+                valid_amount,
             }
         }
         "DamageDoneOnce" => {
@@ -666,6 +700,53 @@ impl GameState {
                     target: one_target
                         .then(|| attackers.first().map(|(_, t)| *t))
                         .flatten(),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::ChangesZoneAll {
+                    origin,
+                    destination,
+                    valid_cards,
+                    valid_amount,
+                },
+                TriggerEvent::ChangesZoneAll { moves },
+            ) => {
+                let cards: Vec<CardId> = moves
+                    .iter()
+                    .filter(|(_, _, from, to)| {
+                        origin
+                            .as_ref()
+                            .is_none_or(|o| from.is_some_and(|f| o.contains(&f)))
+                            && destination.as_ref().is_none_or(|d| d.contains(to))
+                    })
+                    // Verlassen des Battlefields: Eigenschaften des alten Objekts (CR 603.10a)
+                    .map(|(old, new, from, _)| {
+                        if *from == Some(Zone::Battlefield) {
+                            *old
+                        } else {
+                            *new
+                        }
+                    })
+                    .filter(|c| self.opt_card(valid_cards, *c, source, controller))
+                    .collect();
+                if cards.is_empty() {
+                    return None;
+                }
+                if let Some(cmp) = valid_amount {
+                    let ectx = crate::expr::EvalCtx {
+                        source,
+                        controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                    };
+                    if !cmp.holds(cards.len() as i32, self.eval(&cmp.rhs, &ectx)) {
+                        return None;
+                    }
+                }
+                Some(TriggerInfo {
+                    cards,
                     ..Default::default()
                 })
             }
@@ -986,12 +1067,20 @@ impl GameState {
                 from: Some(Zone::Battlefield),
                 ..
             }
-            | TriggerEvent::Sacrificed { old, .. } => Some(old),
+            | TriggerEvent::Sacrificed { old, .. } => Some(vec![*old]),
+            TriggerEvent::ChangesZoneAll { moves } => {
+                let v: Vec<CardId> = moves
+                    .iter()
+                    .filter(|m| m.2 == Some(Zone::Battlefield))
+                    .map(|m| m.0)
+                    .collect();
+                (!v.is_empty()).then_some(v)
+            }
             _ => None,
         };
-        if let Some(old) = left_battlefield {
+        if let Some(olds) = left_battlefield {
             let mut lki: Vec<CardId> = self.lki_battlefield.clone().unwrap_or_default();
-            lki.push(*old);
+            lki.extend(olds);
             for id in lki {
                 let c = self.card(id);
                 if c.zone.is_none()

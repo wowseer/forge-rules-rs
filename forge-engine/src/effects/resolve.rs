@@ -136,6 +136,11 @@ impl GameState {
                         .collect()
                 })
                 .unwrap_or_default(),
+            Defined::TriggeredCards => ctx
+                .trig
+                .as_ref()
+                .map(|t| t.cards.iter().map(|c| Target::Card(*c)).collect())
+                .unwrap_or_default(),
             Defined::TriggeredAttackingPlayer => ctx
                 .trig
                 .as_ref()
@@ -203,6 +208,20 @@ impl GameState {
 
     /// Führt einen einzelnen Effekt aus.
     pub fn apply_effect(
+        &mut self,
+        eff: &Effect,
+        targets: &[Target],
+        ctx: &ResolveCtx,
+        ch: &mut Choices,
+    ) -> Res<()> {
+        // Zonenwechsel eines Effekts gelten als ein Ereignis (ChangesZoneAll).
+        self.begin_zone_batch();
+        let r = self.apply_effect_inner(eff, targets, ctx, ch);
+        self.end_zone_batch();
+        r
+    }
+
+    fn apply_effect_inner(
         &mut self,
         eff: &Effect,
         targets: &[Target],

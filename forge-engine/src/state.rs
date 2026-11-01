@@ -208,6 +208,9 @@ pub struct ContinuousEffect {
     pub timestamp: u64,
 }
 
+/// Ein Zonenwechsel: (altes Objekt, neues Objekt, von, nach).
+pub type ZoneMove = (CardId, CardId, Option<Zone>, Zone);
+
 /// Kontrollwechsel (Layer 2, CR 613.1b) durch `GainControl`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ControlEffect {
@@ -424,6 +427,10 @@ pub struct GameState {
     pub lki_battlefield: Option<Vec<CardId>>,
     /// Verzögerte Trigger (CR 603.7), in Erzeugungsreihenfolge.
     pub delayed_triggers: Vec<crate::triggers::DelayedTrigger>,
+    /// Gebündelte Zonenwechsel (alt, neu, von, nach) für `ChangesZoneAll`,
+    /// mit Verschachtelungstiefe; `None` = jeder Wechsel ein eigenes Ereignis.
+    pub zone_batch: Option<Vec<ZoneMove>>,
+    pub zone_batch_depth: u32,
     /// Kontrolleffekte in Zeitstempelreihenfolge (jüngster zuletzt).
     pub control_effects: Vec<ControlEffect>,
     /// Gleichzeitig zugefügter Schaden (Quelle, Ziel, Menge, Kampf) für
@@ -876,6 +883,8 @@ impl GameState {
             lki_battlefield: None,
             delayed_triggers: Vec::new(),
             control_effects: Vec::new(),
+            zone_batch: None,
+            zone_batch_depth: 0,
             damage_batch: None,
             log: Vec::new(),
             token_defs: Arc::default(),

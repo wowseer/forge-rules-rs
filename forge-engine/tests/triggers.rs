@@ -288,3 +288,29 @@ fn damage_done_once_triggers_once_per_recipient() {
     assert_eq!(d.g().player(P2).life, 16);
     assert_eq!(d.g().player(P1).hand.len(), 1, "einmal, nicht je Angreifer");
 }
+
+#[test]
+fn changes_zone_all_triggers_once_per_simultaneous_event() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Plains", P1, Zone::Battlefield, 4);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 1);
+    put(&db, &mut g, "Mass Grief Lite", P1, Zone::Battlefield);
+    let w = put(&db, &mut g, "Wrath of God", P1, Zone::Hand);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let piker = put(&db, &mut g, "Goblin Piker", P2, Zone::Battlefield);
+    put_n(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield, 3);
+    let mut d = Driver::new(g);
+    d.cast(bolt, &[Target::Card(piker)]);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 19, "ein Tod (SBA)");
+    d.cast(w, &[]);
+    d.pass_all();
+    assert_eq!(
+        d.g().stack.len(),
+        1,
+        "ein Trigger für drei gleichzeitige Tode"
+    );
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 16);
+}
