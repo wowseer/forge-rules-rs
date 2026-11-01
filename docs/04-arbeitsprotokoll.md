@@ -5,6 +5,40 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-02 – Sitzung 5: Schaden ersetzen, Kontrolle, RepeatEach, Performance
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| `R:Event$ DamageDone` (Verhindern, Verdoppeln, +N), `PreventDamage` | ✅ |
+| `GainControl` mit Kontrolleffekten (Layer 2) | ✅ |
+| Gemerkte Spieler, `RepeatEach` | ✅ |
+| Trigger `ChangesZoneAll`, `BecomesTarget`, `Cycled`, `Discarded`, `AttackerBlockedByCreature` | ✅ |
+| Ward, Prowess, Fight, PutCounterAll, `ExileFromGrave<1/CARDNAME>` | ✅ |
+| Performance: `chars()`-Cache auch verschachtelt | ✅ Lasttest 347 s → ~200 s |
+| Tests | 218 (16 neue), 1.000 Zufallspartien je Schritt ohne Absturz |
+| Unterstützte Karten im Zielpool | 33,3 % → **35,4 %** |
+
+### Entscheidungen
+
+- Schadens-Ersatz: erst Mengenänderungen, dann Verhinderung, jeweils nach Zeitstempel
+  (Vereinfachung von CR 616.1).
+- Kontrolle: Liste von Kontrolleffekten; Controller = jüngster aktiver Effekt, sonst
+  Basis-Controller. Ablauf „solange …“ wird vor jeder SBA-Prüfung erkannt (CR 611.2b).
+- Zonenwechsel werden je Effekt/SBA-Durchgang/Kostenzahlung gebündelt (Java `CardZoneTable`).
+- `chars()` aktiviert den Cache für die Dauer des Aufrufs; verschachtelte Ergebnisse haben
+  einen eigenen Schlüssel. Partien bleiben bitgleich (Determinismus geprüft am Benchmark).
+- `perf` ist in der Sandbox blockiert; gemessen wurde mit vorübergehender Instrumentierung.
+
+### Nächste Schritte
+
+1. Mehrseitige Karten (DoubleFaced 389, Adventure 139, Split 124, Modal 99).
+2. `AlternativeCost` (143), `MayPlay` (115), `ChooseCard` (112), `CopyPermanent` (114).
+3. `Replacement Untap` (155), Convoke (104).
+
+---
+
 ## 2026-11-01 – Sitzung 4: Trigger, DelayedTrigger, Planeswalker, Cycling
 
 ### Ergebnis

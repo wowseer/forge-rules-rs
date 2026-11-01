@@ -118,6 +118,22 @@ CompiledAbility {
 - Trigger `Blocks` (ValidCard, ValidBlocked), `AttackerBlocked` (ValidBlocker[Amount]),
   `AttackerUnblocked` (ValidDefender), `Drawn` (Number$ = n-te Karte im Zug),
   `LifeGained`, `Taps` (über `GameState::tap`), `DamageDoneOnce`; `Surveil` (Amount$).
+- Ersatzeffekte `R:Event$ DamageDone`: `Prevent$ True` oder `ReplaceWith$` auf
+  `DB$ ReplaceEffect | VarName$ DamageAmount | VarValue$ X` mit
+  `X:ReplaceCount$DamageAmount[/Op]` (intern als `Count$xPaid` mit x = Schaden).
+  Filter `ValidTarget$`, `ValidSource$`, `IsCombat$`. `PreventDamage | Amount$` legt
+  Verhinderungsschilde bis Zugende an.
+- `GainControl` (`LoseControl$ EOT|UntilTheEndOfYourNextTurn|LeavesPlay|LoseControl`,
+  `Untap$`, `AddKWs$`, `NewController$`) über `GameState::control_effects`.
+- `RepeatEach` (`RepeatPlayers$`, `RepeatCards$`+`Zone$`, `DefinedCards$`): der jeweilige
+  Spieler/die Karte ist während der Unterfähigkeit „gemerkt“; gemerkte Spieler liegen in
+  `CardObj::remembered_players`, Filter `RememberedPlayerCtrl`, `Defined$ Player.IsRemembered`.
+- Trigger `ChangesZoneAll` (Bündel je Effekt/SBA/Kosten, `TriggeredCards`),
+  `BecomesTarget` (`ValidSource$ Spell|Ability|SpellAbility[.YouCtrl|.OppCtrl]`),
+  `Cycled`, `Discarded`, `AttackerBlockedByCreature` (`TriggeredBlocker`).
+- Keywords `Ward:<Kosten>` und `Prowess` werden wie in Java zu Triggern übersetzt.
+- `Fight` (Kämpfer wie Java `getFighters`), `PutCounterAll`; `Defined$ ParentTarget`
+  meint immer die Ziele der Elternfähigkeit. Kostenteil `ExileFromGrave<1/CARDNAME>`.
 - Trigger `Sacrificed`, `AttackersDeclared`, `AttackersDeclaredOneTarget`
   (`TriggeredAttackingPlayer`, `TriggeredAttackedTarget`).
 
