@@ -221,6 +221,12 @@ pub enum Effect {
         remember: Option<Defined>,
         scope: DelayScope,
     },
+    /// „Verhindere die nächsten N Schaden, die … in diesem Zug zugefügt würden“
+    /// (`PreventDamage`, CR 615.7).
+    PreventDamage {
+        what: Defined,
+        amount: Amount,
+    },
     /// Gemerkte Objekte vergessen (`Cleanup`): `ClearRemembered$`.
     Cleanup {
         what: Defined,
@@ -714,6 +720,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         triggers: Vec::new(),
         statics: Vec::new(),
         replacements: Vec::new(),
+        damage_replacements: Vec::new(),
         etb_counters: Vec::new(),
         enchant: None,
     };
@@ -741,6 +748,13 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
     for n in &repl_n {
         let r = forge_script::ScriptReplacement::parse(forge_script::ParamMap::parse(svar(n)?))
             .map_err(|_| CompileError::MissingSvar(n.clone()))?;
+        if r.mode == "DamageDone" {
+            let mut d = crate::replacements::compile_damage_replacement(face, &r)?;
+            // Effektobjekte wirken aus der Command Zone.
+            d.active_zones = Some(vec![crate::zone::Zone::Command]);
+            compiled.damage_replacements.push(Arc::new(d));
+            continue;
+        }
         compiled
             .replacements
             .push(Arc::new(crate::replacements::compile_replacement(
@@ -1018,6 +1032,10 @@ fn compile_depth(
             Effect::Counter
         }
         "DelayedTrigger" => compile_delayed(&mut c, face)?,
+        "PreventDamage" => Effect::PreventDamage {
+            amount: c.amount("Amount", None)?,
+            what: c.defined(Defined::Targeted)?,
+        },
         "Cleanup" => {
             let clear_remembered = c.get("ClearRemembered").is_some();
             // Diese Zustände erzeugt die Engine (noch) nicht; Leeren ist daher

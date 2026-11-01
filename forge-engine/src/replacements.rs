@@ -159,6 +159,128 @@ pub fn compile_replacement(
     })
 }
 
+/// Was ein Schadens-Ersatzeffekt tut.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DamageAction {
+    /// `Prevent$ True`: der Schaden wird verhindert (CR 615).
+    Prevent,
+    /// `ReplaceEffect | VarName$ DamageAmount | VarValue$ X`: neue Menge; im
+    /// Ausdruck steht `Count$xPaid` für die ursprüngliche Menge
+    /// (`ReplaceCount$DamageAmount`).
+    Modify(Expr),
+}
+
+/// `R:Event$ DamageDone` (Java `ReplaceDamage`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DamageReplacement {
+    pub valid_target: Option<ValidSpec>,
+    pub valid_source: Option<ValidSpec>,
+    /// `IsCombat$`
+    pub combat: Option<bool>,
+    pub active_zones: Option<Vec<Zone>>,
+    pub conditions: Vec<Condition>,
+    pub action: DamageAction,
+    /// Verhinderungseffekt (`Prevent$`/`PreventionEffect$`): nach den übrigen
+    /// Ersetzungen angewendet (Vereinfachung von CR 616.1).
+    pub prevention: bool,
+}
+
+pub fn compile_damage_replacement(
+    face: &CardFace,
+    r: &ScriptReplacement,
+) -> Result<DamageReplacement, CompileError> {
+    let p = &r.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: "Replacement DamageDone".into(),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend([
+        "ValidTarget",
+        "ValidSource",
+        "IsCombat",
+        "ActiveZones",
+        "Prevent",
+        "PreventionEffect",
+        "AlwaysReplace",
+    ]);
+    let valid = |k: &str| {
+        p.get(k)
+            .map(ValidSpec::parse)
+            .transpose()
+            .map_err(CompileError::Valid)
+    };
+    let valid_target = valid("ValidTarget")?;
+    let valid_source = valid("ValidSource")?;
+    let combat = p.get("IsCombat").map(|v| v.eq_ignore_ascii_case("true"));
+    let active_zones = match p.get("ActiveZones") {
+        Some(z) => Some(zones(z).ok_or_else(|| err("ActiveZones", z))?),
+        None => None,
+    };
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    let prevent = p.is_true("Prevent");
+    let prevention = prevent || p.has("PreventionEffect");
+    let action = if prevent {
+        if p.has("ReplaceWith") {
+            return Err(err("ReplaceWith", "mit Prevent"));
+        }
+        DamageAction::Prevent
+    } else {
+        let name = p
+            .get("ReplaceWith")
+            .ok_or_else(|| err("ReplaceWith", "fehlt"))?;
+        let sv = face
+            .svar(name)
+            .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+        let ab = ScriptAbility::from_svar(sv)
+            .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+            .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+        let ap = &ab.params;
+        let only_known = ap.keys().all(|k| {
+            [
+                "DB",
+                "VarName",
+                "VarValue",
+                "StackDescription",
+                "SpellDescription",
+            ]
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case(k))
+        });
+        if ab.api != "ReplaceEffect" || ap.get("VarName") != Some("DamageAmount") || !only_known {
+            return Err(err("ReplaceWith", sv));
+        }
+        let var = ap.get("VarValue").ok_or_else(|| err("ReplaceWith", sv))?;
+        let x = face
+            .svar(var)
+            .ok_or_else(|| CompileError::MissingSvar(var.to_string()))?;
+        if !x.trim_start().starts_with("ReplaceCount$DamageAmount") {
+            return Err(err("VarValue", x));
+        }
+        let expr = Expr::parse_svar(
+            face,
+            &x.replacen("ReplaceCount$DamageAmount", "Count$xPaid", 1),
+        )?;
+        DamageAction::Modify(expr)
+    };
+    Ok(DamageReplacement {
+        valid_target,
+        valid_source,
+        combat,
+        active_zones,
+        conditions,
+        action,
+        prevention,
+    })
+}
+
 /// `K:etbCounter:<Typ>:<Anzahl>[:no Condition[:Text]]` → (Typ, Anzahl).
 pub fn parse_etb_counter(face: &CardFace, kw: &str) -> Result<(String, Expr), CompileError> {
     let parts: Vec<&str> = kw.split(':').collect();
@@ -185,6 +307,83 @@ pub struct MoveMods {
 }
 
 impl GameState {
+    /// CR 614/615: Schadens-Ersatz- und Verhinderungseffekte. Liefert die
+    /// tatsächlich zuzufügende Menge. Jeder Effekt wirkt höchstens einmal
+    /// (CR 614.5); erst Mengenänderungen, dann Verhinderung, jeweils nach
+    /// Zeitstempel (statt Wahl des Betroffenen, CR 616.1).
+    pub(crate) fn replace_damage(
+        &mut self,
+        source: CardId,
+        target: crate::decision::Target,
+        amount: u32,
+        combat: bool,
+    ) -> u32 {
+        use crate::decision::Target;
+        let mut hosts: Vec<(u64, CardId)> = self
+            .live_cards()
+            .map(|id| self.card(id))
+            .filter(|c| c.zone.is_some() && !c.compiled().damage_replacements.is_empty())
+            .map(|c| (c.timestamp, c.id))
+            .collect();
+        hosts.sort();
+        let mut amount = amount as i32;
+        for prevention_pass in [false, true] {
+            for (_, host) in &hosts {
+                let h = self.card(*host);
+                let hzone = h.zone.expect("gefiltert");
+                let ctrl = h.controller;
+                for r in &h.compiled().damage_replacements {
+                    if amount <= 0 {
+                        break;
+                    }
+                    if r.prevention != prevention_pass
+                        || r.active_zones.as_ref().is_some_and(|z| !z.contains(&hzone))
+                        || r.combat.is_some_and(|c| c != combat)
+                    {
+                        continue;
+                    }
+                    let tgt_ok = r.valid_target.as_ref().is_none_or(|v| match target {
+                        Target::Player(p) => self.player_matches(p, v, ctrl),
+                        Target::Card(c) => self.card_matches(c, v, *host, ctrl),
+                    });
+                    let src_ok = r
+                        .valid_source
+                        .as_ref()
+                        .is_none_or(|v| self.card_matches(source, v, *host, ctrl));
+                    if !tgt_ok || !src_ok {
+                        continue;
+                    }
+                    let ctx = EvalCtx {
+                        source: *host,
+                        controller: ctrl,
+                        x: amount.max(0) as u32,
+                        targets: &[],
+                        trig: None,
+                    };
+                    if !self.check_conditions(&r.conditions, &ctx) {
+                        continue;
+                    }
+                    amount = match &r.action {
+                        DamageAction::Prevent => 0,
+                        DamageAction::Modify(e) => self.eval(e, &ctx),
+                    };
+                }
+            }
+            if !prevention_pass {
+                // CR 615.7: Schilde „die nächsten N Schaden verhindern“
+                continue;
+            }
+            let shield = match target {
+                Target::Player(p) => &mut self.player_mut(p).prevent_next,
+                Target::Card(c) => &mut self.card_mut(c).prevent_next,
+            };
+            let used = (*shield).min(amount.max(0) as u32);
+            *shield -= used;
+            amount -= used as i32;
+        }
+        amount.max(0) as u32
+    }
+
     /// Wendet Ersatzeffekte auf den Zonenwechsel von `id` an (CR 614).
     /// Liefert die tatsächliche Zielzone und Änderungen für das neue Objekt.
     pub(crate) fn replace_move(

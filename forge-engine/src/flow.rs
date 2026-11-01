@@ -210,6 +210,10 @@ impl GameState {
                     o.damage = 0;
                     o.deathtouch_damage = false;
                     o.regen_shields = 0;
+                    o.prevent_next = 0;
+                }
+                for pl in &mut self.players {
+                    pl.prevent_next = 0;
                 }
                 self.effects
                     .retain(|e| e.duration != Duration::UntilEndOfTurn);

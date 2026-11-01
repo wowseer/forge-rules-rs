@@ -25,6 +25,8 @@ pub struct CompiledFace {
     pub statics: Vec<Arc<crate::statics::CompiledStatic>>,
     /// Ersatzeffekte (`R:`).
     pub replacements: Vec<Arc<crate::replacements::CompiledReplacement>>,
+    /// Schadens-Ersatzeffekte (`R:Event$ DamageDone`).
+    pub damage_replacements: Vec<Arc<crate::replacements::DamageReplacement>>,
     /// `K:etbCounter`: (Markentyp, Anzahl) beim Ankommen.
     pub etb_counters: Vec<(String, crate::expr::Expr)>,
     /// `K:Enchant:<Filter>`: woran die Aura angelegt sein darf (CR 303.4).
@@ -82,6 +84,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         triggers: Vec::new(),
         statics: Vec::new(),
         replacements: Vec::new(),
+        damage_replacements: Vec::new(),
         etb_counters: Vec::new(),
         enchant: None,
     };
@@ -186,6 +189,13 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         }
     }
     for r in &face.replacements {
+        if r.mode == "DamageDone" {
+            match crate::replacements::compile_damage_replacement(face, r) {
+                Ok(c) => out.damage_replacements.push(Arc::new(c)),
+                Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
+            }
+            continue;
+        }
         match crate::replacements::compile_replacement(face, r) {
             Ok(c) => out.replacements.push(Arc::new(c)),
             Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),

@@ -74,6 +74,8 @@ pub struct Player {
     pub lost: Option<LossReason>,
     pub mulligans: u32,
     pub kept_hand: bool,
+    /// Verhinderungsschild: die nächsten N Schaden in diesem Zug (CR 615.7).
+    pub prevent_next: u32,
 }
 
 impl Player {
@@ -134,6 +136,8 @@ pub struct CardObj {
     pub attached_to: Option<CardId>,
     /// Regenerationsschilde bis Zugende (CR 701.15).
     pub regen_shields: u32,
+    /// Verhinderungsschild: die nächsten N Schaden in diesem Zug (CR 615.7).
+    pub prevent_next: u32,
     /// Zug, in dem zuletzt eine Loyalitätsfähigkeit aktiviert wurde (CR 606.3).
     pub loyalty_used_turn: Option<u32>,
 }
@@ -869,6 +873,7 @@ impl GameState {
                 lost: None,
                 mulligans: 0,
                 kept_hand: false,
+                prevent_next: 0,
             });
             for def in deck {
                 g.create_card(def, id, Zone::Library, false);

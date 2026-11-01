@@ -76,3 +76,53 @@ fn enters_with_counters() {
         mulligans_taken: 0,
     };
 }
+
+#[test]
+fn damage_doubling_replacement() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Mountain", P1, Zone::Battlefield);
+    put(&db, &mut g, "Furnace Lite", P1, Zone::Battlefield);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(bolt, &[Target::Player(P2)]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 14, "3 × 2");
+}
+
+#[test]
+fn prevent_combat_damage_to_self_but_not_noncombat() {
+    let (db, mut g) = game_at(Step::BeginCombat, 10);
+    let giant = put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
+    let wall = put(&db, &mut g, "Mist Wall Lite", P2, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
+    d.submit(Choice::Attackers(vec![(giant, T2)]));
+    d.run_until(|_, dec| matches!(dec, Decision::DeclareBlockers { .. }));
+    d.submit(Choice::Blocks(vec![(wall, giant)]));
+    d.run_until(|g, _| g.step == Step::Main2);
+    assert_eq!(d.g().card(wall).damage, 0, "Kampfschaden verhindert");
+    assert_eq!(d.g().card(wall).zone, Some(Zone::Battlefield));
+}
+
+#[test]
+fn prevention_shield_next_n_damage_this_turn_after_doubling() {
+    // CR 615.7; Vereinfachung CR 616.1: erst Verdoppeln, dann Verhindern
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 2);
+    put(&db, &mut g, "Plains", P1, Zone::Battlefield);
+    put(&db, &mut g, "Furnace Lite", P1, Zone::Battlefield);
+    let salve = put(&db, &mut g, "Salve Lite", P1, Zone::Hand);
+    let b1 = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let b2 = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(salve, &[Target::Player(P2)]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).prevent_next, 3);
+    d.cast(b1, &[Target::Player(P2)]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 17, "6 − 3 verhindert");
+    assert_eq!(d.g().player(P2).prevent_next, 0, "Schild verbraucht");
+    d.cast(b2, &[Target::Player(P2)]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 11);
+}

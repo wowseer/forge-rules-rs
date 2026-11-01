@@ -486,6 +486,18 @@ impl GameState {
                     self.move_card(card, Zone::Graveyard, true);
                 }
             }
+            Effect::PreventDamage { what, amount } => {
+                let n = self.amount(amount, ctx, targets).max(0) as u32;
+                for t in self.resolve_defined(*what, targets, ctx) {
+                    match t {
+                        Target::Player(p) => self.player_mut(p).prevent_next += n,
+                        Target::Card(c) if self.card(c).zone == Some(Zone::Battlefield) => {
+                            self.card_mut(c).prevent_next += n;
+                        }
+                        Target::Card(_) => {}
+                    }
+                }
+            }
             Effect::DelayedTrigger {
                 trigger,
                 remember,

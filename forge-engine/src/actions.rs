@@ -39,6 +39,7 @@ impl GameState {
             attached_to: None,
             regen_shields: 0,
             loyalty_used_turn: None,
+            prevent_next: 0,
         });
         self.zone_list_mut(zone, owner).push(id);
         id
@@ -120,6 +121,7 @@ impl GameState {
             attached_to: None,
             regen_shields: 0,
             loyalty_used_turn: None,
+            prevent_next: 0,
         });
         {
             let o = self.card_mut(id);
@@ -251,6 +253,11 @@ impl GameState {
 
     /// Wie [`GameState::deal_damage`], `combat` = Kampfschaden (für Trigger).
     pub fn deal_damage_ex(&mut self, source: CardId, target: Target, amount: u32, combat: bool) {
+        if amount == 0 {
+            return;
+        }
+        // CR 614/615: Ersatz- und Verhinderungseffekte
+        let amount = self.replace_damage(source, target, amount, combat);
         if amount == 0 {
             return;
         }

@@ -136,6 +136,9 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Surveil Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Surveil | Amount$ 2 | SpellDescription$ Surveil 2.\nOracle:\n",
     "Name:Combat Watcher Lite\nManaCost:1 R\nTypes:Enchantment\nT:Mode$ DamageDoneOnce | ValidTarget$ Opponent | CombatDamage$ True | ValidSource$ Creature.YouCtrl | TriggerZones$ Battlefield | Execute$ TrigDraw | TriggerDescription$ Whenever one or more creatures you control deal combat damage to an opponent, draw a card.\nSVar:TrigDraw:DB$ Draw | NumCards$ 1\nOracle:\n",
     "Name:Kill Bonus Lite\nManaCost:B\nTypes:Instant\nA:SP$ Destroy | ValidTgts$ Creature | SubAbility$ DBDraw | SpellDescription$ Destroy target creature. If it was red, draw a card.\nSVar:DBDraw:DB$ Draw | NumCards$ 1 | ConditionDefined$ Targeted | ConditionPresent$ Creature.Red | ConditionCompare$ GE1\nOracle:\n",
+    "Name:Furnace Lite\nManaCost:3 R\nTypes:Enchantment\nR:Event$ DamageDone | ActiveZones$ Battlefield | ValidSource$ Card.YouCtrl | ValidTarget$ Permanent.OppCtrl,Opponent | ReplaceWith$ DmgTwice | Description$ If a source you control would deal damage to an opponent or a permanent an opponent controls, it deals double that damage instead.\nSVar:DmgTwice:DB$ ReplaceEffect | VarName$ DamageAmount | VarValue$ X\nSVar:X:ReplaceCount$DamageAmount/Twice\nOracle:\n",
+    "Name:Mist Wall Lite\nManaCost:1 W\nTypes:Creature Wall\nPT:0/3\nK:Defender\nR:Event$ DamageDone | ActiveZones$ Battlefield | ValidTarget$ Card.Self | IsCombat$ True | Prevent$ True | Description$ Prevent all combat damage that would be dealt to CARDNAME.\nOracle:\n",
+    "Name:Salve Lite\nManaCost:W\nTypes:Instant\nA:SP$ PreventDamage | ValidTgts$ Any | Amount$ 3 | SpellDescription$ Prevent the next 3 damage that would be dealt to any target this turn.\nOracle:\n",
     "Name:Mana Leak\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | TgtPrompt$ Select target spell | ValidTgts$ Card | UnlessCost$ 3 | SpellDescription$ Counter target spell unless its controller pays {3}.\nOracle:\n",
     "Name:Essence Scatter Lite\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | ValidTgts$ Creature | TgtPrompt$ Select target creature spell | SpellDescription$ Counter target creature spell.\nOracle:\n",
     "Name:Blessing Lite\nManaCost:W\nTypes:Instant\nA:SP$ Effect | ValidTgts$ Creature | StaticAbilities$ STHexproof | RememberObjects$ Targeted | SpellDescription$ Target creature gains hexproof until end of turn.\nSVar:STHexproof:Mode$ Continuous | Affected$ Creature.IsRemembered | AddKeyword$ Hexproof | Description$ Hexproof.\nOracle:\n",
@@ -187,7 +190,10 @@ pub fn db() -> CardDb {
         let t = db.add_token_script(name, text).expect("Token-Skript parst");
         assert!(t.is_supported(), "Token {name}: {:?}", t.unsupported);
     }
+    let mut names = std::collections::BTreeSet::new();
     for s in SCRIPTS {
+        let name = s.lines().next().unwrap_or("");
+        assert!(names.insert(name), "doppelte Testkarte: {name}");
         let d = db.add_script(s).expect("Testskript parst");
         let pw_or_battle = d
             .face(0)
