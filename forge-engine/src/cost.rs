@@ -23,6 +23,10 @@ pub enum CostPart {
     PayLife(u32),
     /// `Discard<n/Typ>` (`Hand` = ganze Hand ist nicht unterstützt)
     Discard { amount: u32, valid: ValidSpec },
+    /// `AddCounter<n/TYP>`: Marken auf die Quelle legen (z. B. Loyalität +n, CR 606.4)
+    AddCounter { amount: u32, kind: String },
+    /// `SubCounter<n/TYP>`: Marken von der Quelle entfernen (CR 118.3, 606.4)
+    RemoveCounter { amount: u32, kind: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -51,6 +55,8 @@ impl fmt::Display for Cost {
                 CostPart::Sacrifice { amount, valid } => format!("Sac<{amount}/{valid:?}>"),
                 CostPart::PayLife(n) => format!("PayLife<{n}>"),
                 CostPart::Discard { amount, valid } => format!("Discard<{amount}/{valid:?}>"),
+                CostPart::AddCounter { amount, kind } => format!("AddCounter<{amount}/{kind}>"),
+                CostPart::RemoveCounter { amount, kind } => format!("SubCounter<{amount}/{kind}>"),
             });
         }
         write!(f, "{}", parts.join(" "))
@@ -135,6 +141,14 @@ impl Cost {
                                 valid: ValidSpec::parse(v)?,
                             },
                             ("PayLife", [n]) => CostPart::PayLife(amount(n, &tok)?),
+                            ("AddCounter", [n, k]) => CostPart::AddCounter {
+                                amount: amount(n, &tok)?,
+                                kind: k.trim().to_string(),
+                            },
+                            ("SubCounter", [n, k]) => CostPart::RemoveCounter {
+                                amount: amount(n, &tok)?,
+                                kind: k.trim().to_string(),
+                            },
                             ("Discard", [n, v, ..]) if *v != "Hand" && *v != "Random" => {
                                 CostPart::Discard {
                                     amount: amount(n, &tok)?,
@@ -183,6 +197,14 @@ mod tests {
         let o = Cost::parse("Sac<1/Creature.Other/another creature> PayLife<2>").unwrap();
         assert_eq!(o.parts.len(), 2);
         assert!(Cost::parse("0").unwrap().mana.unwrap().is_zero());
-        assert!(Cost::parse("SubCounter<1/LOYALTY>").is_err());
+        let l = Cost::parse("SubCounter<2/LOYALTY>").unwrap();
+        assert_eq!(
+            l.parts,
+            vec![CostPart::RemoveCounter {
+                amount: 2,
+                kind: "LOYALTY".into()
+            }]
+        );
+        assert!(Cost::parse("SubCounter<X/LOYALTY>").is_err());
     }
 }

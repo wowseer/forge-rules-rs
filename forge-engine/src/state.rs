@@ -132,6 +132,8 @@ pub struct CardObj {
     pub attached_to: Option<CardId>,
     /// Regenerationsschilde bis Zugende (CR 701.15).
     pub regen_shields: u32,
+    /// Zug, in dem zuletzt eine Loyalitätsfähigkeit aktiviert wurde (CR 606.3).
+    pub loyalty_used_turn: Option<u32>,
 }
 
 /// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).

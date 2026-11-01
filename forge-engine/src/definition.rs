@@ -67,6 +67,7 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             sorcery_speed: false,
             conditions: Vec::new(),
             unless: None,
+            planeswalker: false,
         })
     })
     .collect()
@@ -152,6 +153,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             sorcery_speed: false,
             conditions: Vec::new(),
             unless: None,
+            planeswalker: false,
         }));
     } else if face.types.has_subtype("Aura") {
         unsupported.push("Aura ohne Enchant-Keyword".into());
@@ -192,8 +194,10 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             unsupported.push("variable Stärke/Widerstandskraft (*) ohne CDA".into());
         }
     }
-    if face.types.has_core(CoreType::Planeswalker) {
-        unsupported.push("Planeswalker".into());
+    if face.types.has_core(CoreType::Planeswalker)
+        && !matches!(face.loyalty, Some(forge_script::StatValue::Fixed(_)))
+    {
+        unsupported.push("Planeswalker ohne feste Loyalität".into());
     }
     if face.types.has_core(CoreType::Battle) {
         unsupported.push("Battle".into());
@@ -423,5 +427,6 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
         sorcery_speed: true,
         conditions: Vec::new(),
         unless: None,
+        planeswalker: false,
     })
 }

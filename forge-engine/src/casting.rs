@@ -48,6 +48,10 @@ impl GameState {
                     >= *amount
             }
             CostPart::PayLife(n) => self.player(p).life >= *n as i32,
+            CostPart::AddCounter { .. } => src.zone == Some(Zone::Battlefield),
+            CostPart::RemoveCounter { amount, kind } => {
+                src.zone == Some(Zone::Battlefield) && src.counter(kind) >= *amount
+            }
             CostPart::Discard { amount, valid } => {
                 self.player(p)
                     .hand
@@ -224,7 +228,12 @@ impl GameState {
                             .as_ref()
                             .is_none_or(|m| m.mana_value() <= self.potential_mana(p))
                 });
-                let timing_ok = ab.is_mana_ability() || !ab.sorcery_speed || self.sorcery_timing(p);
+                // CR 606.3: Loyalitätsfähigkeiten nur als Hexerei und einmal pro Zug je Permanent.
+                let timing_ok = if ab.planeswalker {
+                    self.sorcery_timing(p) && self.card(c).loyalty_used_turn != Some(self.turn)
+                } else {
+                    ab.is_mana_ability() || !ab.sorcery_speed || self.sorcery_timing(p)
+                };
                 if cost_ok && timing_ok && self.has_targets_for(ab, c, p) {
                     acts.push(Action::Activate(c, i));
                 }
@@ -378,6 +387,10 @@ impl GameState {
         if cost.mana.is_some() {
             self.pay_mana_cost(p, &mana, x, Some(source), ch)?;
         }
+        if ab.planeswalker {
+            let turn = self.turn;
+            self.card_mut(source).loyalty_used_turn = Some(turn);
+        }
         self.stack.push(StackItem {
             id,
             kind: StackKind::Ability,
@@ -432,6 +445,12 @@ impl GameState {
                     self.sacrifice(source);
                 }
                 CostPart::PayLife(n) => self.lose_life(p, *n as i32),
+                CostPart::AddCounter { amount, kind } => self.add_counters(source, kind, *amount),
+                CostPart::RemoveCounter { amount, kind } => {
+                    let o = self.card_mut(source);
+                    let left = o.counter(kind).saturating_sub(*amount);
+                    o.counters.insert(kind.clone(), left);
+                }
                 CostPart::Sacrifice { amount, valid } => {
                     let options: Vec<CardId> = self
                         .battlefield_of(p)

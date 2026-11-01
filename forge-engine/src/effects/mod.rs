@@ -358,6 +358,8 @@ pub struct CompiledAbility {
     pub conditions: Vec<crate::expr::Condition>,
     /// `UnlessCost$`: „… es sei denn, … zahlt“.
     pub unless: Option<UnlessSpec>,
+    /// `Planeswalker$ True`: Loyalitätsfähigkeit (CR 606).
+    pub planeswalker: bool,
 }
 
 impl CompiledAbility {
@@ -1283,6 +1285,10 @@ fn compile_depth(
     };
 
     let unless = compile_unless(&mut c)?;
+    let planeswalker = c
+        .get("Planeswalker")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    c.get("Ultimate");
 
     let (conditions, cond_keys) =
         crate::expr::parse_conditions(face, &ab.params, crate::expr::CondStyle::Effect)?;
@@ -1316,6 +1322,7 @@ fn compile_depth(
         sorcery_speed,
         conditions,
         unless,
+        planeswalker,
     })
 }
 

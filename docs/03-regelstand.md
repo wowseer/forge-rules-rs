@@ -17,7 +17,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Replacement Effect | 35 | 0 | 1 | 5 |
 | Static Ability | 90 | 1 | 4 | 0 |
 | Effect (ApiType) | 188 | 2 | 27 | 16 |
-| Cost | 42 | 5 | 2 | 1 |
+| Cost | 42 | 5 | 4 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 14 | 1 | 3 |
 | Combat Rule | 26 | 7 | 5 | 0 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **66** | **64** | **81** |
+| **Summe** | **789** | **66** | **66** | **81** |
 
 ## Keyword
 
@@ -171,8 +171,10 @@ Offen (159): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, Al
 | Discard | 🟡 teilweise |  | Discard<n/Typ> | cost/CostDiscard.java |
 | PayLife | ✅ ja | `spells::phyrexian_mana_with_life` |  | cost/CostPayLife.java |
 | PayShards | ⚪ n/a |  | Adventure-Modus | cost/CostPayShards.java |
+| AddCounter | 🟡 teilweise | `planeswalkers::enters_with_loyalty_and_activates_once_per_turn_at_sorcery_speed` | Marken auf die Quelle (n fest) | cost/CostPutCounter.java |
+| SubCounter | 🟡 teilweise | `planeswalkers::minus_ability_to_zero_loyalty_goes_to_graveyard` | Marken von der Quelle (n fest) | cost/CostRemoveCounter.java |
 
-Offen (35): tapXType, untapXType, Draw, DamageYou, GainLife, PayEnergy, Exile, ExileFromStack, ExiledMoveToGrave, Mill, PutCardToLib, Return, Reveal, RevealChosen, AddCounter, AddCounterYou, SubCounter, RemoveAnyCounter, GainControl, Unattach, Exert, Enlist, FlipCoin, RollDice, ChooseColor, ChooseCreatureType, CollectEvidence, Forage, PromiseGift, Behold, BeholdExile, Blight, Teamwork, Waterbend, Cost adjustment
+Offen (33): tapXType, untapXType, Draw, DamageYou, GainLife, PayEnergy, Exile, ExileFromStack, ExiledMoveToGrave, Mill, PutCardToLib, Return, Reveal, RevealChosen, AddCounterYou, RemoveAnyCounter, GainControl, Unattach, Exert, Enlist, FlipCoin, RollDice, ChooseColor, ChooseCreatureType, CollectEvidence, Forage, PromiseGift, Behold, BeholdExile, Blight, Teamwork, Waterbend, Cost adjustment
 
 ## Turn Structure
 

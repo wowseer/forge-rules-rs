@@ -38,6 +38,7 @@ impl GameState {
             effect: None,
             attached_to: None,
             regen_shields: 0,
+            loyalty_used_turn: None,
         });
         self.zone_list_mut(zone, owner).push(id);
         id
@@ -118,6 +119,7 @@ impl GameState {
             effect: None,
             attached_to: None,
             regen_shields: 0,
+            loyalty_used_turn: None,
         });
         {
             let o = self.card_mut(id);
@@ -131,6 +133,17 @@ impl GameState {
             for (k, v) in &mods.counters {
                 *n.counters.entry(k.clone()).or_insert(0) += v;
             }
+        }
+        // CR 306.5b: Planeswalker kommen mit ihrer aufgedruckten Loyalität ins Spiel.
+        if to == Zone::Battlefield
+            && let Some(forge_script::StatValue::Fixed(l)) = self.card(new_id).face().loyalty
+            && self
+                .card(new_id)
+                .face()
+                .types
+                .has_core(forge_types::CoreType::Planeswalker)
+        {
+            self.add_counters(new_id, "LOYALTY", l.max(0) as u32);
         }
         if to != Zone::Stack {
             let owner = old.owner;
