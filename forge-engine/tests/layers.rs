@@ -115,7 +115,7 @@ fn static_keywords_used_by_combat() {
     assert!(g.has_keyword(bear, &Keyword::Flying) && g.has_keyword(bear, &Keyword::FirstStrike));
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
-    d.submit(Choice::Attackers(vec![(bear, P2)]));
+    d.submit(Choice::Attackers(vec![(bear, T2)]));
     d.run_until(|_, dec| matches!(dec, Decision::DeclareBlockers { .. }));
     assert!(
         d.try_submit(Choice::Blocks(vec![(blocker, bear)])).is_err(),

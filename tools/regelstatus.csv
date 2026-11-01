@@ -8,7 +8,7 @@ Turn Structure;Upkeep step;ja;triggers::upkeep_trigger_with_sub_ability;inkl. �
 Turn Structure;Draw step;ja;turn_structure::draw_step_draws_and_first_player_skips_first_draw;inkl. CR 103.8a
 Turn Structure;Precombat main phase;teilweise;spells::land_play_once_per_turn_sorcery_timing;Länder/Hexereien fertig; Saga-Kapitelmarken fehlen
 Turn Structure;Beginning of combat step;ja;turn_structure::steps_in_order_and_combat_skips_without_attackers;
-Turn Structure;Declare attackers step;teilweise;combat::summoning_sickness_haste_defender;nur Spieler als Verteidiger; Planeswalker/Battles, Angriffsbedingungen/-kosten fehlen
+Turn Structure;Declare attackers step;teilweise;combat::summoning_sickness_haste_defender;Spieler und Planeswalker als Ziel; Battles, Angriffsbedingungen/-kosten fehlen
 Turn Structure;Declare blockers step;teilweise;combat::flying_needs_flying_or_reach_to_block;Flying/Reach/Menace; weitere Blockbeschränkungen (Statics) fehlen
 Turn Structure;First strike damage step;ja;combat::first_strike_kills_before_regular_damage;
 Turn Structure;Combat damage step;ja;combat::trample_assigns_excess_to_player;Regeln ab Foundations (keine Schadenszuweisungsreihenfolge)
@@ -138,7 +138,7 @@ Effect (ApiType);Animate;teilweise;library_regen_animate::animate_land_until_end
 Combat Rule;Attack legality;ja;combat::summoning_sickness_haste_defender, combat_restrictions::cant_attack;getappt/Einsatzbereitschaft/CantAttack
 Combat Rule;Summoning sickness;ja;combat::summoning_sickness_haste_defender, spells::activated_ability_with_tap_cost_uses_stack_and_sickness;
 Combat Rule;Attack requirements;teilweise;combat_restrictions::must_attack_if_able;MustAttack geprüft, keine Maximierung über mehrere Anforderungen
-Combat Rule;Attack targets;teilweise;;nur Spieler; Planeswalker/Battles als Angriffsziel fehlen
+Combat Rule;Attack targets;teilweise;planeswalkers::creatures_can_attack_planeswalkers_and_damage_removes_loyalty, planeswalkers::attacked_planeswalker_removed_means_no_combat_damage;Spieler und Planeswalker der Gegner; Battles fehlen
 Combat Rule;Block legality;ja;combat::blocked_creatures_trade, combat_restrictions::cant_block;
 Combat Rule;Evasion;teilweise;combat::flying_needs_flying_or_reach_to_block, combat::menace_needs_two_blockers, combat_restrictions::unblockable;Flying/Reach/Menace/CantBlockBy; Landwalk, Shadow, Fear, Intimidate fehlen
 Combat Rule;Minimum blockers;ja;combat::menace_needs_two_blockers;

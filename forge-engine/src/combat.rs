@@ -128,11 +128,31 @@ impl GameState {
         Ok(())
     }
 
+    /// Verteidigender Spieler für ein Angriffsziel (Planeswalker → Controller).
+    fn defending_player_of(&self, t: Target) -> PlayerId {
+        match t {
+            Target::Player(p) => p,
+            Target::Card(c) => self.card(c).controller,
+        }
+    }
+
     pub(crate) fn declare_attackers(&mut self, ch: &mut Choices) -> Res<()> {
         let p = self.active;
         let candidates = self.attack_candidates(p);
-        let defenders = self.opponents(p);
-        let chosen = if candidates.is_empty() || defenders.is_empty() {
+        // CR 508.1b: Gegner und von Gegnern kontrollierte Planeswalker
+        let opps = self.opponents(p);
+        let mut defenders: Vec<Target> = opps.iter().map(|o| Target::Player(*o)).collect();
+        defenders.extend(
+            opps.iter()
+                .flat_map(|o| self.battlefield_of(*o).collect::<Vec<_>>())
+                .filter(|c| {
+                    self.chars(*c)
+                        .types
+                        .has_core(forge_types::CoreType::Planeswalker)
+                })
+                .map(Target::Card),
+        );
+        let chosen = if candidates.is_empty() || opps.is_empty() {
             Vec::new()
         } else {
             match ch.ask(Decision::DeclareAttackers {
@@ -151,32 +171,41 @@ impl GameState {
                 "{m} muss angreifen"
             ))));
         }
-        let combat = self.combat.get_or_insert_with(Combat::default);
-        combat.attackers = chosen
+        let infos: Vec<AttackerInfo> = chosen
             .iter()
-            .map(|(c, d)| AttackerInfo {
+            .map(|(c, t)| AttackerInfo {
                 card: *c,
-                defender: *d,
+                defender: self.defending_player_of(*t),
+                target: *t,
                 blocked: false,
             })
             .collect();
+        let combat = self.combat.get_or_insert_with(Combat::default);
+        combat.attackers = infos.clone();
         for (c, _) in &chosen {
             // CR 508.1f
             if !self.has_keyword(*c, &Keyword::Vigilance) {
                 self.card_mut(*c).tapped = true;
             }
         }
-        for (c, d) in &chosen {
+        for i in &infos {
             self.fire(crate::triggers::TriggerEvent::Attacks {
-                attacker: *c,
-                defender: *d,
+                attacker: i.card,
+                defender: i.defender,
+                target: i.target,
             });
         }
         if !chosen.is_empty() {
             // Java PhaseHandler: erst je angegriffenem Ziel, dann insgesamt.
-            for def in self.players_from(self.active) {
-                let of: Vec<(CardId, PlayerId)> =
-                    chosen.iter().copied().filter(|(_, d)| *d == def).collect();
+            let mut targets: Vec<Target> = Vec::new();
+            for (_, t) in &chosen {
+                if !targets.contains(t) {
+                    targets.push(*t);
+                }
+            }
+            for tgt in targets {
+                let of: Vec<(CardId, Target)> =
+                    chosen.iter().copied().filter(|(_, t)| *t == tgt).collect();
                 if !of.is_empty() {
                     self.fire(crate::triggers::TriggerEvent::AttackersDeclared {
                         player: self.active,
@@ -310,18 +339,25 @@ impl GameState {
                 .filter(|b| self.card(*b).zone == Some(Zone::Battlefield))
                 .collect();
             let trample = self.has_keyword(a, &Keyword::Trample);
+            let attacked = match info.target {
+                Target::Card(pw) if self.card(pw).zone != Some(Zone::Battlefield) => None,
+                t => Some(t),
+            };
             if !info.blocked {
-                assignments.push((a, Target::Player(info.defender), power));
+                // CR 506.4c: angegriffener Planeswalker weg → kein Kampfschaden
+                if let Some(t) = attacked {
+                    assignments.push((a, t, power));
+                }
             } else if blockers.is_empty() {
                 // CR 509.1h / 702.19e
-                if trample {
-                    assignments.push((a, Target::Player(info.defender), power));
+                if trample && let Some(t) = attacked {
+                    assignments.push((a, t, power));
                 }
             } else if blockers.len() == 1 && !trample {
                 assignments.push((a, Target::Card(blockers[0]), power));
             } else {
                 let lethal: Vec<u32> = blockers.iter().map(|b| self.lethal_for(*b, a)).collect();
-                let trample_to = trample.then_some(info.defender);
+                let trample_to = attacked.filter(|_| trample);
                 let dist = match ch.ask(Decision::AssignCombatDamage {
                     player: self.card(a).controller,
                     attacker: a,
@@ -336,8 +372,8 @@ impl GameState {
                 for (b, n) in blockers.iter().zip(&dist) {
                     assignments.push((a, Target::Card(*b), *n));
                 }
-                if let Some(p) = trample_to {
-                    assignments.push((a, Target::Player(p), dist[blockers.len()]));
+                if let Some(t) = trample_to {
+                    assignments.push((a, t, dist[blockers.len()]));
                 }
             }
         }

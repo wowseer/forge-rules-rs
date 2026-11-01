@@ -121,7 +121,7 @@ fn attack_trigger_with_triggered_player() {
     let gob = put(&db, &mut g, "Attack Drummer Lite", P1, Zone::Battlefield);
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
-    d.submit(Choice::Attackers(vec![(gob, P2)]));
+    d.submit(Choice::Attackers(vec![(gob, T2)]));
     assert!(is_trigger_on_top(&d));
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 19);
@@ -156,7 +156,7 @@ fn combat_damage_trigger() {
     let ninja = put(&db, &mut g, "Ninja Lite", P1, Zone::Battlefield);
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
-    d.submit(Choice::Attackers(vec![(ninja, P2)]));
+    d.submit(Choice::Attackers(vec![(ninja, T2)]));
     d.priority_in(Step::CombatDamage, P1);
     assert!(is_trigger_on_top(&d));
     d.pass_all();
@@ -202,7 +202,7 @@ fn attackers_declared_once_with_minimum_amount() {
             .collect();
         let mut d = Driver::new(g);
         d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
-        d.submit(Choice::Attackers(atk.iter().map(|c| (*c, P2)).collect()));
+        d.submit(Choice::Attackers(atk.iter().map(|c| (*c, T2)).collect()));
         assert_eq!(
             d.g().stack.len(),
             usize::from(expect),
@@ -222,7 +222,7 @@ fn attackers_declared_one_target_per_attacked_player() {
     let b = put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
-    d.submit(Choice::Attackers(vec![(a, P2), (b, P2)]));
+    d.submit(Choice::Attackers(vec![(a, T2), (b, T2)]));
     assert_eq!(d.g().stack.len(), 1, "einmal je angegriffenem Spieler");
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 19, "TriggeredAttackedTarget");

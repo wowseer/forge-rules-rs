@@ -130,7 +130,10 @@ pub enum TriggerEvent {
     },
     Attacks {
         attacker: CardId,
+        /// verteidigender Spieler
         defender: PlayerId,
+        /// angegriffener Spieler oder Planeswalker
+        target: Target,
     },
     SpellCast {
         card: CardId,
@@ -145,7 +148,7 @@ pub enum TriggerEvent {
     /// Alle Angreifer eines Spielers mit ihren Verteidigern (einmal je Kampf).
     AttackersDeclared {
         player: PlayerId,
-        attackers: Vec<(CardId, PlayerId)>,
+        attackers: Vec<(CardId, Target)>,
         /// Variante je Ziel (alle `attackers` greifen dasselbe Ziel an).
         one_target: bool,
     },
@@ -440,16 +443,23 @@ impl GameState {
                     ..Default::default()
                 })
             }
-            (TriggerKind::Attacks { valid_card }, TriggerEvent::Attacks { attacker, defender }) => {
-                self.card_matches(*attacker, valid_card, source, controller)
-                    .then(|| TriggerInfo {
-                        card: Some(*attacker),
-                        card_lki: Some(*attacker),
-                        player: Some(*defender),
-                        attacking_player: Some(self.card(*attacker).controller),
-                        ..Default::default()
-                    })
-            }
+            (
+                TriggerKind::Attacks { valid_card },
+                TriggerEvent::Attacks {
+                    attacker,
+                    defender,
+                    target,
+                },
+            ) => self
+                .card_matches(*attacker, valid_card, source, controller)
+                .then(|| TriggerInfo {
+                    card: Some(*attacker),
+                    card_lki: Some(*attacker),
+                    player: Some(*defender),
+                    target: Some(*target),
+                    attacking_player: Some(self.card(*attacker).controller),
+                    ..Default::default()
+                }),
             (
                 TriggerKind::SpellCast {
                     valid_card,
@@ -500,9 +510,10 @@ impl GameState {
                 }
                 // Java matchesValidParam auf einer Sammlung: einer genügt.
                 if let Some(v) = attacked_target
-                    && !attackers
-                        .iter()
-                        .any(|(_, d)| self.player_matches(*d, v, controller))
+                    && !attackers.iter().any(|(_, t)| match t {
+                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Card(c) => self.card_matches(*c, v, source, controller),
+                    })
                 {
                     return None;
                 }
@@ -525,7 +536,7 @@ impl GameState {
                 Some(TriggerInfo {
                     attacking_player: Some(*player),
                     target: one_target
-                        .then(|| attackers.first().map(|(_, d)| Target::Player(*d)))
+                        .then(|| attackers.first().map(|(_, t)| *t))
                         .flatten(),
                     ..Default::default()
                 })

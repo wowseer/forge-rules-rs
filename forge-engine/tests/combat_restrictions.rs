@@ -9,7 +9,7 @@ fn to_blockers(g: GameState, attackers: &[CardId]) -> Driver {
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
     d.submit(Choice::Attackers(
-        attackers.iter().map(|a| (*a, P2)).collect(),
+        attackers.iter().map(|a| (*a, T2)).collect(),
     ));
     d.run_until(|_, dec| matches!(dec, Decision::DeclareBlockers { .. }));
     d
@@ -51,7 +51,7 @@ fn cant_block() {
     put(&db, &mut g, "Craven Lite", P2, Zone::Battlefield);
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
-    d.submit(Choice::Attackers(vec![(bear, P2)]));
+    d.submit(Choice::Attackers(vec![(bear, T2)]));
     d.run_until(|g, _| g.step == Step::Main2);
     assert_eq!(
         d.g().player(P2).life,
@@ -83,8 +83,8 @@ fn must_attack_if_able() {
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::DeclareAttackers { .. }));
     assert!(
-        d.try_submit(Choice::Attackers(vec![(bear, P2)])).is_err(),
+        d.try_submit(Choice::Attackers(vec![(bear, T2)])).is_err(),
         "Berserker muss mit"
     );
-    d.submit(Choice::Attackers(vec![(b, P2)]));
+    d.submit(Choice::Attackers(vec![(b, T2)]));
 }

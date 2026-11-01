@@ -12,7 +12,7 @@ fn to_attackers(g: GameState) -> Driver {
 }
 
 fn attack(d: &mut Driver, cards: &[CardId]) {
-    d.submit(Choice::Attackers(cards.iter().map(|c| (*c, P2)).collect()));
+    d.submit(Choice::Attackers(cards.iter().map(|c| (*c, T2)).collect()));
 }
 
 fn block(d: &mut Driver, blocks: &[(CardId, CardId)]) {
@@ -128,7 +128,7 @@ fn trample_assigns_excess_to_player() {
             ..
         } => {
             assert_eq!(lethal, &vec![2]);
-            assert_eq!(*p, P2);
+            assert_eq!(*p, T2);
         }
         o => panic!("{o:?}"),
     }

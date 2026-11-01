@@ -230,7 +230,10 @@ pub struct StackItem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AttackerInfo {
     pub card: CardId,
+    /// Verteidigender Spieler (bei Planeswalkern deren Controller).
     pub defender: PlayerId,
+    /// Angegriffen: Spieler oder Planeswalker (CR 508.1b).
+    pub target: crate::decision::Target,
     /// CR 509.1h: bleibt geblockt, auch wenn Blocker entfernt werden.
     pub blocked: bool,
 }
@@ -335,7 +338,7 @@ pub enum Event {
     Destroyed(CardId),
     /// CR 701.21: geopfert (Kosten oder Effekt).
     Sacrificed(CardId),
-    AttackersDeclared(Vec<(CardId, PlayerId)>),
+    AttackersDeclared(Vec<(CardId, crate::decision::Target)>),
     BlockersDeclared(Vec<(CardId, CardId)>),
     PlayerLost {
         player: PlayerId,

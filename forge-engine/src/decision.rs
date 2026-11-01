@@ -92,7 +92,8 @@ pub enum Decision {
     DeclareAttackers {
         player: PlayerId,
         candidates: Vec<CardId>,
-        defenders: Vec<PlayerId>,
+        /// Angreifbare Ziele: Gegner und ihre Planeswalker (CR 508.1b).
+        defenders: Vec<Target>,
     },
     DeclareBlockers {
         player: PlayerId,
@@ -107,7 +108,8 @@ pub enum Decision {
         amount: u32,
         blockers: Vec<CardId>,
         lethal: Vec<u32>,
-        trample_to: Option<PlayerId>,
+        /// Angegriffener Spieler bzw. Planeswalker (CR 702.19c).
+        trample_to: Option<Target>,
     },
     /// Karten wählen (Abwerfen auf Handgröße, Opfern als Kosten, …).
     ChooseCards {
@@ -168,7 +170,8 @@ pub enum Choice {
     Yes,
     No,
     Color(Color),
-    Attackers(Vec<(CardId, PlayerId)>),
+    /// (Angreifer, angegriffener Spieler oder Planeswalker)
+    Attackers(Vec<(CardId, Target)>),
     /// (Blocker, Angreifer)
     Blocks(Vec<(CardId, CardId)>),
     /// Schaden je Blocker (gleiche Reihenfolge wie in der Entscheidung),

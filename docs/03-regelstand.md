@@ -185,7 +185,7 @@ Offen (33): tapXType, untapXType, Draw, DamageYou, GainLife, PayEnergy, Exile, E
 | Draw step | ✅ ja | `turn_structure::draw_step_draws_and_first_player_skips_first_draw` | inkl. CR 103.8a | phase/PhaseType.java (DRAW) |
 | Precombat main phase | 🟡 teilweise | `spells::land_play_once_per_turn_sorcery_timing` | Länder/Hexereien fertig | phase/PhaseType.java (MAIN1) |
 | Beginning of combat step | ✅ ja | `turn_structure::steps_in_order_and_combat_skips_without_attackers` |  | phase/PhaseType.java (COMBAT_BEGIN) |
-| Declare attackers step | 🟡 teilweise | `combat::summoning_sickness_haste_defender` | nur Spieler als Verteidiger | phase/PhaseType.java (COMBAT_DECLARE_ATTACKERS) |
+| Declare attackers step | 🟡 teilweise | `combat::summoning_sickness_haste_defender` | Spieler und Planeswalker als Ziel | phase/PhaseType.java (COMBAT_DECLARE_ATTACKERS) |
 | Declare blockers step | 🟡 teilweise | `combat::flying_needs_flying_or_reach_to_block` | Flying/Reach/Menace | phase/PhaseType.java (COMBAT_DECLARE_BLOCKERS) |
 | First strike damage step | ✅ ja | `combat::first_strike_kills_before_regular_damage` |  | phase/PhaseType.java (COMBAT_FIRST_STRIKE_DAMAGE) |
 | Combat damage step | ✅ ja | `combat::trample_assigns_excess_to_player` | Regeln ab Foundations (keine Schadenszuweisungsreihenfolge) | phase/PhaseType.java (COMBAT_DAMAGE) |
@@ -229,7 +229,7 @@ Offen (8): CR 704.5r, CR 704.5s, CR 704.5t, CR 704.5w/x, CR 704.5y, CR 704.5z, C
 | Attack legality | ✅ ja | `combat::summoning_sickness_haste_defender, combat_restrictions::cant_attack` | getappt/Einsatzbereitschaft/CantAttack | combat/CombatUtil.java (canAttack) |
 | Summoning sickness | ✅ ja | `combat::summoning_sickness_haste_defender, spells::activated_ability_with_tap_cost_uses_stack_and_sickness` |  | combat/CombatUtil.java (isAttackerSick) |
 | Attack requirements | 🟡 teilweise | `combat_restrictions::must_attack_if_able` | MustAttack geprüft, keine Maximierung über mehrere Anforderungen | combat/AttackRequirement.java, AttackConstraints.java |
-| Attack targets | 🟡 teilweise |  | nur Spieler | combat/CombatUtil.java (getAllPossibleDefenders) |
+| Attack targets | 🟡 teilweise | `planeswalkers::creatures_can_attack_planeswalkers_and_damage_removes_loyalty, planeswalkers::attacked_planeswalker_removed_means_no_combat_damage` | Spieler und Planeswalker der Gegner | combat/CombatUtil.java (getAllPossibleDefenders) |
 | Block legality | ✅ ja | `combat::blocked_creatures_trade, combat_restrictions::cant_block` |  | combat/CombatUtil.java (canBlock) |
 | Evasion | 🟡 teilweise | `combat::flying_needs_flying_or_reach_to_block, combat::menace_needs_two_blockers, combat_restrictions::unblockable` | Flying/Reach/Menace/CantBlockBy | combat/CombatUtil.java (canBeBlocked) |
 | Minimum blockers | ✅ ja | `combat::menace_needs_two_blockers` |  | combat/CombatUtil.java (getMinNumBlockersForAttacker) |

@@ -8,6 +8,8 @@ use forge_engine::{CardDb, CardId, Engine, GameRules, GameState, PlayerId, Statu
 
 pub const P1: PlayerId = PlayerId(0);
 pub const P2: PlayerId = PlayerId(1);
+/// P2 als Angriffsziel.
+pub const T2: Target = Target::Player(P2);
 
 pub const SCRIPTS: &[&str] = &[
     "Name:Plains\nManaCost:no cost\nTypes:Basic Land Plains\nOracle:\n",
