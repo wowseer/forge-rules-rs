@@ -33,6 +33,7 @@ impl GameState {
             timestamp: ts,
             moved_to: None,
             base_pt: None,
+            cast_x: 0,
         });
         self.zone_list_mut(zone, owner).push(id);
         id
@@ -63,13 +64,31 @@ impl GameState {
     /// Liefert die neue ID; Tokens außerhalb des Battlefields werden später
     /// per SBA entfernt (CR 704.5d).
     pub fn move_card(&mut self, id: CardId, to: Zone, to_top: bool) -> CardId {
+        self.move_card_as(id, to, to_top, None)
+    }
+
+    /// Wie [`GameState::move_card`], mit Controller beim Ankommen (Zauber des
+    /// Wirkenden, „unter deiner Kontrolle“). Ersatzeffekte (CR 614) werden hier
+    /// angewendet: Umleitung, getappt, mit Marken.
+    pub fn move_card_as(
+        &mut self,
+        id: CardId,
+        to: Zone,
+        to_top: bool,
+        controller: Option<PlayerId>,
+    ) -> CardId {
         let from = self.card(id).zone;
+        let (to, mods) = self.replace_move(id, from, to);
         self.remove_from_zone(id);
         let old = self.card(id).clone();
         let new_id = CardId(self.cards.len() as u32);
         let ts = self.timestamp();
-        // Gemeinsame Zonen und Battlefield: Kontrolle; sonst Besitzer (CR 108.4).
-        let controller = old.owner;
+        // Standard: Besitzer (CR 108.4, 110.2); auf dem Battlefield ggf. abweichend.
+        let controller = if to == Zone::Battlefield || to == Zone::Stack {
+            controller.unwrap_or(old.owner)
+        } else {
+            old.owner
+        };
         self.cards.push(CardObj {
             id: new_id,
             def: old.def.clone(),
@@ -86,11 +105,24 @@ impl GameState {
             timestamp: ts,
             moved_to: None,
             base_pt: None,
+            cast_x: if from == Some(Zone::Stack) {
+                old.cast_x
+            } else {
+                0
+            },
         });
         {
             let o = self.card_mut(id);
             o.zone = None;
             o.moved_to = Some(new_id);
+        }
+        // CR 614.1c/614.12: getappt bzw. mit Marken ins Spiel
+        {
+            let n = self.card_mut(new_id);
+            n.tapped = mods.tapped;
+            for (k, v) in &mods.counters {
+                *n.counters.entry(k.clone()).or_insert(0) += v;
+            }
         }
         if to != Zone::Stack {
             let owner = old.owner;

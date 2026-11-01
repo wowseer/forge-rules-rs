@@ -56,6 +56,8 @@ impl GameState {
             Prop::With(k) => ch.has(k),
             Prop::Without(k) => !ch.has(k),
             Prop::PlayerOpponent => false,
+            Prop::Not(inner) => !self.prop_matches(id, ch, inner, source, you),
+            Prop::OppOwn => c.owner != you,
             Prop::Stat { stat, op, value } => {
                 let v = match stat {
                     crate::valid::Stat::Power => ch.power,

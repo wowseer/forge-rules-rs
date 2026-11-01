@@ -23,6 +23,10 @@ pub struct CompiledFace {
     pub triggers: Vec<Arc<crate::triggers::CompiledTrigger>>,
     /// Statische Fähigkeiten (`S:`).
     pub statics: Vec<Arc<crate::statics::CompiledStatic>>,
+    /// Ersatzeffekte (`R:`).
+    pub replacements: Vec<Arc<crate::replacements::CompiledReplacement>>,
+    /// `K:etbCounter`: (Markentyp, Anzahl) beim Ankommen.
+    pub etb_counters: Vec<(String, crate::expr::Expr)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -72,8 +76,17 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         activated: basic_land_mana(face),
         triggers: Vec::new(),
         statics: Vec::new(),
+        replacements: Vec::new(),
+        etb_counters: Vec::new(),
     };
     for k in &face.keywords {
+        if k.starts_with("etbCounter:") {
+            match crate::replacements::parse_etb_counter(face, k) {
+                Ok(c) => out.etb_counters.push(c),
+                Err(e) => unsupported.push(format!("Keyword: {k} ({e})")),
+            }
+            continue;
+        }
         let kw = Keyword::parse(k);
         if !kw.is_supported() {
             unsupported.push(format!("Keyword: {k}"));
@@ -114,7 +127,10 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         }
     }
     for r in &face.replacements {
-        unsupported.push(format!("Replacement: {}", r.mode));
+        match crate::replacements::compile_replacement(face, r) {
+            Ok(c) => out.replacements.push(Arc::new(c)),
+            Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
+        }
     }
     if face
         .power

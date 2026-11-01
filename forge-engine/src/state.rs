@@ -122,6 +122,8 @@ pub struct CardObj {
     pub moved_to: Option<CardId>,
     /// Basis-Stärke/-Widerstandskraft eines Tokens mit festgelegten Werten (`TokenPower$`).
     pub base_pt: Option<(i32, i32)>,
+    /// Für X bezahlter Wert (auf dem Stapel, und als bleibende Karte danach).
+    pub cast_x: u32,
 }
 
 impl CardObj {

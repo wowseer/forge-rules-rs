@@ -101,6 +101,7 @@ Der Test `turn_structure::deterministic_with_same_seed` prüft das.
 | `targeting` | Filter auswerten, legale Ziele, Hexproof/Shroud | 115 |
 | `casting` | legale Aktionen, Land spielen, wirken, aktivieren, Kosten und Mana bezahlen, Auto-Bezahlung | 117, 305, 601, 602, 605 |
 | `combat` | Angreifer, Blocker, Kampfschaden | 506–511 |
+| `replacements` | Ersatzeffekte `Moved` (Umleitung, getappt, mit Marken), angewendet in `move_card_as` vor dem Ankommen | 614 |
 | `sba` | zustandsbasierte Aktionen | 704 |
 | `expr` | Ausdrücke (`Count$…`, `Number$`, Rechenoperationen) und Bedingungen (`IsPresent$`, `CheckSVar$`, `Condition$`, `ConditionPresent$` …) | 603.4, 608.2c |
 | `statics` | statische Fähigkeiten (`S:Mode$ Continuous`) kompilieren | 604 |

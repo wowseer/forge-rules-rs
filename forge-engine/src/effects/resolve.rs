@@ -424,14 +424,10 @@ impl GameState {
         place: &super::ZonePlacement,
         controller: PlayerId,
     ) -> CardId {
-        let new = self.move_card(c, to, !place.library_bottom);
-        if to == Zone::Battlefield {
-            if place.tapped {
-                self.card_mut(new).tapped = true;
-            }
-            if place.gain_control {
-                self.card_mut(new).controller = controller;
-            }
+        let ctrl = place.gain_control.then_some(controller);
+        let new = self.move_card_as(c, to, !place.library_bottom, ctrl);
+        if self.card(new).zone == Some(Zone::Battlefield) && place.tapped {
+            self.card_mut(new).tapped = true;
         }
         new
     }
@@ -547,9 +543,8 @@ impl GameState {
         };
         let is_permanent = self.chars(card).types.is_permanent();
         if is_permanent && !fizzled {
-            let new = self.move_card(card, Zone::Battlefield, true);
-            let ctrl = item.controller;
-            self.card_mut(new).controller = ctrl;
+            // CR 608.3a: unter Kontrolle des Zauberspruch-Controllers
+            self.move_card_as(card, Zone::Battlefield, true, Some(item.controller));
         } else {
             self.move_card(card, Zone::Graveyard, true);
         }

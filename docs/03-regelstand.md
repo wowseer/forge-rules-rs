@@ -14,13 +14,13 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 |---|---:|---:|---:|---:|
 | Keyword | 198 | 13 | 2 | 4 |
 | Trigger | 137 | 0 | 5 | 11 |
-| Replacement Effect | 35 | 0 | 0 | 5 |
+| Replacement Effect | 35 | 0 | 1 | 5 |
 | Static Ability | 90 | 0 | 1 | 0 |
 | Effect (ApiType) | 188 | 0 | 14 | 16 |
 | Cost | 42 | 5 | 2 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 12 | 0 | 3 |
-| **Summe** | **729** | **40** | **30** | **40** |
+| **Summe** | **729** | **40** | **31** | **40** |
 
 ## Keyword
 
@@ -76,12 +76,13 @@ Offen (132): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Alw
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | AssembleContraption | ⚪ n/a |  | Unstable | replacement/ReplaceAssembleContraption.java |
+| Moved | 🟡 teilweise | `replacements::rest_in_peace_redirects_to_exile_and_no_dies_trigger` | Umleitung (ChangeZone ReplacedCard), getappt ins Spiel inkl. Bedingung, etbCounter | replacement/ReplaceMoved.java |
 | PlanarDiceResult | ⚪ n/a |  | Planechase | replacement/ReplacePlanarDiceResult.java |
 | Planeswalk | ⚪ n/a |  | Planechase | replacement/ReplacePlaneswalk.java |
 | RollPlanarDice | ⚪ n/a |  | Planechase | replacement/ReplaceRollPlanarDice.java |
 | SetInMotion | ⚪ n/a |  | Archenemy | replacement/ReplaceSetInMotion.java |
 
-Offen (35): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Cascade, Connive, Counter, CopySpell, CreateToken, DamageDone, DealtDamage, DeclareBlocker, Destroy, Draw, DrawCards, Explore, GainLife, GameLoss, GameWin, Learn, LifeReduced, LoseMana, Mill, Moved, PayLife, ProduceMana, Proliferate, RemoveCounter, RollDice, Scry, Tap, Transform, TurnFaceUp, Untap
+Offen (34): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Cascade, Connive, Counter, CopySpell, CreateToken, DamageDone, DealtDamage, DeclareBlocker, Destroy, Draw, DrawCards, Explore, GainLife, GameLoss, GameWin, Learn, LifeReduced, LoseMana, Mill, PayLife, ProduceMana, Proliferate, RemoveCounter, RollDice, Scry, Tap, Transform, TurnFaceUp, Untap
 
 ## Static Ability
 

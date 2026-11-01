@@ -17,6 +17,7 @@ pub mod flow;
 pub mod ids;
 pub mod keyword;
 pub mod mana_pool;
+pub mod replacements;
 pub mod rng;
 pub mod sba;
 pub mod simple_ai;

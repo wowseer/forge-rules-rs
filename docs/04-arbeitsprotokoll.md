@@ -70,9 +70,20 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 - Unterstützung: 17,4 % → **19,8 %** (Pauper 32,0 %, Modern 21,6 %).
 - Repo **github.com/wowseer/forge-rules-rs** eingerichtet; jeder Arbeitsschritt wird gepusht.
 
+### Nachtrag: Ersatzeffekte (Moved)
+
+- `replacements.rs`: Umleitung (Rest in Peace), getappt ins Spiel (auch Check-Lands mit
+  Bedingung), `etbCounter` (auch X). Angewendet beim Zonenwechsel vor dem Ankommen,
+  also vor ETB-Triggern; je Ereignis höchstens einmal (614.5).
+- Zonenwechsel setzt den Controller jetzt beim Ankommen (Zauber, Land, „unter deiner
+  Kontrolle“) statt danach – ETB-Trigger sehen den richtigen Controller.
+- Filter: `!`-Negation (`Card.!token`), `OppOwn`.
+- Vereinfachung: Mehrere Umleitungen → Zeitstempel statt Wahl des Betroffenen (CR 616.1).
+- 4 neue Tests (135), 300 Zufallspartien; Zielpool 19,8 % → **21,1 %**.
+
 ### Nächste Schritte
 
-1. **Replacement-Effekte** (`Moved`: 404), **Effect** (367), **PumpAll** (313), **Discard** (288),
+1. **Effect** (367), **PumpAll** (313), **Discard** (288),
    **Counter** (284), **Animate**, **ReduceCost**, **Dig**, **DamageAll**.
 2. **Replacement-Effekte** (`Moved`: 394, ETB getappt usw.).
 3. **Auren und Ausrüstung**: `Enchant`, `Attach`, `Equip`, `AffectedDefined$ Enchanted/Equipped`,

@@ -233,8 +233,7 @@ impl GameState {
         match a {
             Action::Pass => Ok(()),
             Action::PlayLand(c) => {
-                let new = self.move_card(c, Zone::Battlefield, true);
-                self.card_mut(new).controller = p;
+                let new = self.move_card_as(c, Zone::Battlefield, true, Some(p));
                 self.player_mut(p).lands_played_this_turn += 1;
                 self.push_event(Event::LandPlayed {
                     player: p,
@@ -295,6 +294,8 @@ impl GameState {
         let mana_cost = self.chars(card).mana_cost.clone().unwrap_or_default();
         let on_stack = self.move_card(card, Zone::Stack, true);
         self.card_mut(on_stack).controller = p;
+        // X merken: für Werte, die sich beim Ankommen auf X beziehen (etbCounter)
+        let remember_x_on = on_stack;
         let id = self.next_stack_id;
         self.next_stack_id += 1;
 
@@ -321,6 +322,7 @@ impl GameState {
         // 601.2f–h
         self.pay_mana_cost(p, &mana_cost, x, None, ch)?;
 
+        self.card_mut(remember_x_on).cast_x = x;
         self.stack.push(StackItem {
             id,
             kind: StackKind::Spell { card: on_stack },

@@ -58,6 +58,10 @@ pub enum Prop {
     Without(Keyword),
     /// Spieler-Eigenschaft `Opponent` in `Player.Opponent`.
     PlayerOpponent,
+    /// `!<Eigenschaft>`
+    Not(Box<Prop>),
+    /// Gegner besitzt die Karte
+    OppOwn,
     /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
     Stat {
         stat: Stat,
@@ -142,6 +146,12 @@ fn is_type_word(w: &str) -> bool {
 }
 
 fn parse_prop(p: &str) -> Result<Prop, ValidError> {
+    if let Some(rest) = p.strip_prefix('!') {
+        return Ok(Prop::Not(Box::new(parse_prop(rest)?)));
+    }
+    if p == "OppOwn" {
+        return Ok(Prop::OppOwn);
+    }
     let colors = |s: &str| Color::from_name(s);
     Ok(match p {
         "YouCtrl" => Prop::YouCtrl,
