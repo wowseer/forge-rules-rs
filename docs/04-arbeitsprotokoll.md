@@ -101,6 +101,13 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
   weiteren Static-Arten (`CantBlockBy`, `CantBlock`, `CantAttack`, `MustAttack`) und
   `RememberObjects$ Remembered`. Effect ist damit Infrastruktur für diese Bausteine.
 
+### Nachtrag: Kampfbeschränkungen
+
+- Static-Arten `CantBlockBy` (auch „unblockbar“), `CantBlock`, `CantAttack`, `MustAttack`
+  (Pflicht wird bei der Angriffsdeklaration geprüft, CR 508.1d); wirken auch aus
+  Effektobjekten (z. B. „kann diesen Zug nicht von Kreaturen mit Stärke ≤ 2 geblockt werden“).
+- 5 neue Tests (152), 300 Zufallspartien; Zielpool 23,7 % → **24,7 %** (Pauper 38,5 %).
+
 ### Nächste Schritte
 
 1. **Auren und Ausrüstung** (`AffectedDefined$ Enchanted/Equipped`: 833 + 551 Vorkommen),

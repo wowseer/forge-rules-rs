@@ -143,8 +143,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
     {
         // `*` ist nur mit charakteristik-definierender Fähigkeit spielbar (CR 604.3).
         let has_cda = out.statics.iter().any(|s| {
-            let crate::statics::CompiledStatic::Continuous(c) = s.as_ref();
-            c.characteristic_defining && c.has_layer7b()
+            matches!(s.as_ref(), crate::statics::CompiledStatic::Continuous(c) if c.characteristic_defining && c.has_layer7b())
         });
         if !has_cda {
             unsupported.push("variable Stärke/Widerstandskraft (*) ohne CDA".into());

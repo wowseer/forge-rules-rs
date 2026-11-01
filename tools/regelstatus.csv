@@ -120,3 +120,7 @@ Effect (ApiType);DamageAll;teilweise;mass_discard_counter::damage_all_creatures_
 Effect (ApiType);Discard;teilweise;mass_discard_counter::duress_caster_chooses_noncreature_nonland;TgtChoose, Hand, Random, RevealYouChoose, DiscardValid; RememberDiscarded fehlt
 Effect (ApiType);Counter;teilweise;mass_discard_counter::mana_leak_pay_or_countered;Zauber neutralisieren, UnlessCost (Zahl, automatische Zahlung); Fähigkeiten neutralisieren, Destination fehlen
 Effect (ApiType);Effect;teilweise;effects_objects::effect_grants_hexproof_to_remembered_until_end_of_turn;Effektobjekt in Command Zone mit Statics/Triggern/Ersatzeffekten, RememberObjects (Targeted/Self/Triggered…), Duration (Zugende, Permanent, UntilYourNextTurn, UntilTheEndOfYourNextTurn); RememberObjects Remembered, EffectOwner, weitere Dauern fehlen
+Static Ability;CantBlockBy;teilweise;combat_restrictions::cant_be_blocked_by_small_creatures_via_effect;ValidAttacker, ValidBlocker, Bedingungen; ValidDefender fehlt
+Static Ability;CantBlock;ja;combat_restrictions::cant_block;
+Static Ability;CantAttack;teilweise;combat_restrictions::cant_attack;ValidCard, Bedingungen; Target/UnlessDefender fehlen
+Static Ability;MustAttack;teilweise;combat_restrictions::must_attack_if_able;ValidCreature (CR 508.1d); MustAttack$-Ziel, ValidPlayer fehlen

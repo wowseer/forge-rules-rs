@@ -93,9 +93,10 @@ impl Controller for SimpleAi {
                 defenders,
                 ..
             } => {
+                let must = state.must_attack(d.player());
                 let att = candidates
                     .iter()
-                    .filter(|_| self.rng.below(2) == 0)
+                    .filter(|c| must.contains(c) || self.rng.below(2) == 0)
                     .map(|c| (*c, defenders[0]))
                     .collect();
                 Choice::Attackers(att)

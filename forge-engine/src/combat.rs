@@ -15,6 +15,48 @@ use crate::state::{AttackerInfo, Choices, Combat, Event, GameState, Interrupt, R
 use crate::zone::Zone;
 
 impl GameState {
+    /// Wirkende Kampfbeschränkungen einer Art: (Quelle, Controller, Beschränkung).
+    pub(crate) fn restrictions(
+        &self,
+        kind: crate::statics::RestrictionKind,
+    ) -> Vec<(CardId, PlayerId, &crate::statics::CombatRestriction)> {
+        let mut v = Vec::new();
+        for c in self.battlefield.iter().chain(self.command.iter()) {
+            let o = self.card(*c);
+            let Some(zone) = o.zone else { continue };
+            for s in &o.compiled().statics {
+                if let crate::statics::CompiledStatic::Combat(r) = s.as_ref() {
+                    let ctx = crate::expr::EvalCtx {
+                        source: *c,
+                        controller: o.controller,
+                        x: 0,
+                    };
+                    if r.kind == kind
+                        && r.effect_zones.contains(&zone)
+                        && self.check_conditions(&r.conditions, &ctx)
+                    {
+                        v.push((*c, o.controller, r));
+                    }
+                }
+            }
+        }
+        v
+    }
+
+    fn restricted(&self, kind: crate::statics::RestrictionKind, card: CardId) -> bool {
+        self.restrictions(kind)
+            .iter()
+            .any(|(src, ctrl, r)| self.card_matches(card, &r.valid, *src, *ctrl))
+    }
+
+    /// Kreaturen von `p`, die angreifen müssen, sofern sie können (CR 508.1d).
+    pub fn must_attack(&self, p: PlayerId) -> Vec<CardId> {
+        self.attack_candidates(p)
+            .into_iter()
+            .filter(|c| self.restricted(crate::statics::RestrictionKind::MustAttack, *c))
+            .collect()
+    }
+
     /// CR 508.1a: Kreaturen, die angreifen können.
     pub fn attack_candidates(&self, p: PlayerId) -> Vec<CardId> {
         self.battlefield_of(p)
@@ -23,6 +65,7 @@ impl GameState {
                     && !self.card(*c).tapped
                     && !self.is_summoning_sick(*c)
                     && !self.has_keyword(*c, &Keyword::Defender)
+                    && !self.restricted(crate::statics::RestrictionKind::CantAttack, *c)
             })
             .collect()
     }
@@ -30,7 +73,11 @@ impl GameState {
     /// CR 509.1a: Kreaturen von `p`, die blocken können.
     pub fn block_candidates(&self, p: PlayerId) -> Vec<CardId> {
         self.battlefield_of(p)
-            .filter(|c| self.is_creature(*c) && !self.card(*c).tapped)
+            .filter(|c| {
+                self.is_creature(*c)
+                    && !self.card(*c).tapped
+                    && !self.restricted(crate::statics::RestrictionKind::CantBlock, *c)
+            })
             .collect()
     }
 
@@ -41,6 +88,16 @@ impl GameState {
             && !self.has_keyword(blocker, &Keyword::Reach)
         {
             return false;
+        }
+        // CantBlockBy: „kann nicht (von …) geblockt werden“
+        for (src, ctrl, r) in self.restrictions(crate::statics::RestrictionKind::CantBlockBy) {
+            if self.card_matches(attacker, &r.valid, src, ctrl)
+                && r.valid_blocker
+                    .as_ref()
+                    .is_none_or(|v| self.card_matches(blocker, v, src, ctrl))
+            {
+                return false;
+            }
         }
         true
     }
@@ -83,6 +140,13 @@ impl GameState {
                 _ => Vec::new(),
             }
         };
+        // CR 508.1d: Angriffspflichten erfüllen, soweit möglich
+        let must = self.must_attack(p);
+        if let Some(m) = must.iter().find(|m| !chosen.iter().any(|(c, _)| c == *m)) {
+            return Err(Interrupt::Invalid(InvalidChoice(format!(
+                "{m} muss angreifen"
+            ))));
+        }
         let combat = self.combat.get_or_insert_with(Combat::default);
         combat.attackers = chosen
             .iter()

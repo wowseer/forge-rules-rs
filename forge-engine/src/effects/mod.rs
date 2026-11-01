@@ -568,8 +568,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
             .map_err(|_| CompileError::MissingSvar(n.clone()))?;
         let mut cs = crate::statics::compile_static(face, &st)?;
         // Effektobjekte wirken aus der Command Zone.
-        let crate::statics::CompiledStatic::Continuous(c) = &mut cs;
-        c.effect_zones = vec![crate::zone::Zone::Command];
+        *cs.effect_zones_mut() = vec![crate::zone::Zone::Command];
         compiled.statics.push(Arc::new(cs));
     }
     for n in &triggers_n {

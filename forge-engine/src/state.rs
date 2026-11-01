@@ -536,7 +536,9 @@ impl GameState {
                 let s = self.card(sid);
                 let Some(szone) = s.zone else { continue };
                 for cs in &s.compiled().statics {
-                    let CompiledStatic::Continuous(st) = cs.as_ref();
+                    let CompiledStatic::Continuous(st) = cs.as_ref() else {
+                        continue;
+                    };
                     // Rekursionsschutz: in verschachtelten Auswertungen nur statische Werte.
                     if nested && st.is_dynamic() {
                         continue;

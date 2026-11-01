@@ -78,8 +78,98 @@ impl ContinuousStatic {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+// Statics liegen immer hinter `Arc` (CompiledFace), die Variantengröße ist daher unkritisch.
+#[allow(clippy::large_enum_variant)]
 pub enum CompiledStatic {
     Continuous(ContinuousStatic),
+    /// Kampfbeschränkungen (CR 508.1c/d, 509.1b/c).
+    Combat(CombatRestriction),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RestrictionKind {
+    /// `CantBlockBy`: `valid` (Angreifer) kann nicht von `valid_blocker` geblockt werden
+    /// (ohne `ValidBlocker$`: gar nicht).
+    CantBlockBy,
+    /// `CantBlock`: `valid` kann nicht blocken.
+    CantBlock,
+    /// `CantAttack`: `valid` kann nicht angreifen.
+    CantAttack,
+    /// `MustAttack`: `valid` greift jeden Kampf an, falls möglich.
+    MustAttack,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CombatRestriction {
+    pub kind: RestrictionKind,
+    pub valid: ValidSpec,
+    pub valid_blocker: Option<ValidSpec>,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
+    pub description: String,
+}
+
+impl CompiledStatic {
+    pub fn effect_zones_mut(&mut self) -> &mut Vec<Zone> {
+        match self {
+            CompiledStatic::Continuous(c) => &mut c.effect_zones,
+            CompiledStatic::Combat(c) => &mut c.effect_zones,
+        }
+    }
+}
+
+fn compile_combat(
+    face: &CardFace,
+    s: &ScriptStatic,
+    kind: RestrictionKind,
+) -> Result<CompiledStatic, CompileError> {
+    let p = &s.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: format!("Static {}", s.mode),
+        key: k.into(),
+        value: v.into(),
+    };
+    let key = match kind {
+        RestrictionKind::CantBlockBy => "ValidAttacker",
+        RestrictionKind::CantBlock | RestrictionKind::CantAttack => "ValidCard",
+        RestrictionKind::MustAttack => "ValidCreature",
+    };
+    let mut used: Vec<&str> = vec![
+        "Mode",
+        "Description",
+        "Secondary",
+        "EffectZone",
+        key,
+        "ValidBlocker",
+    ];
+    let valid = ValidSpec::parse(p.get(key).ok_or_else(|| err(key, "fehlt"))?)
+        .map_err(CompileError::Valid)?;
+    let valid_blocker = match (kind, p.get("ValidBlocker")) {
+        (RestrictionKind::CantBlockBy, Some(v)) => {
+            Some(ValidSpec::parse(v).map_err(CompileError::Valid)?)
+        }
+        (_, Some(v)) => return Err(err("ValidBlocker", v)),
+        _ => None,
+    };
+    let effect_zones = match p.get("EffectZone") {
+        Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+        None => vec![Zone::Battlefield],
+    };
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    Ok(CompiledStatic::Combat(CombatRestriction {
+        kind,
+        valid,
+        valid_blocker,
+        effect_zones,
+        conditions,
+        description: p.get("Description").unwrap_or("").to_string(),
+    }))
 }
 
 const NEUTRAL: &[&str] = &["Mode", "Description", "Secondary", "AILogic"];
@@ -109,8 +199,13 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         key: k.into(),
         value: v.into(),
     };
-    if s.mode != "Continuous" {
-        return Err(CompileError::UnsupportedApi(format!("Static {}", s.mode)));
+    match s.mode.as_str() {
+        "Continuous" => {}
+        "CantBlockBy" => return compile_combat(face, s, RestrictionKind::CantBlockBy),
+        "CantBlock" => return compile_combat(face, s, RestrictionKind::CantBlock),
+        "CantAttack" => return compile_combat(face, s, RestrictionKind::CantAttack),
+        "MustAttack" => return compile_combat(face, s, RestrictionKind::MustAttack),
+        _ => return Err(CompileError::UnsupportedApi(format!("Static {}", s.mode))),
     }
     let mut used: Vec<&str> = NEUTRAL.to_vec();
     let mut get = |k: &'static str| {
@@ -242,8 +337,11 @@ mod tests {
 
     #[test]
     fn anthem_and_unsupported() {
-        let CompiledStatic::Continuous(a) =
-            st("S:Mode$ Continuous | Affected$ Creature.YouCtrl | AddPower$ 1 | AddToughness$ 1 | Description$ x").unwrap();
+        let Ok(CompiledStatic::Continuous(a)) = st(
+            "S:Mode$ Continuous | Affected$ Creature.YouCtrl | AddPower$ 1 | AddToughness$ 1 | Description$ x",
+        ) else {
+            panic!("Continuous erwartet")
+        };
         assert_eq!(
             (a.add_power, a.add_toughness),
             (Some(Expr::Const(1)), Some(Expr::Const(1)))
@@ -258,6 +356,7 @@ mod tests {
                 .is_err()
         );
         assert!(st("S:Mode$ Continuous | Affected$ You | AddKeyword$ Hexproof").is_err());
-        assert!(st("S:Mode$ CantBlockBy | ValidAttacker$ Creature").is_err());
+        assert!(st("S:Mode$ CantBlockBy | ValidAttacker$ Creature").is_ok());
+        assert!(st("S:Mode$ CantRegenerate | ValidCard$ Creature").is_err());
     }
 }
