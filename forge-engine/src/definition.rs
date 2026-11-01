@@ -104,6 +104,27 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             }
             continue;
         }
+        // CR 702.21: Ward (Java CardFactoryUtil: BecomesTarget-Trigger + Counter unless)
+        if let Some(cost) = k.strip_prefix("Ward:") {
+            let mut f = face.clone();
+            f.svars.push((
+                "WardCounter".into(),
+                format!(
+                    "DB$ Counter | Defined$ TriggeredSourceSA | UnlessCost$ {cost} | UnlessPayer$ TriggeredSourceSAController"
+                ),
+            ));
+            let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(
+                "Mode$ BecomesTarget | ValidSource$ SpellAbility.OppCtrl | ValidTarget$ Card.Self | TriggerZones$ Battlefield | Execute$ WardCounter | TriggerDescription$ Ward",
+            ));
+            match st
+                .map_err(|_| ())
+                .and_then(|st| crate::triggers::compile_trigger(&f, &st).map_err(|_| ()))
+            {
+                Ok(t) => out.triggers.push(Arc::new(t)),
+                Err(()) => unsupported.push(format!("Keyword: {k}")),
+            }
+            continue;
+        }
         // CR 702.29: Cycling / Typecycling (Java CardFactoryUtil: AB$ aus der Hand)
         if let Some(script) = cycling_script(k) {
             match ScriptAbility::from_svar(&script)

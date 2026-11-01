@@ -512,7 +512,19 @@ impl GameState {
                     }
                 }
             }
-            Effect::Counter => {
+            Effect::Counter { triggered_sa: true } => {
+                // CR 701.5a: Zauber → Friedhof, Fähigkeit → entfernt
+                let id = ctx.trig.as_ref().and_then(|t| t.stack_item);
+                if let Some(pos) = self.stack.iter().position(|s| Some(s.id) == id) {
+                    let item = self.stack.remove(pos);
+                    if let StackKind::Spell { card } = item.kind {
+                        self.move_card(card, Zone::Graveyard, true);
+                    }
+                }
+            }
+            Effect::Counter {
+                triggered_sa: false,
+            } => {
                 for t in targets {
                     let Target::Card(card) = *t else { continue };
                     let Some(pos) = self

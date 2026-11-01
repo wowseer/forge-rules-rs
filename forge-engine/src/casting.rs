@@ -384,7 +384,32 @@ impl GameState {
             card: on_stack,
             player: p,
         });
+        self.fire_becomes_target();
         Ok(())
+    }
+
+    /// „Wird zum Ziel“ für das oberste Stapelobjekt (CR 115.1, Trigger `BecomesTarget`).
+    pub(crate) fn fire_becomes_target(&mut self) {
+        let Some(item) = self.stack.last() else {
+            return;
+        };
+        let mut seen: Vec<Target> = Vec::new();
+        for t in item.targets.iter().flatten() {
+            if !seen.contains(t) {
+                seen.push(*t);
+            }
+        }
+        let (id, source, controller) = (item.id, item.source, item.controller);
+        let is_spell = matches!(item.kind, StackKind::Spell { .. });
+        for target in seen {
+            self.fire(crate::triggers::TriggerEvent::BecomesTarget {
+                target,
+                source,
+                stack_item: id,
+                is_spell,
+                controller,
+            });
+        }
     }
 
     fn activate_ability(
@@ -432,6 +457,7 @@ impl GameState {
             card: source,
             index,
         });
+        self.fire_becomes_target();
         Ok(())
     }
 

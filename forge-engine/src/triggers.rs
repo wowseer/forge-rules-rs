@@ -58,6 +58,11 @@ pub enum TriggerKind {
         /// `Mode$ AttackersDeclaredOneTarget`: je angegriffenem Ziel einmal.
         one_target: bool,
     },
+    /// `Mode$ BecomesTarget` – ein Objekt/Spieler wird Ziel eines Zaubers/einer Fähigkeit.
+    BecomesTarget {
+        valid_target: Option<ValidSpec>,
+        valid_source: Option<SaFilter>,
+    },
     /// `Mode$ ChangesZoneAll` – ein oder mehrere Objekte wechselten gleichzeitig die Zone.
     ChangesZoneAll {
         origin: Option<Vec<Zone>>,
@@ -129,6 +134,37 @@ pub struct CompiledTrigger {
     pub description: String,
 }
 
+/// Filter für Zaubersprüche/Fähigkeiten (`ValidSource$ SpellAbility.OppCtrl`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SaFilter {
+    /// `Some(true)` = nur Zaubersprüche, `Some(false)` = nur Fähigkeiten
+    pub spell: Option<bool>,
+    /// `Some(true)` = du kontrollierst, `Some(false)` = ein Gegner
+    pub yours: Option<bool>,
+}
+
+impl SaFilter {
+    fn parse(s: &str) -> Option<SaFilter> {
+        let (base, props) = match s.split_once('.') {
+            Some((b, p)) => (b, Some(p)),
+            None => (s, None),
+        };
+        let spell = match base {
+            "SpellAbility" | "Card" => None,
+            "Spell" => Some(true),
+            "Ability" | "Activated" => Some(false),
+            _ => return None,
+        };
+        let yours = match props {
+            None => None,
+            Some("YouCtrl") => Some(true),
+            Some("OppCtrl") => Some(false),
+            Some(_) => return None,
+        };
+        Some(SaFilter { spell, yours })
+    }
+}
+
 /// Was beim Auslösen bekannt war (Java: `runParams`, „Triggered…“-Defined).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TriggerInfo {
@@ -145,6 +181,8 @@ pub struct TriggerInfo {
     pub delay_remembered: Vec<Target>,
     /// Betroffene Objekte bei Sammel-Triggern (`TriggeredCards`).
     pub cards: Vec<CardId>,
+    /// Auslösendes Stapelobjekt (`TriggeredSourceSA`).
+    pub stack_item: Option<u32>,
 }
 
 /// Verzögerter Trigger (CR 603.7), angelegt vom Effekt `DelayedTrigger`.
@@ -196,6 +234,13 @@ pub enum TriggerEvent {
         attackers: Vec<(CardId, Target)>,
         /// Variante je Ziel (alle `attackers` greifen dasselbe Ziel an).
         one_target: bool,
+    },
+    BecomesTarget {
+        target: Target,
+        source: CardId,
+        stack_item: u32,
+        is_spell: bool,
+        controller: PlayerId,
     },
     /// Gleichzeitige Zonenwechsel (alt, neu, von, nach).
     ChangesZoneAll {
@@ -369,6 +414,17 @@ pub fn compile_trigger(
                 attacked_target: valid("AttackedTarget", &mut used)?,
                 valid_attackers,
                 one_target: t.mode == "AttackersDeclaredOneTarget",
+            }
+        }
+        "BecomesTarget" => {
+            used.push("ValidSource");
+            let valid_source = match p.get("ValidSource") {
+                Some(v) => Some(SaFilter::parse(v).ok_or_else(|| unsupported("ValidSource", v))?),
+                None => None,
+            };
+            TriggerKind::BecomesTarget {
+                valid_target: valid("ValidTarget", &mut used)?,
+                valid_source,
             }
         }
         "ChangesZoneAll" => {
@@ -700,6 +756,42 @@ impl GameState {
                     target: one_target
                         .then(|| attackers.first().map(|(_, t)| *t))
                         .flatten(),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::BecomesTarget {
+                    valid_target,
+                    valid_source,
+                },
+                TriggerEvent::BecomesTarget {
+                    target,
+                    source: sa_source,
+                    stack_item,
+                    is_spell,
+                    controller: sa_ctrl,
+                },
+            ) => {
+                if let Some(f) = valid_source
+                    && (f.spell.is_some_and(|s| s != *is_spell)
+                        || f.yours.is_some_and(|y| y != (*sa_ctrl == controller)))
+                {
+                    return None;
+                }
+                if let Some(v) = valid_target {
+                    let ok = match target {
+                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Card(c) => self.opt_card(&Some(v.clone()), *c, source, controller),
+                    };
+                    if !ok {
+                        return None;
+                    }
+                }
+                Some(TriggerInfo {
+                    target: Some(*target),
+                    source: Some(*sa_source),
+                    player: Some(*sa_ctrl),
+                    stack_item: Some(*stack_item),
                     ..Default::default()
                 })
             }
@@ -1215,6 +1307,7 @@ impl GameState {
                     targets,
                     x: 0,
                 });
+                self.fire_becomes_target();
                 any = true;
             }
         }

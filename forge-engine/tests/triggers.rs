@@ -314,3 +314,45 @@ fn changes_zone_all_triggers_once_per_simultaneous_event() {
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 16);
 }
+
+#[test]
+fn ward_counters_unless_paid() {
+    for (lands, pay, countered) in [(3usize, true, false), (3, false, true), (1, true, true)] {
+        let (db, mut g) = game_at(Step::Main1, 10);
+        put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, lands);
+        let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+        let bear = put(&db, &mut g, "Warded Bear Lite", P2, Zone::Battlefield);
+        let mut d = Driver::new(g);
+        d.cast(bolt, &[Target::Card(bear)]);
+        assert_eq!(d.g().stack.len(), 2, "Ward-Trigger über dem Blitz");
+        d.pass_all();
+        if lands == 3 {
+            match d.decision() {
+                Decision::PayUnlessCost { player, .. } => assert_eq!(*player, P1),
+                o => panic!("{o:?}"),
+            }
+            d.submit(if pay { Choice::Yes } else { Choice::No });
+        }
+        d.pass_all();
+        assert_eq!(
+            count(d.g(), "Warded Bear Lite", Zone::Battlefield) == 1,
+            countered,
+            "lands={lands} pay={pay}"
+        );
+        assert_eq!(count(d.g(), "Lightning Bolt", Zone::Graveyard), 1);
+    }
+}
+
+#[test]
+fn becomes_target_only_by_own_spells() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 2);
+    let hero = put(&db, &mut g, "Heroic Lite", P1, Zone::Battlefield);
+    let bite = put(&db, &mut g, "Bite Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(bite, &[Target::Card(hero)]);
+    assert_eq!(d.g().stack.len(), 2);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().card(hero).counter("P1P1"), 1);
+}

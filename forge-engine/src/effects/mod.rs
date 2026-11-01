@@ -215,7 +215,10 @@ pub enum Effect {
     },
     /// Zauber neutralisieren (`Counter`, CR 701.5). „Es sei denn, … zahlt“
     /// regelt das allgemeine [`UnlessSpec`] der Fähigkeit.
-    Counter,
+    Counter {
+        /// `Defined$ TriggeredSourceSA`: das auslösende Stapelobjekt (auch Fähigkeiten).
+        triggered_sa: bool,
+    },
     /// Verzögerten Trigger anlegen (`DelayedTrigger`, CR 603.7): löst beim
     /// nächsten passenden Ereignis einmal aus.
     DelayedTrigger {
@@ -575,7 +578,9 @@ impl<'a> Ctx<'a> {
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
                 "TriggeredBlocker" | "TriggeredBlockerLKICopy" => Defined::TriggeredCard,
                 "TriggeredCards" | "TriggeredCardsLKICopy" => Defined::TriggeredCards,
-                "TriggeredDefendingPlayer" => Defined::TriggeredPlayer,
+                "TriggeredDefendingPlayer" | "TriggeredSourceSAController" => {
+                    Defined::TriggeredPlayer
+                }
                 "TriggeredTarget" | "TriggeredTargetLKICopy" | "TriggeredAttackedTarget" => {
                     Defined::TriggeredTarget
                 }
@@ -1045,10 +1050,12 @@ fn compile_depth(
                 Some("Spell") | None => {}
                 Some(t) => return Err(c.unsupported("TargetType", t)),
             }
-            if c.ab.params.has("Defined") {
-                return Err(c.unsupported("Defined", c.ab.params.get("Defined").unwrap_or("")));
-            }
-            Effect::Counter
+            let triggered_sa = match c.get("Defined") {
+                None => false,
+                Some("TriggeredSourceSA" | "TriggeredSpellAbility") => true,
+                Some(v) => return Err(c.unsupported("Defined", v)),
+            };
+            Effect::Counter { triggered_sa }
         }
         "DelayedTrigger" => compile_delayed(&mut c, face)?,
         "RepeatEach" => {
