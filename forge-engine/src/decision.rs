@@ -122,6 +122,11 @@ pub enum Decision {
         player: PlayerId,
         descriptions: Vec<String>,
     },
+    /// CR 701.22: Scry – Karten oben/unten anordnen.
+    Scry {
+        player: PlayerId,
+        cards: Vec<CardId>,
+    },
     /// „… es sei denn, sein Controller zahlt {N}“ (CR 118.12).
     PayUnlessCost {
         player: PlayerId,
@@ -141,6 +146,8 @@ pub enum CardChoiceReason {
     DiscardCost,
     /// CR 704.5j: welche legendäre bleibt
     LegendRule,
+    /// Dig: Karten aus den obersten wählen
+    Dig,
     /// CR 701.19: Bibliothek/Hand durchsuchen
     Search,
     /// CR 701.9: Abwerfen durch einen Effekt
@@ -169,6 +176,11 @@ pub enum Choice {
     Order(Vec<usize>),
     /// Gewählte Modi (Indizes aus `ChooseModes::modes`).
     Modes(Vec<usize>),
+    /// Scry: `top` (von oben nach unten) und `bottom` (von oben nach unten).
+    Arrange {
+        top: Vec<CardId>,
+        bottom: Vec<CardId>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -208,7 +220,8 @@ impl Decision {
             | Decision::OrderTriggers { player, .. }
             | Decision::OptionalTrigger { player, .. }
             | Decision::ChooseModes { player, .. }
-            | Decision::PayUnlessCost { player, .. } => *player,
+            | Decision::PayUnlessCost { player, .. }
+            | Decision::Scry { player, .. } => *player,
         }
     }
 
@@ -359,6 +372,16 @@ impl Decision {
                 Decision::OptionalTrigger { .. } | Decision::PayUnlessCost { .. },
                 Choice::Yes | Choice::No,
             ) => Ok(()),
+            (Decision::Scry { cards, .. }, Choice::Arrange { top, bottom }) => {
+                let mut all: Vec<CardId> = top.iter().chain(bottom).copied().collect();
+                all.sort();
+                let mut expected = cards.clone();
+                expected.sort();
+                if all != expected {
+                    return err("jede Karte genau einmal oben oder unten");
+                }
+                Ok(())
+            }
             (
                 Decision::ChooseModes {
                     modes,

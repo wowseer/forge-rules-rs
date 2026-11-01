@@ -311,6 +311,11 @@ impl ValidSpec {
     }
 }
 
+/// Geladene Typliste (falls `CardDb::load` lief).
+pub fn type_registry() -> Option<&'static forge_types::TypeRegistry> {
+    TYPE_REGISTRY.get()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

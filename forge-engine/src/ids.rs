@@ -5,7 +5,7 @@ use std::fmt;
 
 /// Index in `GameState::cards`. Eine neue ID entsteht, wenn ein Objekt die
 /// Zone wechselt (CR 400.7: es wird ein neues Objekt).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct CardId(pub u32);
 
 /// Index in `GameState::players` (Sitzreihenfolge = Zugreihenfolge).

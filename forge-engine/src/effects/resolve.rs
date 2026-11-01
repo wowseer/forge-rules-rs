@@ -168,11 +168,11 @@ impl GameState {
                     self.lose_life(p, n);
                 }
             }
-            Effect::Destroy { what, .. } => {
+            Effect::Destroy { what, no_regen } => {
                 let ts = self.resolve_defined(*what, targets, ctx);
                 // CR 701.8: gleichzeitig zerstören
                 for c in self.cards_of(&ts) {
-                    self.destroy(c);
+                    self.destroy_ex(c, !no_regen);
                 }
             }
             Effect::Pump {
@@ -193,6 +193,7 @@ impl GameState {
                         keywords: keywords.clone(),
                         duration: Duration::UntilEndOfTurn,
                         timestamp,
+                        ..Default::default()
                     });
                 }
             }
@@ -322,10 +323,11 @@ impl GameState {
                         keywords: keywords.clone(),
                         duration: Duration::UntilEndOfTurn,
                         timestamp,
+                        ..Default::default()
                     });
                 }
             }
-            Effect::DestroyAll { valid } => {
+            Effect::DestroyAll { valid, no_regen } => {
                 let affected: Vec<CardId> = self
                     .battlefield
                     .iter()
@@ -335,7 +337,7 @@ impl GameState {
                 // CR 701.8 + 603.10a: gleichzeitig, Rückblick für „stirbt“-Trigger
                 self.lki_battlefield = Some(self.battlefield.clone());
                 for c in affected {
-                    self.destroy(c);
+                    self.destroy_ex(c, !no_regen);
                 }
                 self.lki_battlefield = None;
             }
@@ -479,6 +481,151 @@ impl GameState {
                 });
             }
             Effect::AuraSpell => {}
+            Effect::Scry { who, num } => {
+                let n = self.amount(num, ctx).max(0) as usize;
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let lib = &self.player(p).library;
+                    let k = n.min(lib.len());
+                    if k == 0 {
+                        continue;
+                    }
+                    // oberste zuerst
+                    let cards: Vec<CardId> = lib.iter().rev().take(k).copied().collect();
+                    let (top, bottom) = match ch.ask(Decision::Scry {
+                        player: p,
+                        cards: cards.clone(),
+                    })? {
+                        Choice::Arrange { top, bottom } => (top, bottom),
+                        _ => (cards.clone(), Vec::new()),
+                    };
+                    let lib = &mut self.player_mut(p).library;
+                    lib.retain(|c| !cards.contains(c));
+                    // unten: die zuerst genannte liegt am weitesten oben (Index 0 = ganz unten)
+                    for c in bottom.iter() {
+                        lib.insert(0, *c);
+                    }
+                    for c in top.iter().rev() {
+                        lib.push(*c);
+                    }
+                }
+            }
+            Effect::Mill { who, num } => {
+                let n = self.amount(num, ctx).max(0) as usize;
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let top: Vec<CardId> = self
+                        .player(p)
+                        .library
+                        .iter()
+                        .rev()
+                        .take(n)
+                        .copied()
+                        .collect();
+                    for c in top {
+                        self.move_card(c, Zone::Graveyard, true);
+                    }
+                }
+            }
+            Effect::Dig {
+                who,
+                dig,
+                change,
+                valid,
+                dest1,
+                dest1_bottom,
+                dest2,
+                dest2_bottom,
+                optional,
+            } => {
+                let n = self.amount(dig, ctx).max(0) as usize;
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let top: Vec<CardId> = self
+                        .player(p)
+                        .library
+                        .iter()
+                        .rev()
+                        .take(n)
+                        .copied()
+                        .collect();
+                    let options: Vec<CardId> = top
+                        .iter()
+                        .copied()
+                        .filter(|c| {
+                            valid.as_ref().is_none_or(|v| {
+                                self.card_matches(*c, v, ctx.source, ctx.controller)
+                            })
+                        })
+                        .collect();
+                    let chosen: Vec<CardId> = match change {
+                        // ChangeNum$ All: alle passenden
+                        None => options.clone(),
+                        Some(a) => {
+                            let max =
+                                (self.amount(a, ctx).max(0) as usize).min(options.len()) as u32;
+                            let min = if *optional { 0 } else { max };
+                            if max == 0 {
+                                Vec::new()
+                            } else {
+                                match ch.ask(Decision::ChooseCards {
+                                    player: ctx.controller,
+                                    reason: crate::decision::CardChoiceReason::Dig,
+                                    options,
+                                    min,
+                                    max,
+                                })? {
+                                    Choice::Cards(c) => c,
+                                    _ => Vec::new(),
+                                }
+                            }
+                        }
+                    };
+                    for c in &chosen {
+                        let ctrl = (*dest1 == Zone::Battlefield).then_some(ctx.controller);
+                        self.move_card_as(*c, *dest1, !dest1_bottom, ctrl);
+                    }
+                    for c in top.into_iter().filter(|c| !chosen.contains(c)) {
+                        self.move_card(c, *dest2, !dest2_bottom);
+                    }
+                }
+            }
+            Effect::Regenerate { what } => {
+                let ts = self.resolve_defined(*what, targets, ctx);
+                for c in self.cards_of(&ts) {
+                    self.card_mut(c).regen_shields += 1;
+                }
+            }
+            Effect::Animate {
+                what,
+                power,
+                toughness,
+                types,
+                remove_creature_types,
+                keywords,
+                colors,
+                permanent,
+            } => {
+                let sp = power.as_ref().map(|a| self.amount(a, ctx));
+                let st = toughness.as_ref().map(|a| self.amount(a, ctx));
+                let ts = self.resolve_defined(*what, targets, ctx);
+                for c in self.cards_of(&ts) {
+                    let timestamp = self.timestamp();
+                    self.effects.push(ContinuousEffect {
+                        affected: c,
+                        keywords: keywords.clone(),
+                        add_types: types.clone(),
+                        remove_creature_types: *remove_creature_types,
+                        colors: *colors,
+                        set_power: sp,
+                        set_toughness: st,
+                        duration: if *permanent {
+                            Duration::Permanent
+                        } else {
+                            Duration::UntilEndOfTurn
+                        },
+                        timestamp,
+                        ..Default::default()
+                    });
+                }
+            }
             Effect::Attach { object } => {
                 let to = self.cards_of(targets).into_iter().next();
                 let obj = self

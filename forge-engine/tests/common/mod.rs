@@ -116,6 +116,12 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Rancor Lite\nManaCost:G\nTypes:Enchantment Aura\nK:Enchant:Creature\nS:Mode$ Continuous | AffectedDefined$ Enchanted | Affected$ Creature | AddPower$ 2 | AddKeyword$ Trample | Description$ Enchanted creature gets +2/+0 and has trample.\nT:Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Card.Self | Execute$ TrigChangeZone | TriggerDescription$ When CARDNAME is put into a graveyard from the battlefield, return CARDNAME to its owner's hand.\nSVar:TrigChangeZone:DB$ ChangeZone | Origin$ Graveyard | Destination$ Hand | Defined$ TriggeredNewCardLKICopy\nOracle:\n",
     "Name:Pacifism\nManaCost:1 W\nTypes:Enchantment Aura\nK:Enchant:Creature\nS:Mode$ CantAttack,CantBlock | ValidCard$ Creature.EnchantedBy | Description$ Enchanted creature can't attack or block.\nOracle:\n",
     "Name:Bonesplitter\nManaCost:1\nTypes:Artifact Equipment\nK:Equip:1\nS:Mode$ Continuous | AffectedDefined$ Equipped | Affected$ Creature | AddPower$ 2 | Description$ Equipped creature gets +2/+0.\nOracle:\n",
+    "Name:Opt Lite\nManaCost:U\nTypes:Instant\nA:SP$ Scry | ScryNum$ 2 | SubAbility$ DBDraw | SpellDescription$ Scry 2. Draw a card.\nSVar:DBDraw:DB$ Draw | NumCards$ 1\nOracle:\n",
+    "Name:Mind Sculpt Lite\nManaCost:1 U\nTypes:Sorcery\nA:SP$ Mill | ValidTgts$ Player | NumCards$ 3 | Defined$ Targeted | SpellDescription$ Target player mills three cards.\nOracle:\n",
+    "Name:Impulse Lite\nManaCost:1 U\nTypes:Instant\nA:SP$ Dig | DigNum$ 4 | ChangeNum$ 1 | SpellDescription$ Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library.\nOracle:\n",
+    "Name:Land Dig Lite\nManaCost:G\nTypes:Sorcery\nA:SP$ Dig | DigNum$ 3 | ChangeNum$ All | ChangeValid$ Land | DestinationZone2$ Graveyard | SpellDescription$ Reveal the top three cards. Put all lands among them into your hand and the rest into your graveyard.\nOracle:\n",
+    "Name:River Boa Lite\nManaCost:1 G\nTypes:Creature Snake\nPT:2/1\nA:AB$ Regenerate | Cost$ G | SpellDescription$ Regenerate CARDNAME.\nOracle:\n",
+    "Name:Animate Land Lite\nManaCost:G\nTypes:Instant\nA:SP$ Animate | ValidTgts$ Land | Power$ 3 | Toughness$ 3 | Types$ Creature,Elemental | Keywords$ Haste | Colors$ Red | OverwriteColors$ True | SpellDescription$ Until end of turn, target land becomes a 3/3 red Elemental creature with haste. It's still a land.\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
 ];
 
@@ -349,6 +355,10 @@ pub fn default_choice(d: &Decision) -> Choice {
             };
             Choice::Modes(pick)
         }
+        Decision::Scry { cards, .. } => Choice::Arrange {
+            top: cards.clone(),
+            bottom: vec![],
+        },
         Decision::PayUnlessCost { .. } => Choice::Yes,
         Decision::OrderTriggers { descriptions, .. } => {
             Choice::Order((0..descriptions.len()).collect())

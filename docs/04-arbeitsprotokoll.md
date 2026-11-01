@@ -118,9 +118,22 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 - SBA 704.5m (Aura ohne legales Objekt → Friedhof), 704.5n (Ausrüstung lösen), 704.5p.
 - 6 neue Tests (158), 300 Zufallspartien; Zielpool 24,7 % → **26,1 %** (Pauper 41,2 %).
 
+### Nachtrag: Scry, Mill, Dig, Regenerate, Animate
+
+- Scry (eigene Entscheidung `Decision::Scry`/`Choice::Arrange`), Mill, Dig (Java-Standards:
+  Ziel Hand, Rest unter die Bibliothek), Regenerate (Schild bis Zugende, greift auch bei
+  SBA-Zerstörung, `NoRegen$` bei Destroy/DestroyAll), Animate (fortlaufender Effekt in
+  Layer 4/5/6/7b; statische Fähigkeiten und Effekte gemeinsam nach Zeitstempel).
+- Gefundene Fehler: Scry legte die unteren Karten in falscher Reihenfolge ab; eine
+  Regeneration in den SBAs zählte nicht als Änderung (wäre bei Unzerstörbarkeit sonst
+  zur Endlosschleife geworden – jetzt nur echte Änderungen).
+- 7 neue Tests (165), 300 Zufallspartien; Zielpool 26,1 % → **28,5 %** (Pauper 44,6 %).
+
 ### Nächste Schritte
 
-1. Erledigt: Auren und Ausrüstung. Offen: (`AffectedDefined$ Enchanted/Equipped`: 833 + 551 Vorkommen),
+1. **ReduceCost** (243), DealDamage mit X ohne Kosten-X (127), Schadens-Ersatzeffekte (113),
+   Trigger AttackersDeclared (108), **DelayedTrigger** (106), **Sacrifice** (102), **Cycling** (97+).
+2. Erledigt: Auren und Ausrüstung. Offen: (`AffectedDefined$ Enchanted/Equipped`: 833 + 551 Vorkommen),
    **ReduceCost** (483), **CantBlockBy/CantBlock/CantAttack/MustAttack** (≈ 700),
    **Animate** (257), **Dig** (202), **Regenerate**, **Scry**, **Mill**.
 2. (alt) **Effect** (367), **PumpAll** (313), **Discard** (288),

@@ -216,8 +216,13 @@ impl GameState {
             }
         }
         for id in to_destroy {
-            if self.card(id).zone == Some(Zone::Battlefield) && self.destroy(id) {
-                performed = true;
+            // Auch eine Regeneration (CR 701.15) verändert den Zustand.
+            if self.card(id).zone == Some(Zone::Battlefield) {
+                let shields = self.card(id).regen_shields;
+                let destroyed = self.destroy(id);
+                if destroyed || self.card(id).regen_shields < shields {
+                    performed = true;
+                }
             }
         }
         self.lki_battlefield = None;

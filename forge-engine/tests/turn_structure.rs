@@ -98,6 +98,7 @@ fn cleanup_discards_to_hand_size_removes_damage_ends_effects() {
         keywords: vec![],
         duration: forge_engine::state::Duration::UntilEndOfTurn,
         timestamp: 99,
+        ..Default::default()
     });
     let mut d = Driver::new(g);
     d.run_until(|_, dec| matches!(dec, Decision::ChooseCards { .. }));

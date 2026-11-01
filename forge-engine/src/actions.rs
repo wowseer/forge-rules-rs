@@ -37,6 +37,7 @@ impl GameState {
             remembered: Vec::new(),
             effect: None,
             attached_to: None,
+            regen_shields: 0,
         });
         self.zone_list_mut(zone, owner).push(id);
         id
@@ -116,6 +117,7 @@ impl GameState {
             remembered: Vec::new(),
             effect: None,
             attached_to: None,
+            regen_shields: 0,
         });
         {
             let o = self.card_mut(id);
@@ -270,9 +272,27 @@ impl GameState {
 
     /// CR 701.8: Zerstören. Unzerstörbare bleiben (CR 702.12b).
     pub fn destroy(&mut self, c: CardId) -> bool {
+        self.destroy_ex(c, true)
+    }
+
+    /// Zerstören; `can_regenerate = false` bei „kann nicht regeneriert werden“.
+    pub fn destroy_ex(&mut self, c: CardId, can_regenerate: bool) -> bool {
         if self.card(c).zone != Some(Zone::Battlefield)
             || self.has_keyword(c, &Keyword::Indestructible)
         {
+            return false;
+        }
+        // CR 701.15: Regeneration ersetzt das Zerstören
+        if can_regenerate && self.card(c).regen_shields > 0 {
+            let o = self.card_mut(c);
+            o.regen_shields -= 1;
+            o.damage = 0;
+            o.deathtouch_damage = false;
+            o.tapped = true;
+            if let Some(cb) = self.combat.as_mut() {
+                cb.attackers.retain(|a| a.card != c);
+                cb.blocks.retain(|(b, a)| *b != c && *a != c);
+            }
             return false;
         }
         self.push_event(crate::state::Event::Destroyed(c));

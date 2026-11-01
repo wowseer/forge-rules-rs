@@ -161,6 +161,10 @@ impl Controller for SimpleAi {
                 };
                 Choice::Modes(pick)
             }
+            Decision::Scry { cards, .. } => Choice::Arrange {
+                top: cards.clone(),
+                bottom: vec![],
+            },
             Decision::PayUnlessCost { .. } => Choice::Yes,
             Decision::OrderTriggers { descriptions, .. } => {
                 Choice::Order((0..descriptions.len()).collect())

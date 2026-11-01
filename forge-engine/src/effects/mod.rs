@@ -143,6 +143,44 @@ pub enum Effect {
     /// Alle passenden bleibenden Karten zerstören (`DestroyAll`, gleichzeitig).
     DestroyAll {
         valid: ValidSpec,
+        no_regen: bool,
+    },
+    /// Oberste Karten ansehen, beliebig unten/oben anordnen (`Scry`, CR 701.22).
+    Scry {
+        who: Defined,
+        num: Amount,
+    },
+    /// Oberste Karten in den Friedhof (`Mill`, CR 701.13).
+    Mill {
+        who: Defined,
+        num: Amount,
+    },
+    /// Oberste `dig` Karten ansehen, bis zu `change` (gefiltert) nach `dest1`, Rest nach `dest2`.
+    Dig {
+        who: Defined,
+        dig: Amount,
+        change: Option<Amount>,
+        valid: Option<ValidSpec>,
+        dest1: crate::zone::Zone,
+        dest1_bottom: bool,
+        dest2: crate::zone::Zone,
+        dest2_bottom: bool,
+        optional: bool,
+    },
+    /// Regenerationsschild (`Regenerate`, CR 701.15).
+    Regenerate {
+        what: Defined,
+    },
+    /// Objekt wird (bis Zugende oder dauerhaft) zu etwas anderem (`Animate`).
+    Animate {
+        what: Defined,
+        power: Option<Amount>,
+        toughness: Option<Amount>,
+        types: Vec<String>,
+        remove_creature_types: bool,
+        keywords: Vec<Keyword>,
+        colors: Option<(forge_types::ColorSet, bool)>,
+        permanent: bool,
     },
     /// Schaden an alle passenden Kreaturen/Planeswalker und Spieler (`DamageAll`).
     DamageAll {
@@ -822,8 +860,10 @@ fn compile_depth(
                     api: api.into(),
                     key: "ValidCards",
                 })?)?;
-            c.get("NoRegen");
-            Effect::DestroyAll { valid }
+            let no_regen = c
+                .get("NoRegen")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            Effect::DestroyAll { valid, no_regen }
         }
         "DamageAll" => {
             let amount = c.amount("NumDmg", None)?;
@@ -876,6 +916,138 @@ fn compile_depth(
             Effect::Counter { unless_cost }
         }
         "Effect" => compile_effect_object(&mut c, face)?,
+        "Scry" => {
+            let num = c.amount("ScryNum", Some(1))?;
+            Effect::Scry {
+                who: c.defined(Defined::You)?,
+                num,
+            }
+        }
+        "Mill" => {
+            let num = c.amount("NumCards", Some(1))?;
+            Effect::Mill {
+                who: c.defined(Defined::You)?,
+                num,
+            }
+        }
+        "Dig" => {
+            use crate::zone::Zone;
+            let dig = c.amount("DigNum", None)?;
+            let change = match c.get("ChangeNum") {
+                Some("All") => None,
+                Some(v) => Some(c.amount_value("ChangeNum", v)?),
+                None => Some(Amount::Fixed(1)),
+            };
+            let valid = c.get("ChangeValid").map(ValidSpec::parse).transpose()?;
+            let d1 = c.get("DestinationZone");
+            let dest1 = match d1 {
+                Some(z) => Zone::parse(z).ok_or_else(|| c.unsupported("DestinationZone", z))?,
+                None => Zone::Hand,
+            };
+            let d2 = c.get("DestinationZone2");
+            let dest2 = match d2 {
+                Some(z) => Zone::parse(z).ok_or_else(|| c.unsupported("DestinationZone2", z))?,
+                None => Zone::Library,
+            };
+            let mut pos = |k: &'static str| -> Result<bool, CompileError> {
+                match c.get(k) {
+                    None | Some("-1") => Ok(true),
+                    Some("0") => Ok(false),
+                    Some(v) => Err(c.unsupported(k, v)),
+                }
+            };
+            let dest1_bottom = pos("LibraryPosition")?;
+            let dest2_bottom = pos("LibraryPosition2")?;
+            let optional = c
+                .get("Optional")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            for k in [
+                "Reveal",
+                "NoReveal",
+                "ForceRevealToController",
+                "RestRandomOrder",
+                "ChangeValidDesc",
+                "PrimaryPrompt",
+            ] {
+                c.get(k);
+            }
+            Effect::Dig {
+                who: c.defined(Defined::You)?,
+                dig,
+                change,
+                valid,
+                dest1,
+                dest1_bottom,
+                dest2,
+                dest2_bottom,
+                optional,
+            }
+        }
+        "Regenerate" => Effect::Regenerate {
+            what: c.defined(Defined::SelfCard)?,
+        },
+        "Animate" => {
+            let what = c.defined(Defined::SelfCard)?;
+            let power = match c.get("Power") {
+                Some(v) => Some(c.amount_value("Power", v)?),
+                None => None,
+            };
+            let toughness = match c.get("Toughness") {
+                Some(v) => Some(c.amount_value("Toughness", v)?),
+                None => None,
+            };
+            let types: Vec<String> = c
+                .get("Types")
+                .map(|t| {
+                    t.split(',')
+                        .map(|x| x.trim().to_string())
+                        .filter(|x| !x.is_empty())
+                        .collect()
+                })
+                .unwrap_or_default();
+            if types
+                .iter()
+                .any(|t| t.contains(' ') || t.starts_with("All") || t.starts_with("Chosen"))
+            {
+                return Err(c.unsupported("Types", c.ab.params.get("Types").unwrap_or("")));
+            }
+            let remove_creature_types = c
+                .get("RemoveCreatureTypes")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let keywords = c
+                .get("Keywords")
+                .map(Keyword::parse_list)
+                .unwrap_or_default();
+            if let Some(k) = keywords.iter().find(|k| !k.is_supported()) {
+                return Err(c.unsupported("Keywords", &format!("{k:?}")));
+            }
+            let overwrite = c
+                .get("OverwriteColors")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let colors = match c.get("Colors") {
+                Some(v) => Some((
+                    forge_types::ColorSet::from_names(v)
+                        .ok_or_else(|| c.unsupported("Colors", v))?,
+                    overwrite,
+                )),
+                None => None,
+            };
+            let permanent = match c.get("Duration") {
+                None => false,
+                Some("Permanent") => true,
+                Some(v) => return Err(c.unsupported("Duration", v)),
+            };
+            Effect::Animate {
+                what,
+                power,
+                toughness,
+                types,
+                remove_creature_types,
+                keywords,
+                colors,
+                permanent,
+            }
+        }
         "Attach" => {
             if c.ab.params.get("ValidTgts").is_none() {
                 return Err(c.unsupported("Attach", "ohne ValidTgts"));

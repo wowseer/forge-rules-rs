@@ -208,6 +208,7 @@ impl GameState {
                     let o = self.card_mut(c);
                     o.damage = 0;
                     o.deathtouch_damage = false;
+                    o.regen_shields = 0;
                 }
                 self.effects
                     .retain(|e| e.duration != Duration::UntilEndOfTurn);

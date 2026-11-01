@@ -130,6 +130,8 @@ pub struct CardObj {
     pub effect: Option<EffectInfo>,
     /// Aura/Ausrüstung: an welches Objekt angelegt (CR 301.5, 303.4).
     pub attached_to: Option<CardId>,
+    /// Regenerationsschilde bis Zugende (CR 701.15).
+    pub regen_shields: u32,
 }
 
 /// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).
@@ -165,18 +167,31 @@ impl CardObj {
 }
 
 /// Dauer eines Effekts (CR 611.2).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Duration {
+    #[default]
     UntilEndOfTurn,
+    /// ohne Ende (`Duration$ Permanent`)
+    Permanent,
 }
 
 /// Fortlaufender Effekt auf ein bestimmtes Objekt (CR 611, Layer 6/7c).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ContinuousEffect {
     pub affected: CardId,
+    /// Layer 7c
     pub power: i32,
     pub toughness: i32,
+    /// Layer 6
     pub keywords: Vec<Keyword>,
+    /// Layer 4: hinzugefügte Typen; `remove_creature_types` entfernt vorher alle Kreaturtypen
+    pub add_types: Vec<String>,
+    pub remove_creature_types: bool,
+    /// Layer 5: (Farben, überschreiben statt hinzufügen)
+    pub colors: Option<(forge_types::ColorSet, bool)>,
+    /// Layer 7b
+    pub set_power: Option<i32>,
+    pub set_toughness: Option<i32>,
     pub duration: Duration,
     pub timestamp: u64,
 }
@@ -589,19 +604,47 @@ impl GameState {
             })
         };
 
-        // Layer 4
+        // Layer 4 (statisch und Effekte nach Zeitstempel)
+        let mut l4: Vec<(u64, Vec<String>, bool)> = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer4()) {
             if applies(self, s, &ch) {
-                for t in &s.st.add_types {
-                    ch.types.add(t);
-                }
+                l4.push((s.ts, s.st.add_types.clone(), false));
+            }
+        }
+        l4.extend(
+            pumps
+                .iter()
+                .filter(|e| !e.add_types.is_empty() || e.remove_creature_types)
+                .map(|e| (e.timestamp, e.add_types.clone(), e.remove_creature_types)),
+        );
+        l4.sort_by_key(|x| x.0);
+        for (_, types, remove_ct) in l4 {
+            if remove_ct && let Some(reg) = crate::valid::type_registry() {
+                ch.types
+                    .subtypes
+                    .retain(|t| reg.kind_of(t) != Some(forge_types::SubtypeKind::Creature));
+            }
+            for t in &types {
+                ch.types.add(t);
             }
         }
         // Layer 5
+        let mut l5: Vec<(u64, forge_types::ColorSet, bool)> = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer5()) {
-            if applies(self, s, &ch) {
-                ch.colors = s.st.set_color.unwrap_or(ch.colors);
+            if applies(self, s, &ch)
+                && let Some(c) = s.st.set_color
+            {
+                l5.push((s.ts, c, true));
             }
+        }
+        l5.extend(
+            pumps
+                .iter()
+                .filter_map(|e| e.colors.map(|(c, o)| (e.timestamp, c, o))),
+        );
+        l5.sort_by_key(|x| x.0);
+        for (_, c, overwrite) in l5 {
+            ch.colors = if overwrite { c } else { ch.colors.union(c) };
         }
         // Layer 6 (statisch und Pump-Effekte gemeinsam nach Zeitstempel)
         let mut l6: Vec<(u64, Vec<Keyword>)> = Vec::new();
@@ -633,6 +676,19 @@ impl GameState {
                         ch.toughness = Some(t);
                     }
                 }
+            }
+        }
+        // Layer 7b aus Effekten (Animate) – nach den statischen 7b-Werten derselben Schicht;
+        // Zeitstempel-Reihenfolge innerhalb 7b: Effekte sind i. d. R. jünger.
+        for e in pumps
+            .iter()
+            .filter(|e| e.set_power.is_some() || e.set_toughness.is_some())
+        {
+            if let Some(p) = e.set_power {
+                ch.power = Some(p);
+            }
+            if let Some(t) = e.set_toughness {
+                ch.toughness = Some(t);
             }
         }
         // Layer 7c
