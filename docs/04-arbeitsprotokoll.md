@@ -5,6 +5,45 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-01 – Sitzung 4: Trigger, DelayedTrigger, Planeswalker, Cycling
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Trigger `Sacrificed`, `AttackersDeclared[OneTarget]`, `Blocks`, `AttackerBlocked`, `AttackerUnblocked`, `Drawn`, `LifeGained`, `Taps`, `DamageDoneOnce` | ✅ Grundformen |
+| `DelayedTrigger` (CR 603.7) inkl. `ThisTurn`/`NextTurn`, `DelayTriggerRemembered` | ✅ |
+| Objekt-Ausdrücke `<Defined>$<Eigenschaft>` (`ParentTargeted$CardPower` …) | ✅ |
+| Planeswalker: Loyalität, Loyalitätsfähigkeiten, Angriffe auf Planeswalker | ✅ (Loyalität X fehlt) |
+| Cycling, Typecycling, `ActivationZone$`, Devoid, Surveil, `ConditionDefined$ Targeted` | ✅ |
+| Tests | 202 (23 neue), 1.000 Zufallspartien je Schritt ohne Absturz |
+| Unterstützte Karten im Zielpool | 29,7 % → **33,3 %** (Pauper 50 %, Modern 36 %) |
+
+### Entscheidungen
+
+- Angriffsziel ist jetzt `Target` (Spieler oder Planeswalker); `AttackerInfo` trägt
+  zusätzlich den verteidigenden Spieler. `Choice::Attackers` nimmt `(CardId, Target)`;
+  Tests nutzen die Konstante `T2`.
+- `EvalCtx` hat eine Lebensdauer und trägt Ziele + Trigger-Kontext (bleibt `Copy`).
+- Ein zentrales `GameState::tap()` ersetzt direkte `tapped = true`-Zuweisungen
+  (außer „kommt getappt ins Spiel“, das kein Tappen ist).
+- `TriggeredDefender` wird bewusst nicht abgebildet (kann ein Planeswalker sein).
+
+### Bekannte Lücken
+
+- Kosten-bezahlte Karten (`Sacrificed$CardPower`, `Discarded$…`) fehlen.
+- Planeswalker mit `Loyalty:X`, `SubCounter<X/LOYALTY>`, Battles als Angriffsziel.
+- Performance-Ausreißer aus Sitzung 3 noch nicht untersucht; Lasttest 1.000 Partien ~300 s.
+
+### Nächste Schritte
+
+1. Ersatzeffekt `DamageDone` (118/201) und `PreventDamage` (82).
+2. `RepeatEach` (92), `GainControl` (84), `ChangesZoneAll`-Trigger (66), `BecomesTarget` (71).
+3. Mehrseitige Karten (DoubleFaced 389, Adventure 139, Split 124) – größter Strukturblock.
+4. Kosten-bezahlte Karten auf dem Stapelobjekt merken.
+
+---
+
 ## 2026-11-01 – Sitzung 3: Performance-Cache, neuer Tracker, Sacrifice, UnlessCost, Remembered
 
 ### Ergebnis

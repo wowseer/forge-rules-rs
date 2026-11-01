@@ -109,6 +109,15 @@ CompiledAbility {
   Battlefields), `TargetedPlayer`, `TriggeredPlayer`; Eigenschaften `Amount`, `CardPower`,
   `CardToughness`, `CardManaCost`, `CardsInHand`, `LifeTotal`; Summe über alle Objekte,
   danach `/Plus.N` usw. `EvalCtx` trägt dafür Ziele und Trigger-Kontext.
+- Fähigkeiten: `ActivationZone$ Hand|Graveyard` (Standard Battlefield), Kostenteile
+  `Discard<1/CARDNAME>`, `AddCounter<n/TYP>`, `SubCounter<n/TYP>` (Quelle, n fest).
+  `Planeswalker$ True` = Loyalitätsfähigkeit (Hexerei, einmal pro Zug, CR 606.3);
+  Planeswalker kommen mit `Loyalty:` ins Spiel (nur feste Werte).
+- Keywords `Cycling:<Kosten>` und `TypeCycling:<Typ>:<Kosten>` werden wie in Java
+  zu `AB$ Draw` bzw. `AB$ ChangeZone` aus der Hand übersetzt; `Devoid` macht farblos.
+- Trigger `Blocks` (ValidCard, ValidBlocked), `AttackerBlocked` (ValidBlocker[Amount]),
+  `AttackerUnblocked` (ValidDefender), `Drawn` (Number$ = n-te Karte im Zug),
+  `LifeGained`, `Taps` (über `GameState::tap`), `DamageDoneOnce`; `Surveil` (Amount$).
 - Trigger `Sacrificed`, `AttackersDeclared`, `AttackersDeclaredOneTarget`
   (`TriggeredAttackingPlayer`, `TriggeredAttackedTarget`).
 

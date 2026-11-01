@@ -100,7 +100,7 @@ Der Test `turn_structure::deterministic_with_same_seed` prüft das.
 | `actions` | Zonenwechsel, Ziehen, Schaden, Leben, Zerstören, Marken | 120, 121, 701 |
 | `targeting` | Filter auswerten, legale Ziele, Hexproof/Shroud | 115 |
 | `casting` | legale Aktionen, Land spielen, wirken, aktivieren, Kosten und Mana bezahlen, Auto-Bezahlung | 117, 305, 601, 602, 605 |
-| `combat` | Angreifer, Blocker, Kampfschaden | 506–511 |
+| `combat` | Angreifer (Ziel: Spieler oder Planeswalker, `AttackerInfo::target`), Blocker, Kampfschaden | 506–511 |
 | `replacements` | Ersatzeffekte `Moved` (Umleitung, getappt, mit Marken), angewendet in `move_card_as` vor dem Ankommen | 614 |
 | `sba` | zustandsbasierte Aktionen | 704 |
 | `expr` | Ausdrücke (`Count$…`, `Number$`, Rechenoperationen) und Bedingungen (`IsPresent$`, `CheckSVar$`, `Condition$`, `ConditionPresent$` …) | 603.4, 608.2c |
@@ -125,6 +125,15 @@ APNAP-Reihenfolge auf den Stapel; mehrere eigene Trigger ordnet der Spieler
 entfällt der Trigger (603.3d). „You may“ (`OptionalDecider$ You`) wird beim
 Auflösen gefragt (`Decision::OptionalTrigger`). Effekte erreichen den Kontext
 über `Defined$ Triggered…`.
+
+**Verzögerte Trigger** (`DelayedTrigger`, CR 603.7) liegen in
+`GameState::delayed_triggers`, sind an keine Zone gebunden, werden in `fire` nach
+den normalen Triggern geprüft und nach dem ersten Auslösen entfernt.
+**Gleichzeitiger Schaden** (Kampf, `DealDamage`, `DamageAll`) wird über
+`begin_damage_batch`/`end_damage_batch` gebündelt; `DamageDoneOnce` löst danach
+einmal je Empfänger aus. Ausdrücke sehen über `EvalCtx` die Ziele der
+auflösenden Fähigkeit und den Trigger-Kontext (`TriggerInfo`), auch schon beim
+Prüfen von Trigger-Bedingungen.
 
 Aktive Zonen wie in Java: `TriggerZones$`, sonst Battlefield; Selbst-ETB
 (`ValidCard$ Card.Self`, `Origin$ Any`) aktiv in der Zielzone, Verlassen des
