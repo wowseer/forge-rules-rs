@@ -104,14 +104,18 @@ impl GameState {
             }
             Target::Card(c) => {
                 let card = self.card(c);
-                if card.zone != Some(Zone::Battlefield) {
+                let Some(zone) = card.zone else { return false };
+                if !spec.zones.contains(&zone) {
                     return false;
                 }
-                if self.has_keyword(c, &Keyword::Shroud) {
-                    return false;
-                }
-                if self.has_keyword(c, &Keyword::Hexproof) && card.controller != you {
-                    return false;
+                // Fluchsicherheit/Verhüllung wirken nur auf bleibende Karten (CR 702.11a, 702.18a).
+                if zone == Zone::Battlefield {
+                    if self.has_keyword(c, &Keyword::Shroud) {
+                        return false;
+                    }
+                    if self.has_keyword(c, &Keyword::Hexproof) && card.controller != you {
+                        return false;
+                    }
                 }
                 self.card_matches(c, &spec.valid, source, you)
             }
@@ -133,7 +137,21 @@ impl GameState {
             );
         }
         if spec.valid.allows_cards() {
-            v.extend(self.battlefield.iter().map(|c| Target::Card(*c)));
+            for z in &spec.zones {
+                match z {
+                    Zone::Battlefield => {
+                        v.extend(self.battlefield.iter().map(|c| Target::Card(*c)))
+                    }
+                    Zone::Exile => v.extend(self.exile.iter().map(|c| Target::Card(*c))),
+                    Zone::Command => v.extend(self.command.iter().map(|c| Target::Card(*c))),
+                    Zone::Stack => {}
+                    pz => {
+                        for p in self.players_from(self.active) {
+                            v.extend(self.player(p).zone(*pz).iter().map(|c| Target::Card(*c)));
+                        }
+                    }
+                }
+            }
         }
         v.retain(|t| self.is_legal_target(spec, *t, source, you));
         v

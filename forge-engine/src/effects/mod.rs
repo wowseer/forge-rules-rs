@@ -50,6 +50,8 @@ pub struct TargetSpec {
     pub min: u32,
     pub max: u32,
     pub prompt: Option<String>,
+    /// Zonen, in denen Karten-Ziele liegen müssen (Standard: Battlefield).
+    pub zones: Vec<crate::zone::Zone>,
 }
 
 /// Was eine Mana-Fähigkeit erzeugt (`Produced$`).
@@ -104,6 +106,41 @@ pub enum Effect {
         counter: String,
         amount: Amount,
     },
+    /// Bekannte Karten (Ziel/Defined) aus `origin` nach `destination` (CR 400.7).
+    ChangeZone {
+        what: Defined,
+        origin: Vec<crate::zone::Zone>,
+        destination: crate::zone::Zone,
+        place: ZonePlacement,
+    },
+    /// Suche in verdeckter Zone (Bibliothek/Hand) nach `change_type` (CR 701.19).
+    ChangeZoneSearch {
+        origin: crate::zone::Zone,
+        destination: crate::zone::Zone,
+        change_type: ValidSpec,
+        num: Amount,
+        place: ZonePlacement,
+        shuffle: bool,
+    },
+    /// Alle passenden Karten der Ursprungszonen bewegen (`ChangeZoneAll`).
+    ChangeZoneAll {
+        origin: Vec<crate::zone::Zone>,
+        destination: crate::zone::Zone,
+        change_type: ValidSpec,
+        place: ZonePlacement,
+        shuffle: bool,
+    },
+}
+
+/// Wie ein Objekt in der Zielzone ankommt.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ZonePlacement {
+    /// `Tapped$ True` (nur Battlefield)
+    pub tapped: bool,
+    /// `GainControl$ True`: Controller der Fähigkeit statt Besitzer (nur Battlefield)
+    pub gain_control: bool,
+    /// `LibraryPosition$`: 0 = oben, -1 = unten (nur Bibliothek)
+    pub library_bottom: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -265,11 +302,15 @@ impl<'a> Ctx<'a> {
         let has_tgt = self.ab.params.has("ValidTgts");
         match self.get("Defined") {
             None if has_tgt => Ok(Defined::Targeted),
+            // Java (AbilityUtils.getDefinedCards): ohne Defined$ ist „Self“ gemeint.
+            None if default == Defined::Targeted => Ok(Defined::SelfCard),
             None => Ok(default),
             Some(v) => Ok(match v {
                 "You" => Defined::You,
                 "Self" => Defined::SelfCard,
-                "Targeted" | "TargetedPlayer" | "TargetedCard" => Defined::Targeted,
+                "Targeted" | "TargetedPlayer" | "TargetedCard" | "ParentTarget" => {
+                    Defined::Targeted
+                }
                 "TargetedController" => Defined::TargetedController,
                 "Player" => Defined::EachPlayer,
                 "Player.Opponent" | "Opponent" => Defined::EachOpponent,
@@ -315,6 +356,105 @@ fn parse_produced(s: &str) -> Option<ManaProduce> {
     syms.map(ManaProduce::Fixed)
 }
 
+fn parse_zones(
+    c: &Ctx,
+    key: &'static str,
+    v: &str,
+) -> Result<Vec<crate::zone::Zone>, CompileError> {
+    v.split(',')
+        .map(|z| crate::zone::Zone::parse(z).ok_or_else(|| c.unsupported(key, v)))
+        .collect()
+}
+
+fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
+    use crate::zone::Zone;
+    let origin_s = c.get("Origin").ok_or(CompileError::MissingParam {
+        api: api.into(),
+        key: "Origin",
+    })?;
+    let origin = parse_zones(c, "Origin", origin_s)?;
+    let dest_s = c.get("Destination").ok_or(CompileError::MissingParam {
+        api: api.into(),
+        key: "Destination",
+    })?;
+    let destination = match parse_zones(c, "Destination", dest_s)?.as_slice() {
+        [z] => *z,
+        _ => return Err(c.unsupported("Destination", dest_s)),
+    };
+    let place = ZonePlacement {
+        tapped: c
+            .get("Tapped")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+        gain_control: c
+            .get("GainControl")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+        library_bottom: match c.get("LibraryPosition") {
+            None | Some("0") => false,
+            Some("-1") => true,
+            Some(v) => return Err(c.unsupported("LibraryPosition", v)),
+        },
+    };
+    // reine Text-/Hinweisparameter
+    for k in [
+        "ChangeTypeDesc",
+        "SelectPrompt",
+        "Mandatory",
+        "ShuffleNonMandatory",
+    ] {
+        c.get(k);
+    }
+    let shuffle_param = c.get("Shuffle").map(|v| v.eq_ignore_ascii_case("true"));
+    if api == "ChangeZoneAll" {
+        let ct = c.get("ChangeType").ok_or(CompileError::MissingParam {
+            api: api.into(),
+            key: "ChangeType",
+        })?;
+        let shuffle = shuffle_param
+            .unwrap_or(origin.contains(&Zone::Library) && destination != Zone::Library);
+        return Ok(Effect::ChangeZoneAll {
+            origin,
+            destination,
+            change_type: ValidSpec::parse(ct)?,
+            place,
+            shuffle,
+        });
+    }
+    let hidden = c
+        .get("Hidden")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"))
+        || (origin.iter().all(|z| z.is_hidden())
+            && !c.ab.params.has("ValidTgts")
+            && !c.ab.params.has("Defined"));
+    if hidden {
+        let [o] = origin.as_slice() else {
+            return Err(c.unsupported("Origin", origin_s));
+        };
+        let ct = c.get("ChangeType").unwrap_or("Card");
+        let num = c.amount("ChangeNum", Some(1))?;
+        let shuffle = shuffle_param.unwrap_or(*o == Zone::Library);
+        return Ok(Effect::ChangeZoneSearch {
+            origin: *o,
+            destination,
+            change_type: ValidSpec::parse(ct)?,
+            num,
+            place,
+            shuffle,
+        });
+    }
+    if let Some(s) = shuffle_param
+        && s
+    {
+        return Err(c.unsupported("Shuffle", "True"));
+    }
+    let what = c.defined(Defined::Targeted)?;
+    Ok(Effect::ChangeZone {
+        what,
+        origin,
+        destination,
+        place,
+    })
+}
+
 /// Übersetzt eine Fähigkeit samt `SubAbility$`-Kette.
 pub fn compile(face: &CardFace, ab: &ScriptAbility) -> Result<CompiledAbility, CompileError> {
     compile_depth(face, ab, 0)
@@ -346,11 +486,27 @@ fn compile_depth(
                 Some(s) => s.parse().map_err(|_| c.unsupported("TargetMax", s))?,
                 None => 1,
             };
+            // Ziele außerhalb des Battlefields: TgtZone$, bei ChangeZone die Origin-Zone.
+            let zone_param = c.get("TgtZone").or_else(|| {
+                if api == "ChangeZone" {
+                    c.ab.params.get("Origin")
+                } else {
+                    None
+                }
+            });
+            let zones = match zone_param {
+                Some(z) => z
+                    .split(',')
+                    .map(|x| crate::zone::Zone::parse(x).ok_or_else(|| c.unsupported("TgtZone", z)))
+                    .collect::<Result<Vec<_>, _>>()?,
+                None => vec![crate::zone::Zone::Battlefield],
+            };
             Some(TargetSpec {
                 valid: ValidSpec::parse(v)?,
                 min,
                 max,
                 prompt: c.get("TgtPrompt").map(str::to_string),
+                zones,
             })
         }
         None => None,
@@ -439,6 +595,7 @@ fn compile_depth(
                 amount,
             }
         }
+        "ChangeZone" | "ChangeZoneAll" => compile_change_zone(&mut c, api)?,
         other => return Err(CompileError::UnsupportedApi(other.to_string())),
     };
 

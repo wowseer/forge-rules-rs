@@ -64,9 +64,16 @@ CompiledAbility {
   einer Kette kompiliert (`CompiledAbility::chain`).
 - Zahlen (`NumDmg$ 3`, `NumAtt$ +2`, `X` mit `SVar:X:Count$xPaid`, `Number$N`)
   werden zu `Amount`. Andere `Count$`-Ausdrücke sind noch nicht unterstützt.
-- `Defined$` (You, Self, Targeted, TargetedController, Player, Opponent) wird zu
-  `Defined`. Ohne `Defined$` gilt `Targeted`, falls `ValidTgts$` existiert, sonst
-  der Standard des Effekts.
+- `Defined$` (You, Self, Targeted/ParentTarget, TargetedController, Player,
+  Opponent, Triggered…) wird zu `Defined`. Ohne `Defined$` gilt `Targeted`, falls
+  `ValidTgts$` existiert; sonst bei Karten-Effekten `Self` (wie Java
+  `AbilityUtils.getDefinedCards`), bei Spieler-Effekten `You`.
+- Unterfähigkeiten ohne eigene Ziele erben die Ziele der Elternfähigkeit
+  (`Targeted`, `TargetedController` in `SubAbility$`-Ketten).
+- Ziele liegen standardmäßig auf dem Battlefield; `TgtZone$` bzw. bei
+  `ChangeZone` die `Origin$`-Zone erlauben andere Zonen (z. B. Friedhof).
+- Filterwörter (`Land.Basic`, `Creature.Elf`) werden gegen `TypeLists.txt`
+  geprüft; unbekannte Wörter machen die Karte „nicht unterstützt“.
 - Filter (`ValidTgts$`, `Sac<1/Creature.Other>`) werden mit `valid::ValidSpec` geparst.
 
 ## Neue Effekte hinzufügen (Checkliste)

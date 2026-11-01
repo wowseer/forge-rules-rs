@@ -108,3 +108,5 @@ Trigger;Phase;teilweise;triggers::upkeep_trigger_with_sub_ability;Phase$ als Lis
 Trigger;Attacks;teilweise;triggers::attack_trigger_with_triggered_player;Bedingungen (Alone, Attacked …) fehlen
 Trigger;SpellCast;teilweise;triggers::spell_cast_trigger_resolves_before_spell;ValidCard/ValidActivatingPlayer; TargetsValid, ActivatorThisTurnCast fehlen
 Trigger;DamageDone;teilweise;triggers::combat_damage_trigger;ValidSource/ValidTarget/CombatDamage
+Effect (ApiType);ChangeZone;teilweise;change_zone::search_library_tapped_then_shuffle;Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1; RememberChanged u. a. fehlen
+Effect (ApiType);ChangeZoneAll;teilweise;change_zone::change_zone_all_bounces_everything;ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger)

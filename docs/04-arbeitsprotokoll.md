@@ -17,7 +17,7 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 | Rückblick beim Verlassen des Battlefields inkl. gleichzeitiger Tode | ✅ |
 | APNAP, Trigger ordnen, Ziele beim Stapeln, optionale Trigger | ✅ |
 | Tests | 95 (9 neue Trigger-Tests), 1.000 Zufallspartien ohne Absturz |
-| Unterstützte Karten im Zielpool | 3.738 von 32.336 (11,6 %, vorher 8,4 %), Pauper 22,2 % |
+| Unterstützte Karten im Zielpool | 3.738 von 32.336 (11,6 %, vorher 8,4 %), Pauper 22,2 %; nach ChangeZone 4.493 (13,9 %) |
 
 ### Entscheidungen
 
@@ -26,10 +26,19 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 - Bedingungen wie `IsPresent$`, `CheckSVar$`, `Static$` machen die Karte vorerst „nicht
   unterstützt“, statt falsch zu triggern.
 
+### Nachtrag: ChangeZone / ChangeZoneAll
+
+- Bounce, Exil, Reanimation (GainControl), Bibliothekssuche (Tapped, Shuffle; verdeckte
+  Zonen dürfen „nicht finden“, öffentliche nicht), unten in die Bibliothek, Massen-Bounce.
+- Ziele in Friedhof/Exil/Hand; Fluchsicherheit wirkt dort nicht.
+- Korrekturen nach Java-Abgleich: ohne `Defined$` gilt `Self`; Unterfähigkeiten erben
+  Ziele der Elternfähigkeit; `ParentTarget`.
+- 9 neue Tests (104 gesamt), 1.000 Zufallspartien ohne Absturz.
+- Unterstützung Zielpool: 11,6 % → **13,9 %** (Pauper 25,2 %).
+
 ### Nächste Schritte
 
-1. Effekt **ChangeZone/ChangeZoneAll** (1.045 Karten fehlt nur dieser Baustein, dazu 435 über Trigger).
-2. **Static Continuous** + Layer-System (1.046).
+1. **Static Continuous** + Layer-System (1.081 Karten fehlt nur dieser Baustein).
 3. **Charm** (modale Zauber), **Token**, **Effect**, **Discard**, **Counter**, **PumpAll**.
 4. Trigger-Bedingungen (`IsPresent`, `CheckSVar`) und `Count$`-Ausdrücke.
 

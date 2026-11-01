@@ -150,6 +150,12 @@ impl Controller for SimpleAi {
             Decision::OptionalTrigger { .. } => Choice::Yes,
             Decision::ChooseCards {
                 options,
+                max,
+                reason: CardChoiceReason::Search,
+                ..
+            } => Choice::Cards(options[..*max as usize].to_vec()),
+            Decision::ChooseCards {
+                options,
                 min,
                 reason,
                 ..

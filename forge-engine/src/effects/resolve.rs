@@ -33,8 +33,8 @@ impl GameState {
         match d {
             Defined::You => vec![Target::Player(ctx.controller)],
             Defined::SelfCard => {
-                let c = self.card(ctx.source);
-                if c.zone == Some(Zone::Battlefield) {
+                // Zonenfilter macht der jeweilige Effekt (meist: nur Battlefield).
+                if self.card(ctx.source).zone.is_some() {
                     vec![Target::Card(ctx.source)]
                 } else {
                     vec![]
@@ -238,8 +238,139 @@ impl GameState {
                     self.add_counters(c, counter, n);
                 }
             }
+            Effect::ChangeZone {
+                what,
+                origin,
+                destination,
+                place,
+            } => {
+                let ts = self.resolve_defined(*what, targets, ctx);
+                let cards: Vec<CardId> = ts
+                    .iter()
+                    .filter_map(|t| {
+                        if let Target::Card(c) = t {
+                            Some(*c)
+                        } else {
+                            None
+                        }
+                    })
+                    .filter(|c| self.card(*c).zone.is_some_and(|z| origin.contains(&z)))
+                    .collect();
+                for c in cards {
+                    self.put_into_zone(c, *destination, place, ctx.controller);
+                }
+            }
+            Effect::ChangeZoneSearch {
+                origin,
+                destination,
+                change_type,
+                num,
+                place,
+                shuffle,
+            } => {
+                let p = ctx.controller;
+                let n = self.amount(num, ctx).max(0) as u32;
+                // Kandidaten: eigene Karten in der Ursprungszone (Battlefield: kontrolliert).
+                let pool: Vec<CardId> = match origin {
+                    Zone::Battlefield => self.battlefield_of(p).collect(),
+                    Zone::Exile => self
+                        .exile
+                        .iter()
+                        .copied()
+                        .filter(|c| self.card(*c).owner == p)
+                        .collect(),
+                    Zone::Command => self
+                        .command
+                        .iter()
+                        .copied()
+                        .filter(|c| self.card(*c).owner == p)
+                        .collect(),
+                    Zone::Stack => Vec::new(),
+                    pz => self.player(p).zone(*pz).clone(),
+                };
+                let options: Vec<CardId> = pool
+                    .into_iter()
+                    .filter(|c| self.card_matches(*c, change_type, ctx.source, p))
+                    .collect();
+                let max = n.min(options.len() as u32);
+                // CR 701.19b: nur in verdeckten Zonen darf man „nicht finden“.
+                let min = if origin.is_hidden() { 0 } else { max };
+                let chosen = if max == 0 {
+                    Vec::new()
+                } else {
+                    match ch.ask(Decision::ChooseCards {
+                        player: p,
+                        reason: crate::decision::CardChoiceReason::Search,
+                        options,
+                        min,
+                        max,
+                    })? {
+                        Choice::Cards(c) => c,
+                        _ => Vec::new(),
+                    }
+                };
+                for c in chosen {
+                    self.put_into_zone(c, *destination, place, p);
+                }
+                if *shuffle && *origin == Zone::Library {
+                    self.shuffle_library(p);
+                }
+            }
+            Effect::ChangeZoneAll {
+                origin,
+                destination,
+                change_type,
+                place,
+                shuffle,
+            } => {
+                let mut cards = Vec::new();
+                for z in origin {
+                    match z {
+                        Zone::Battlefield => cards.extend(self.battlefield.iter().copied()),
+                        Zone::Exile => cards.extend(self.exile.iter().copied()),
+                        Zone::Command | Zone::Stack => {}
+                        pz => {
+                            for pl in self.apnap() {
+                                cards.extend(self.player(pl).zone(*pz).iter().copied());
+                            }
+                        }
+                    }
+                }
+                cards.retain(|c| self.card_matches(*c, change_type, ctx.source, ctx.controller));
+                // gleichzeitig: Rückblick für Trigger (CR 603.10a)
+                self.lki_battlefield = Some(self.battlefield.clone());
+                for c in cards {
+                    self.put_into_zone(c, *destination, place, ctx.controller);
+                }
+                self.lki_battlefield = None;
+                if *shuffle {
+                    for pl in self.apnap() {
+                        self.shuffle_library(pl);
+                    }
+                }
+            }
         }
         Ok(())
+    }
+
+    /// Bewegt eine Karte gemäß `place` (Tapped, Kontrolle, Bibliotheksposition).
+    pub fn put_into_zone(
+        &mut self,
+        c: CardId,
+        to: Zone,
+        place: &super::ZonePlacement,
+        controller: PlayerId,
+    ) -> CardId {
+        let new = self.move_card(c, to, !place.library_bottom);
+        if to == Zone::Battlefield {
+            if place.tapped {
+                self.card_mut(new).tapped = true;
+            }
+            if place.gain_control {
+                self.card_mut(new).controller = controller;
+            }
+        }
+        new
     }
 
     /// Führt eine Fähigkeitskette mit bereits geprüften Zielen aus.
@@ -250,8 +381,17 @@ impl GameState {
         ctx: &ResolveCtx,
         ch: &mut Choices,
     ) -> Res<()> {
+        // Unterfähigkeiten ohne eigene Ziele beziehen sich auf die Ziele der
+        // nächsten Elternfähigkeit mit Zielen (Java: SpellAbility.getParentTargetingCard).
+        let mut inherited: &[Target] = &[];
         for (i, a) in ab.chain().into_iter().enumerate() {
-            let t = targets.get(i).map(Vec::as_slice).unwrap_or(&[]);
+            let own = targets.get(i).map(Vec::as_slice).unwrap_or(&[]);
+            let t = if a.target.is_some() {
+                inherited = own;
+                own
+            } else {
+                inherited
+            };
             self.apply_effect(&a.effect, t, ctx, ch)?;
         }
         Ok(())

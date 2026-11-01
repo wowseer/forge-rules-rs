@@ -102,6 +102,32 @@ fn is_word_base(s: &str) -> bool {
             .all(|c| c.is_alphanumeric() || c == '\'' || c == '-')
 }
 
+/// Bekannte Untertypen (aus `TypeLists.txt`), gesetzt von `CardDb::load`.
+/// Ohne Registry (Unit-Tests) gelten alle großgeschriebenen Wörter als Typ.
+static TYPE_REGISTRY: std::sync::OnceLock<forge_types::TypeRegistry> = std::sync::OnceLock::new();
+
+pub fn set_type_registry(reg: forge_types::TypeRegistry) {
+    let _ = TYPE_REGISTRY.set(reg);
+}
+
+/// Ist `w` ein Kartentyp, Supertyp oder bekannter Untertyp?
+fn is_type_word(w: &str) -> bool {
+    if !is_word_base(w) {
+        return false;
+    }
+    if w == "Card"
+        || w == "Permanent"
+        || CoreType::from_name(w).is_some()
+        || forge_types::Supertype::from_name(w).is_some()
+    {
+        return true;
+    }
+    match TYPE_REGISTRY.get() {
+        Some(reg) => reg.kind_of(w).is_some(),
+        None => true,
+    }
+}
+
 fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     let colors = |s: &str| Color::from_name(s);
     Ok(match p {
@@ -126,7 +152,7 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
                 if let Some(c) = colors(rest) {
                     return Ok(Prop::NonColor(c));
                 }
-                if is_word_base(rest) {
+                if is_type_word(rest) {
                     return Ok(Prop::Non(card_base(rest)));
                 }
             }
@@ -145,7 +171,7 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
             if let Some(c) = colors(p) {
                 return Ok(Prop::Color(c));
             }
-            if is_word_base(p) && CoreType::from_name(p).is_some() {
+            if is_type_word(p) {
                 return Ok(Prop::Is(card_base(p)));
             }
             return Err(ValidError::Unsupported(p.to_string()));
@@ -201,7 +227,7 @@ impl ValidSpec {
                     base: PlayerBase::You,
                     props,
                 },
-                b if is_word_base(b) => Alternative::Card {
+                b if is_type_word(b) => Alternative::Card {
                     base: card_base(b),
                     props,
                 },

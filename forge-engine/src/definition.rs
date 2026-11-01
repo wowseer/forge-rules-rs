@@ -207,6 +207,7 @@ impl CardDb {
     /// Lädt `cardsfolder` aus dem Forge-Ressourcenverzeichnis.
     pub fn load(res: &std::path::Path) -> std::io::Result<CardDb> {
         let reg = forge_script::corpus::load_type_registry(res)?;
+        crate::valid::set_type_registry(reg.clone());
         let mut db = CardDb::default();
         for e in forge_script::corpus::parse_dir(&res.join("cardsfolder"), &reg)? {
             if let Ok(script) = e.result {

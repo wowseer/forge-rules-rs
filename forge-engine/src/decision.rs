@@ -127,6 +127,8 @@ pub enum CardChoiceReason {
     DiscardCost,
     /// CR 704.5j: welche legendäre bleibt
     LegendRule,
+    /// CR 701.19: Bibliothek/Hand durchsuchen
+    Search,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
