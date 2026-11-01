@@ -111,6 +111,12 @@ impl GameState {
                 .remembered_current(ctx.source)
                 .into_iter()
                 .map(Target::Card)
+                .chain(
+                    self.card(ctx.source)
+                        .remembered_players
+                        .iter()
+                        .map(|p| Target::Player(*p)),
+                )
                 .collect(),
             Defined::DelayTriggerRememberedLki => ctx
                 .trig
@@ -143,6 +149,12 @@ impl GameState {
                 .iter()
                 .copied()
                 .map(Target::Card)
+                .chain(
+                    self.card(ctx.source)
+                        .remembered_players
+                        .iter()
+                        .map(|p| Target::Player(*p)),
+                )
                 .collect(),
             Defined::TriggeredSource => ctx
                 .trig
@@ -152,6 +164,16 @@ impl GameState {
                 .into_iter()
                 .collect(),
         }
+    }
+
+    /// Karten aus Zielen, unabhängig von der Zone.
+    fn cards_of_any(ts: &[Target]) -> Vec<CardId> {
+        ts.iter()
+            .filter_map(|t| match t {
+                Target::Card(c) => Some(*c),
+                Target::Player(_) => None,
+            })
+            .collect()
     }
 
     fn players_of(ts: &[Target]) -> Vec<PlayerId> {
@@ -486,6 +508,82 @@ impl GameState {
                     self.move_card(card, Zone::Graveyard, true);
                 }
             }
+            Effect::RepeatEach {
+                over,
+                sub,
+                starting_with_you,
+                clear_remembered_before,
+                damage_map,
+            } => {
+                let cards: Option<Vec<CardId>> = match over {
+                    super::RepeatOver::Players(_) => None,
+                    super::RepeatOver::Cards(v, zones) => {
+                        let all = self.players_from(self.active);
+                        Some(
+                            self.cards_in_zones(zones, &all)
+                                .into_iter()
+                                .filter(|c| self.card_matches(*c, v, ctx.source, ctx.controller))
+                                .collect(),
+                        )
+                    }
+                    super::RepeatOver::DefinedCards(d) => {
+                        Some(Self::cards_of_any(&self.resolve_defined(*d, targets, ctx)))
+                    }
+                };
+                if let Some(cards) = cards {
+                    if *clear_remembered_before {
+                        let o = self.card_mut(ctx.source);
+                        o.remembered.clear();
+                        o.remembered_players.clear();
+                    }
+                    if *damage_map {
+                        self.begin_damage_batch();
+                    }
+                    // Java: Karte merken, Unterfähigkeit ausführen, wieder vergessen.
+                    for c in cards {
+                        self.card_mut(ctx.source).remembered.push(c);
+                        let r = self.apply_chain_inherit(sub, targets, ctx, ch);
+                        let o = self.card_mut(ctx.source);
+                        if let Some(i) = o.remembered.iter().rposition(|x| *x == c) {
+                            o.remembered.remove(i);
+                        }
+                        r?;
+                    }
+                    if *damage_map {
+                        self.end_damage_batch();
+                    }
+                    return Ok(());
+                }
+                let super::RepeatOver::Players(players) = over else {
+                    unreachable!()
+                };
+                let mut ps = Self::players_of(&self.resolve_defined(*players, targets, ctx));
+                if *starting_with_you {
+                    let order = self.players_from(ctx.controller);
+                    ps.sort_by_key(|p| order.iter().position(|o| o == p));
+                }
+                if *clear_remembered_before {
+                    let o = self.card_mut(ctx.source);
+                    o.remembered.clear();
+                    o.remembered_players.clear();
+                }
+                if *damage_map {
+                    self.begin_damage_batch();
+                }
+                for p in ps {
+                    // Java RepeatEachEffect: andere gemerkte Spieler vorübergehend entfernen.
+                    let saved = std::mem::take(&mut self.card_mut(ctx.source).remembered_players);
+                    self.card_mut(ctx.source).remembered_players = vec![p];
+                    let r = self.apply_chain_inherit(sub, targets, ctx, ch);
+                    let o = self.card_mut(ctx.source);
+                    o.remembered_players.retain(|x| *x != p);
+                    o.remembered_players.extend(saved);
+                    r?;
+                }
+                if *damage_map {
+                    self.end_damage_batch();
+                }
+            }
             Effect::GainControl {
                 what,
                 new_controller,
@@ -573,7 +671,9 @@ impl GameState {
             } => {
                 for t in self.resolve_defined(*what, targets, ctx) {
                     if let (Target::Card(c), true) = (t, *clear_remembered) {
-                        self.card_mut(c).remembered.clear();
+                        let o = self.card_mut(c);
+                        o.remembered.clear();
+                        o.remembered_players.clear();
                     }
                 }
             }
@@ -665,23 +765,14 @@ impl GameState {
                 remember,
             } => {
                 let id = self.create_card(def.0.clone(), ctx.controller, Zone::Command, false);
-                let remembered: Vec<CardId> = match remember {
-                    Some(d) => self
-                        .resolve_defined(*d, targets, ctx)
-                        .into_iter()
-                        .filter_map(|t| {
-                            if let Target::Card(c) = t {
-                                Some(c)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect(),
+                let objs = match remember {
+                    Some(d) => self.resolve_defined(*d, targets, ctx),
                     None => Vec::new(),
                 };
                 let turn = self.turn;
                 let o = self.card_mut(id);
-                o.remembered = remembered;
+                o.remembered = Self::cards_of_any(&objs);
+                o.remembered_players = Self::players_of(&objs);
                 o.effect = Some(crate::state::EffectInfo {
                     duration: *duration,
                     created_turn: turn,
@@ -1014,6 +1105,18 @@ impl GameState {
         new
     }
 
+    /// Führt eine Kette ohne eigene Ziele aus, die die Ziele `inherited` der
+    /// Elternfähigkeit erbt (z. B. `RepeatSubAbility$`).
+    pub fn apply_chain_inherit(
+        &mut self,
+        ab: &CompiledAbility,
+        inherited: &[Target],
+        ctx: &ResolveCtx,
+        ch: &mut Choices,
+    ) -> Res<()> {
+        self.apply_chain_from(ab, &[], inherited, ctx, ch)
+    }
+
     /// Führt eine Fähigkeitskette mit bereits geprüften Zielen aus.
     pub fn apply_chain(
         &mut self,
@@ -1022,9 +1125,20 @@ impl GameState {
         ctx: &ResolveCtx,
         ch: &mut Choices,
     ) -> Res<()> {
+        self.apply_chain_from(ab, targets, &[], ctx, ch)
+    }
+
+    fn apply_chain_from(
+        &mut self,
+        ab: &CompiledAbility,
+        targets: &[Vec<Target>],
+        inherited: &[Target],
+        ctx: &ResolveCtx,
+        ch: &mut Choices,
+    ) -> Res<()> {
         // Unterfähigkeiten ohne eigene Ziele beziehen sich auf die Ziele der
         // nächsten Elternfähigkeit mit Zielen (Java: SpellAbility.getParentTargetingCard).
-        let mut inherited: &[Target] = &[];
+        let mut inherited: &[Target] = inherited;
         for (i, a) in ab.chain().into_iter().enumerate() {
             let own = targets.get(i).map(Vec::as_slice).unwrap_or(&[]);
             let t = if a.target.is_some() {

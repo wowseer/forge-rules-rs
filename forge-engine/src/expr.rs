@@ -525,7 +525,7 @@ impl Drop for DepthGuard {
 }
 
 impl GameState {
-    fn cards_in_zones(&self, zones: &[Zone], players: &[PlayerId]) -> Vec<CardId> {
+    pub(crate) fn cards_in_zones(&self, zones: &[Zone], players: &[PlayerId]) -> Vec<CardId> {
         let mut v = Vec::new();
         for z in zones {
             match z {
@@ -595,7 +595,13 @@ impl GameState {
                     Target::Player(_) => None,
                 })
                 .collect(),
-            ObjRef::Remembered => self.card(ctx.source).remembered.clone(),
+            ObjRef::Remembered => {
+                if prop == ObjPropKind::Amount {
+                    let s = self.card(ctx.source);
+                    return (s.remembered.len() + s.remembered_players.len()) as i32;
+                }
+                self.card(ctx.source).remembered.clone()
+            }
             // Nach Verlassen des Battlefields zählt das alte Objekt (LKI).
             _ => ctx
                 .trig

@@ -64,6 +64,8 @@ pub enum Prop {
     OppOwn,
     /// Von der Quelle gemerkt (`IsRemembered`)
     IsRemembered,
+    /// Controller ist ein von der Quelle gemerkter Spieler (`RememberedPlayerCtrl`)
+    RememberedPlayerCtrl,
     /// Die Quelle (Aura/Ausrüstung) ist an dieses Objekt angelegt.
     AttachedBySource,
     /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
@@ -158,6 +160,9 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     if p == "IsRemembered" {
         return Ok(Prop::IsRemembered);
+    }
+    if p == "RememberedPlayerCtrl" {
+        return Ok(Prop::RememberedPlayerCtrl);
     }
     if p == "OppOwn" {
         return Ok(Prop::OppOwn);

@@ -36,6 +36,7 @@ impl GameState {
             base_pt: None,
             cast_x: 0,
             remembered: Vec::new(),
+            remembered_players: Vec::new(),
             effect: None,
             attached_to: None,
             regen_shields: 0,
@@ -119,6 +120,7 @@ impl GameState {
                 0
             },
             remembered: Vec::new(),
+            remembered_players: Vec::new(),
             effect: None,
             attached_to: None,
             regen_shields: 0,

@@ -221,6 +221,16 @@ pub enum Effect {
         remember: Option<Defined>,
         scope: DelayScope,
     },
+    /// Für jeden Spieler die Unterfähigkeit ausführen (`RepeatEach | RepeatPlayers$`);
+    /// der jeweilige Spieler ist dabei „gemerkt“ (`Remembered`).
+    RepeatEach {
+        over: RepeatOver,
+        sub: Arc<CompiledAbility>,
+        starting_with_you: bool,
+        clear_remembered_before: bool,
+        /// `DamageMap$`: Schaden aller Durchläufe gleichzeitig.
+        damage_map: bool,
+    },
     /// Kontrolle übernehmen (`GainControl`, CR 613.1b).
     GainControl {
         what: Defined,
@@ -285,6 +295,17 @@ pub enum Effect {
         place: ZonePlacement,
         shuffle: bool,
     },
+}
+
+/// Worüber `RepeatEach` läuft.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RepeatOver {
+    /// `RepeatPlayers$`
+    Players(Defined),
+    /// `RepeatCards$` (+ `Zone$`, Standard Battlefield)
+    Cards(ValidSpec, Vec<crate::zone::Zone>),
+    /// `DefinedCards$`
+    DefinedCards(Defined),
 }
 
 /// Wann ein verzögerter Trigger aktiv ist.
@@ -474,20 +495,6 @@ const NEUTRAL_PARAMS: &[&str] = &[
     "IsPresent",
 ];
 
-/// Effekte, deren `Defined$` Karten (nicht Spieler) meint.
-const CARD_APIS: &[&str] = &[
-    "ChangeZone",
-    "PutCounter",
-    "Animate",
-    "Pump",
-    "Destroy",
-    "Tap",
-    "Untap",
-    "Regenerate",
-    "Cleanup",
-    "DelayedTrigger",
-];
-
 struct Ctx<'a> {
     face: &'a CardFace,
     ab: &'a ScriptAbility,
@@ -573,12 +580,9 @@ impl<'a> Ctx<'a> {
                 "DelayTriggerRemembered" => Defined::DelayTriggerRemembered,
                 "DelayTriggerRememberedLKI" => Defined::DelayTriggerRememberedLki,
                 "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
-                // Gemerkt werden bisher nur Karten (`CardObj::remembered`); bei
-                // Spieler-Effekten wäre das Ergebnis still leer.
-                "Remembered" if CARD_APIS.contains(&self.ab.api.as_str()) => Defined::Remembered,
-                "RememberedLKI" if CARD_APIS.contains(&self.ab.api.as_str()) => {
-                    Defined::RememberedLki
-                }
+                // Gemerkte Karten und Spieler (Java `getDefinedObjects("Remembered")`).
+                "Remembered" | "Player.IsRemembered" => Defined::Remembered,
+                "RememberedLKI" => Defined::RememberedLki,
                 other => return Err(self.unsupported(key, other)),
             }),
         }
@@ -1044,6 +1048,54 @@ fn compile_depth(
             Effect::Counter
         }
         "DelayedTrigger" => compile_delayed(&mut c, face)?,
+        "RepeatEach" => {
+            let over = if c.ab.params.has("RepeatPlayers") {
+                RepeatOver::Players(c.defined_key("RepeatPlayers", Defined::EachPlayer)?)
+            } else if let Some(v) = c.get("RepeatCards") {
+                let zones = match c.get("Zone") {
+                    Some(z) => parse_zones(&c, "Zone", z)?,
+                    None => vec![crate::zone::Zone::Battlefield],
+                };
+                RepeatOver::Cards(ValidSpec::parse(v)?, zones)
+            } else if c.ab.params.has("DefinedCards") {
+                RepeatOver::DefinedCards(c.defined_key("DefinedCards", Defined::Targeted)?)
+            } else {
+                return Err(c.unsupported("RepeatEach", "ohne RepeatPlayers/RepeatCards"));
+            };
+            let name = c
+                .get("RepeatSubAbility")
+                .ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "RepeatSubAbility",
+                })?;
+            let sv = face
+                .svar(name)
+                .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+            let sub_ab = ScriptAbility::from_svar(sv)
+                .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+                .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+            let sub = Arc::new(compile_depth(face, &sub_ab, depth + 1)?);
+            // Ziele werden nur für die Hauptkette gewählt (CR 601.2c).
+            if sub.chain().iter().any(|a| a.target.is_some()) {
+                return Err(c.unsupported("RepeatSubAbility", "mit eigenen Zielen"));
+            }
+            let starting_with_you = match c.get("StartingWith") {
+                None => false,
+                Some("You") => true,
+                Some(v) => return Err(c.unsupported("StartingWith", v)),
+            };
+            let clear_remembered_before = c.get("ClearRememberedBeforeLoop").is_some();
+            let damage_map = c.get("DamageMap").is_some();
+            // ChangeZoneTable$: betrifft nur ChangesZoneAll-Trigger (noch nicht unterstützt).
+            c.get("ChangeZoneTable");
+            Effect::RepeatEach {
+                over,
+                sub,
+                starting_with_you,
+                clear_remembered_before,
+                damage_map,
+            }
+        }
         "GainControl" => {
             let (mut eot, mut next, mut leaves, mut lose) = (false, false, false, false);
             if let Some(v) = c.get("LoseControl") {

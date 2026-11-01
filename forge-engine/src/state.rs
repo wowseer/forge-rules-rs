@@ -132,6 +132,8 @@ pub struct CardObj {
     pub cast_x: u32,
     /// Gemerkte Objekte (`RememberObjects$`, `Card.IsRemembered`).
     pub remembered: Vec<CardId>,
+    /// Gemerkte Spieler (`RememberObjects$` mit Spielern, `RepeatEach`).
+    pub remembered_players: Vec<PlayerId>,
     /// Nur bei Effektobjekten (`Effect`): wann sie enden.
     pub effect: Option<EffectInfo>,
     /// Aura/Ausrüstung: an welches Objekt angelegt (CR 301.5, 303.4).

@@ -206,3 +206,37 @@ fn condition_defined_targeted_checks_the_target() {
         assert_eq!(d.g().player(P1).hand.len(), draws, "{victim}");
     }
 }
+
+#[test]
+fn repeat_each_player_with_remembered_player() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 3);
+    put_n(&db, &mut g, "Island", P2, Zone::Battlefield, 5);
+    put_n(&db, &mut g, "Island", P1, Zone::Battlefield, 2);
+    let soil = put(&db, &mut g, "Acidic Soil Lite", P1, Zone::Hand);
+    let draws = put(&db, &mut g, "Each Draws Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(soil, &[]);
+    d.pass_all();
+    assert_eq!(d.g().player(P1).life, 15, "5 eigene Länder");
+    assert_eq!(d.g().player(P2).life, 15, "5 Länder");
+    d.cast(draws, &[]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).hand.len(), 1);
+    assert_eq!(d.g().player(P2).life, 14);
+    assert_eq!(d.g().player(P1).hand.len(), 0, "nur Gegner");
+}
+
+#[test]
+fn repeat_each_card_remembers_each_card_in_turn() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Mountain", P1, Zone::Battlefield);
+    let s = put(&db, &mut g, "Creature Pinger Lite", P1, Zone::Hand);
+    let bear = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
+    put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(s, &[]);
+    d.pass_all();
+    assert_eq!(d.g().card(bear).damage, 1);
+    assert_eq!(count(d.g(), "Goblin Piker", Zone::Graveyard), 1);
+}
