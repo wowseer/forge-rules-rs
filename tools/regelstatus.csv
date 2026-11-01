@@ -209,3 +209,4 @@ Game Rule Option;Poison counters to lose;teilweise;sba::cr_704_5c_ten_poison_los
 Game Rule Option;Play for ante;n/a;;Ante ausgeschlossen
 Game Rule Option;Ante rarity matching;n/a;;Ante ausgeschlossen
 Effect (ApiType);Sacrifice;teilweise;sacrifice_unless::edict_target_player_chooses_and_indestructible_can_be_sacrificed, sacrifice_unless::each_player_sacrifices_simultaneously_dies_triggers_see_all, sacrifice_unless::optional_up_to_amount_and_remembered, sacrifice_unless::strict_amount_sacrifices_nothing_if_not_enough;SacValid, Defined, Amount, Optional, StrictAmount, Destroy, RememberSacrificed, gleichzeitig (CR 101.4); Echo, CumulativeUpkeep, SacEachValid, Random, Devour/Exploit fehlen
+Effect (ApiType);Cleanup;teilweise;sacrifice_unless::condition_defined_remembered_and_cleanup;ClearRemembered (übrige Clear…-Flags ohne Wirkung, da der Zustand nicht existiert); ForgetDefined, ClearTriggered fehlen

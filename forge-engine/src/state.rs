@@ -524,6 +524,28 @@ impl GameState {
         ch
     }
 
+    /// Aktuelles Objekt nach Zonenwechseln (folgt `moved_to`).
+    pub fn current_object(&self, mut id: CardId) -> CardId {
+        while let Some(n) = self.card(id).moved_to {
+            id = n;
+        }
+        id
+    }
+
+    /// Gemerkte Objekte von `source` in ihrem aktuellen Zustand (Java
+    /// `game.getCardState`). Effektobjekte bleiben beim gemerkten Objekt, da
+    /// `ForgetOnMoved$` vereinfacht über die neue ID (CR 400.7) abgebildet ist.
+    pub fn remembered_current(&self, source: CardId) -> Vec<CardId> {
+        let src = self.card(source);
+        if src.effect.is_some() {
+            return src.remembered.clone();
+        }
+        src.remembered
+            .iter()
+            .map(|r| self.current_object(*r))
+            .collect()
+    }
+
     fn chars_uncached(&self, id: CardId) -> Characteristics {
         use crate::statics::{CompiledStatic, ContinuousStatic};
         let c = self.card(id);

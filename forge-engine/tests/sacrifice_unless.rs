@@ -190,3 +190,64 @@ fn unless_switched_and_subs_only_when_paid() {
         }
     }
 }
+
+fn stack_card(d: &Driver) -> forge_engine::CardId {
+    match d.g().stack.last().unwrap().kind {
+        forge_engine::state::StackKind::Spell { card } => card,
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn condition_defined_remembered_and_cleanup() {
+    for sac in [true, false] {
+        let (db, mut g) = game_at(Step::Main1, 10);
+        put(&db, &mut g, "Swamp", P1, Zone::Battlefield);
+        let s = put(&db, &mut g, "Offering Draw Lite", P1, Zone::Hand);
+        let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+        let mut d = Driver::new(g);
+        d.cast(s, &[]);
+        let sc = stack_card(&d);
+        d.pass_all();
+        d.submit(Choice::Cards(if sac { vec![bear] } else { vec![] }));
+        d.pass_all();
+        assert_eq!(
+            d.g().player(P1).hand.len(),
+            if sac { 2 } else { 0 },
+            "sac={sac}"
+        );
+        assert!(d.g().card(sc).remembered.is_empty(), "ClearRemembered");
+    }
+}
+
+#[test]
+fn remembered_amount_counts_sacrificed() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Swamp", P1, Zone::Battlefield);
+    let s = put(&db, &mut g, "Mass Offering Lite", P1, Zone::Hand);
+    let a = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    let b = put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
+    put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(s, &[]);
+    d.pass_all();
+    d.submit(Choice::Cards(vec![a, b]));
+    d.pass_all();
+    assert_eq!(d.g().player(P1).life, 24);
+}
+
+#[test]
+fn defined_remembered_follows_card_to_new_zone() {
+    // Java: AbilityUtils.getDefinedCards("Remembered") → game.getCardState(card)
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Swamp", P1, Zone::Battlefield);
+    let s = put(&db, &mut g, "Recycle Lite", P1, Zone::Hand);
+    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(s, &[]);
+    d.pass_all();
+    d.submit(Choice::Cards(vec![bear]));
+    d.pass_all();
+    assert_eq!(count(d.g(), "Grizzly Bears", Zone::Hand), 1);
+    assert_eq!(count(d.g(), "Grizzly Bears", Zone::Graveyard), 0);
+}

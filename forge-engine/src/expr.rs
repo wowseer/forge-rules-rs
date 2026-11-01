@@ -53,6 +53,8 @@ pub enum Expr {
     CardsInYourHand,
     /// Anzahl Standardlandtypen unter deinen Ländern.
     Domain,
+    /// Anzahl der von der Quelle gemerkten Objekte (`Remembered$Amount`).
+    RememberedCount,
     Math(Box<Expr>, MathOp, Box<Expr>),
 }
 
@@ -101,6 +103,14 @@ pub enum Condition {
     Metalcraft(bool),
     Hellbent(bool),
     FatefulHour(bool),
+    /// Gemerkte Objekte der Quelle filtern und zählen
+    /// (`ConditionDefined$ Remembered` + `ConditionPresent$`).
+    RememberedPresent {
+        spec: ValidSpec,
+        cmp: Compare,
+        /// `RememberedLKI`: gemerkte Objekte wie gemerkt statt aktuell.
+        lki: bool,
+    },
 }
 
 /// Kontext einer Auswertung.
@@ -174,7 +184,10 @@ impl Expr {
                 .map(Expr::Const)
                 .map_err(|_| bad("Number", sv));
         }
-        let Some(rest) = sv.strip_prefix("Count$") else {
+        let Some(rest) = sv
+            .strip_prefix("Count$")
+            .or_else(|| sv.strip_prefix("Remembered$").map(|_| sv))
+        else {
             return Err(bad("SVar", sv));
         };
         let (main, op) = match rest.split_once('/') {
@@ -214,6 +227,9 @@ impl Expr {
                 zones,
                 spec: ValidSpec::parse(spec).ok()?,
             });
+        }
+        if main == "Remembered$Amount" {
+            return Some(Expr::RememberedCount);
         }
         if let Some(kind) = main.strip_prefix("CardCounters.") {
             return Some(Expr::CardCounters(kind.to_string()));
@@ -316,7 +332,29 @@ pub fn parse_conditions(
         ),
     };
     used.extend([k_present, k_cmp, k_zone, k_player, k_svar, k_svar_cmp]);
-    if let Some(p) = params.get(k_present) {
+    let defined = match style {
+        CondStyle::Effect => {
+            used.push("ConditionDefined");
+            params.get("ConditionDefined")
+        }
+        CondStyle::Requirement => None,
+    };
+    if let Some(d) = defined {
+        // Java: ohne ConditionPresent$ wird ConditionDefined$ nicht geprüft.
+        if !matches!(d, "Remembered" | "RememberedLKI") {
+            return Err(bad("ConditionDefined", d));
+        }
+        if params.has(k_zone) || params.has(k_player) {
+            return Err(bad("ConditionDefined", "mit Zone/Spieler"));
+        }
+        if let Some(p) = params.get(k_present) {
+            conds.push(Condition::RememberedPresent {
+                spec: ValidSpec::parse(p).map_err(CompileError::Valid)?,
+                cmp: Compare::parse(face, params.get(k_cmp).unwrap_or("GE1"))?,
+                lki: d == "RememberedLKI",
+            });
+        }
+    } else if let Some(p) = params.get(k_present) {
         let spec = ValidSpec::parse(p).map_err(CompileError::Valid)?;
         let cmp = Compare::parse(face, params.get(k_cmp).unwrap_or("GE1"))?;
         let zs = match params.get(k_zone) {
@@ -472,6 +510,7 @@ impl GameState {
             Expr::YourLifeTotal => self.player(ctx.controller).life,
             Expr::YourStartingLife => self.rules.starting_life,
             Expr::CardsInYourHand => self.player(ctx.controller).hand.len() as i32,
+            Expr::RememberedCount => self.card(ctx.source).remembered.len() as i32,
             Expr::Domain => {
                 let mut n = 0;
                 for t in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
@@ -569,6 +608,18 @@ impl GameState {
             }
             Condition::Hellbent(b) => self.player(you).hand.is_empty() == *b,
             Condition::FatefulHour(b) => (self.player(you).life <= 5) == *b,
+            Condition::RememberedPresent { spec, cmp, lki } => {
+                let objs = if *lki {
+                    self.card(ctx.source).remembered.clone()
+                } else {
+                    self.remembered_current(ctx.source)
+                };
+                let n = objs
+                    .iter()
+                    .filter(|x| self.card_matches(**x, spec, ctx.source, you))
+                    .count() as i32;
+                cmp.holds(n, self.eval(&cmp.rhs, ctx))
+            }
         }
     }
 

@@ -100,6 +100,18 @@ impl GameState {
                 .and_then(|t| t.target)
                 .into_iter()
                 .collect(),
+            Defined::Remembered => self
+                .remembered_current(ctx.source)
+                .into_iter()
+                .map(Target::Card)
+                .collect(),
+            Defined::RememberedLki => self
+                .card(ctx.source)
+                .remembered
+                .iter()
+                .copied()
+                .map(Target::Card)
+                .collect(),
             Defined::TriggeredSource => ctx
                 .trig
                 .as_ref()
@@ -436,6 +448,16 @@ impl GameState {
                     // CR 701.5a: vom Stapel in den Friedhof des Besitzers
                     self.stack.remove(pos);
                     self.move_card(card, Zone::Graveyard, true);
+                }
+            }
+            Effect::Cleanup {
+                what,
+                clear_remembered,
+            } => {
+                for t in self.resolve_defined(*what, targets, ctx) {
+                    if let (Target::Card(c), true) = (t, *clear_remembered) {
+                        self.card_mut(c).remembered.clear();
+                    }
                 }
             }
             Effect::Sacrifice {

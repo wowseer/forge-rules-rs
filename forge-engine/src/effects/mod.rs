@@ -44,6 +44,11 @@ pub enum Defined {
     TriggeredPlayer,
     TriggeredTarget,
     TriggeredSource,
+    /// Von der Quelle gemerkte Objekte in ihrem aktuellen Zustand (`Remembered`,
+    /// Java `game.getCardState`) …
+    Remembered,
+    /// … bzw. so, wie sie gemerkt wurden (`RememberedLKI`).
+    RememberedLki,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -198,6 +203,11 @@ pub enum Effect {
     /// Zauber neutralisieren (`Counter`, CR 701.5). „Es sei denn, … zahlt“
     /// regelt das allgemeine [`UnlessSpec`] der Fähigkeit.
     Counter,
+    /// Gemerkte Objekte vergessen (`Cleanup`): `ClearRemembered$`.
+    Cleanup {
+        what: Defined,
+        clear_remembered: bool,
+    },
     /// Bleibende Karten opfern (`Sacrifice`, CR 701.21) bzw. mit `Destroy$` zerstören.
     Sacrifice {
         /// Spieler, die opfern (`Defined$`, Standard: du).
@@ -413,6 +423,19 @@ const NEUTRAL_PARAMS: &[&str] = &[
     "IsPresent",
 ];
 
+/// Effekte, deren `Defined$` Karten (nicht Spieler) meint.
+const CARD_APIS: &[&str] = &[
+    "ChangeZone",
+    "PutCounter",
+    "Animate",
+    "Pump",
+    "Destroy",
+    "Tap",
+    "Untap",
+    "Regenerate",
+    "Cleanup",
+];
+
 struct Ctx<'a> {
     face: &'a CardFace,
     ab: &'a ScriptAbility,
@@ -489,6 +512,12 @@ impl<'a> Ctx<'a> {
                 "TriggeredPlayer" => Defined::TriggeredPlayer,
                 "TriggeredTarget" => Defined::TriggeredTarget,
                 "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
+                // Gemerkt werden bisher nur Karten (`CardObj::remembered`); bei
+                // Spieler-Effekten wäre das Ergebnis still leer.
+                "Remembered" if CARD_APIS.contains(&self.ab.api.as_str()) => Defined::Remembered,
+                "RememberedLKI" if CARD_APIS.contains(&self.ab.api.as_str()) => {
+                    Defined::RememberedLki
+                }
                 other => return Err(self.unsupported(key, other)),
             }),
         }
@@ -943,6 +972,28 @@ fn compile_depth(
                 return Err(c.unsupported("Defined", c.ab.params.get("Defined").unwrap_or("")));
             }
             Effect::Counter
+        }
+        "Cleanup" => {
+            let clear_remembered = c.get("ClearRemembered").is_some();
+            // Diese Zustände erzeugt die Engine (noch) nicht; Leeren ist daher
+            // ohne Wirkung und korrekt. Wer sie setzt (ChooseCard, Imprint …),
+            // ist selbst noch nicht unterstützt.
+            for k in [
+                "ClearImprinted",
+                "ClearChosenCard",
+                "ClearChosenPlayer",
+                "ClearChosenColor",
+                "ClearChosenType",
+                "ClearNamedCard",
+                "ClearCoinFlips",
+                "Log",
+            ] {
+                c.get(k);
+            }
+            Effect::Cleanup {
+                what: c.defined(Defined::SelfCard)?,
+                clear_remembered,
+            }
         }
         "Sacrifice" => {
             let valid = match c.get("SacValid").map(str::trim) {

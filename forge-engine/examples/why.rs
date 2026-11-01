@@ -20,7 +20,7 @@ fn main() {
         }
     }
     let mut v: Vec<_> = reasons.into_iter().collect();
-    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v.sort_by_key(|e| std::cmp::Reverse(e.1));
     println!("{n} nicht unterstützte Karten mit '{needle}'; einziger Grund:");
     for (r, c) in v.into_iter().take(30) {
         println!("{c:5}  {r}");

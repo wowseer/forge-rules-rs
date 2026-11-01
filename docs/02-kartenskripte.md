@@ -92,6 +92,11 @@ CompiledAbility {
   `Amount$`, `Optional$` (bis zu), `StrictAmount$`, `Destroy$` (zerstören statt opfern),
   `RememberSacrificed$`. Alle Spieler wählen zuerst, dann wird gleichzeitig geopfert
   (CR 101.4) – Java opfert spielerweise nacheinander.
+- Gemerkte Objekte (`CardObj::remembered`, bisher nur Karten): `RememberSacrificed$`,
+  `RememberObjects$` (Effect). Lesen über `Defined$ Remembered` (aktuelles Objekt,
+  folgt `moved_to` wie Java `getCardState`; nur bei Karten-Effekten), `RememberedLKI`
+  (Objekt wie gemerkt), `ConditionDefined$ Remembered[LKI]` + `ConditionPresent$`,
+  SVar `Remembered$Amount`. `Cleanup | ClearRemembered$ True` leert die Liste.
 
 ## Token und modale Fähigkeiten
 
