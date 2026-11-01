@@ -86,6 +86,76 @@ pub enum CompiledStatic {
     Continuous(ContinuousStatic),
     /// Kampfbeschränkungen (CR 508.1c/d, 509.1b/c).
     Combat(CombatRestriction),
+    /// Kostenänderung für Zaubersprüche (`ReduceCost`/`RaiseCost`, CR 601.2f).
+    CostAdjust(CostAdjust),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CostAdjust {
+    /// `true` = Senkung, `false` = Erhöhung (generisches Mana)
+    pub reduce: bool,
+    pub valid_card: ValidSpec,
+    pub amount: Expr,
+    /// Wer wirkt: `You`/`Opponent`/`Player` relativ zum Controller der Quelle (Standard: jeder)
+    pub activator: Option<ValidSpec>,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
+}
+
+fn compile_cost_adjust(
+    face: &CardFace,
+    s: &ScriptStatic,
+    reduce: bool,
+) -> Result<CompiledStatic, CompileError> {
+    let p = &s.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: format!("Static {}", s.mode),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = vec![
+        "Mode",
+        "Description",
+        "Secondary",
+        "EffectZone",
+        "ValidCard",
+        "Type",
+        "Amount",
+        "Activator",
+    ];
+    match p.get("Type") {
+        Some("Spell") => {}
+        Some(v) => return Err(err("Type", v)),
+        None => return Err(err("Type", "fehlt")),
+    }
+    let valid_card =
+        ValidSpec::parse(p.get("ValidCard").unwrap_or("Card")).map_err(CompileError::Valid)?;
+    let amount = Expr::parse_value(face, p.get("Amount").unwrap_or("1"))
+        .map_err(|_| err("Amount", p.get("Amount").unwrap_or("")))?;
+    let activator = p
+        .get("Activator")
+        .map(ValidSpec::parse)
+        .transpose()
+        .map_err(CompileError::Valid)?;
+    let effect_zones = match p.get("EffectZone") {
+        Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+        None => vec![Zone::Battlefield],
+    };
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    Ok(CompiledStatic::CostAdjust(CostAdjust {
+        reduce,
+        valid_card,
+        amount,
+        activator,
+        effect_zones,
+        conditions,
+    }))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -116,6 +186,7 @@ impl CompiledStatic {
         match self {
             CompiledStatic::Continuous(c) => &mut c.effect_zones,
             CompiledStatic::Combat(c) => &mut c.effect_zones,
+            CompiledStatic::CostAdjust(c) => &mut c.effect_zones,
         }
     }
 }
@@ -207,6 +278,8 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         "CantBlock" => return compile_combat(face, s, RestrictionKind::CantBlock),
         "CantAttack" => return compile_combat(face, s, RestrictionKind::CantAttack),
         "MustAttack" => return compile_combat(face, s, RestrictionKind::MustAttack),
+        "ReduceCost" => return compile_cost_adjust(face, s, true),
+        "RaiseCost" => return compile_cost_adjust(face, s, false),
         _ => return Err(CompileError::UnsupportedApi(format!("Static {}", s.mode))),
     }
     let mut used: Vec<&str> = NEUTRAL.to_vec();

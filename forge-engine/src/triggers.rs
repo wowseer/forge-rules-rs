@@ -457,8 +457,8 @@ impl GameState {
     pub fn fire(&mut self, ev: TriggerEvent) {
         // Kandidaten: Objekte in Zonen + Rückblick bei Verlassen des Battlefields.
         let mut sources: Vec<(CardId, Zone)> = self
-            .cards
-            .iter()
+            .live_cards()
+            .map(|id| self.card(id))
             .filter(|c| !c.compiled().triggers.is_empty())
             .filter_map(|c| c.zone.map(|z| (c.id, z)))
             .collect();

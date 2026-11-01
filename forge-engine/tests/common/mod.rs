@@ -122,6 +122,9 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Land Dig Lite\nManaCost:G\nTypes:Sorcery\nA:SP$ Dig | DigNum$ 3 | ChangeNum$ All | ChangeValid$ Land | DestinationZone2$ Graveyard | SpellDescription$ Reveal the top three cards. Put all lands among them into your hand and the rest into your graveyard.\nOracle:\n",
     "Name:River Boa Lite\nManaCost:1 G\nTypes:Creature Snake\nPT:2/1\nA:AB$ Regenerate | Cost$ G | SpellDescription$ Regenerate CARDNAME.\nOracle:\n",
     "Name:Animate Land Lite\nManaCost:G\nTypes:Instant\nA:SP$ Animate | ValidTgts$ Land | Power$ 3 | Toughness$ 3 | Types$ Creature,Elemental | Keywords$ Haste | Colors$ Red | OverwriteColors$ True | SpellDescription$ Until end of turn, target land becomes a 3/3 red Elemental creature with haste. It's still a land.\nOracle:\n",
+    "Name:Wizard Bolt Lite\nManaCost:2 R\nTypes:Instant\nS:Mode$ ReduceCost | ValidCard$ Card.Self | Type$ Spell | Amount$ 2 | EffectZone$ All | IsPresent$ Wizard.YouCtrl | Description$ This spell costs {2} less to cast if you control a Wizard.\nA:SP$ DealDamage | ValidTgts$ Any | NumDmg$ 3 | SpellDescription$ 3 damage.\nOracle:\n",
+    "Name:Electromancer Lite\nManaCost:R\nTypes:Creature Goblin Wizard\nPT:1/1\nS:Mode$ ReduceCost | ValidCard$ Instant,Sorcery | Type$ Spell | Activator$ You | Amount$ 1 | Description$ Instant and sorcery spells you cast cost {1} less to cast.\nOracle:\n",
+    "Name:Thalia Lite\nManaCost:1 W\nTypes:Legendary Creature Human Soldier\nPT:2/1\nK:First Strike\nS:Mode$ RaiseCost | ValidCard$ Card.nonCreature | Type$ Spell | Amount$ 1 | Description$ Noncreature spells cost {1} more to cast.\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
 ];
 

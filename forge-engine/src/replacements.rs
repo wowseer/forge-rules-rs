@@ -200,8 +200,8 @@ impl GameState {
         let mover_ctrl = moving.controller;
 
         let mut hosts: Vec<(u64, CardId)> = self
-            .cards
-            .iter()
+            .live_cards()
+            .map(|id| self.card(id))
             .filter(|c| c.zone.is_some() && !c.compiled().replacements.is_empty())
             .map(|c| (c.timestamp, c.id))
             .collect();

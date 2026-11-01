@@ -263,8 +263,8 @@ impl GameState {
     /// existieren.
     pub fn remove_player_objects(&mut self, p: PlayerId) {
         let owned: Vec<CardId> = self
-            .cards
-            .iter()
+            .live_cards()
+            .map(|id| self.card(id))
             .filter(|c| c.owner == p && c.zone.is_some())
             .map(|c| c.id)
             .collect();

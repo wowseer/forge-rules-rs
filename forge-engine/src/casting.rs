@@ -195,7 +195,11 @@ impl GameState {
             {
                 continue;
             }
-            let mv = ch.mana_cost.as_ref().map(ManaCost::mana_value).unwrap_or(0);
+            let mv = ch
+                .mana_cost
+                .as_ref()
+                .map(|m| self.adjusted_spell_cost(p, c, m).mana_value())
+                .unwrap_or(0);
             if ch.mana_cost.as_ref().is_some_and(|m| m.no_cost) {
                 continue; // CR 118.6: ohne Manakosten nicht normal wirkbar
             }
@@ -319,7 +323,9 @@ impl GameState {
             Some(ab) => self.choose_targets(p, on_stack, ab, ch)?,
             None => Vec::new(),
         };
-        // 601.2f–h
+        // 601.2f: Kostenänderungen (zuerst Erhöhungen, dann Senkungen)
+        let mana_cost = self.adjusted_spell_cost(p, on_stack, &mana_cost);
+        // 601.2g–h
         self.pay_mana_cost(p, &mana_cost, x, None, ch)?;
 
         self.card_mut(remember_x_on).cast_x = x;
@@ -622,5 +628,64 @@ impl GameState {
         } else {
             None
         }
+    }
+}
+
+impl GameState {
+    /// CR 601.2f: Gesamtkosten eines Zauberspruchs nach `RaiseCost`/`ReduceCost`
+    /// (nur generischer Anteil; Senkung nicht unter 0).
+    pub fn adjusted_spell_cost(
+        &self,
+        caster: PlayerId,
+        spell: CardId,
+        base: &ManaCost,
+    ) -> ManaCost {
+        let mut raise = 0i32;
+        let mut reduce = 0i32;
+        let sources = self.live_cards().map(|id| self.card(id)).filter(|c| {
+            c.zone.is_some()
+                && c.compiled()
+                    .statics
+                    .iter()
+                    .any(|s| matches!(s.as_ref(), crate::statics::CompiledStatic::CostAdjust(_)))
+        });
+        for src in sources {
+            let zone = src.zone.expect("gefiltert");
+            for s in &src.compiled().statics {
+                let crate::statics::CompiledStatic::CostAdjust(a) = s.as_ref() else {
+                    continue;
+                };
+                if !a.effect_zones.contains(&zone) {
+                    continue;
+                }
+                let ctx = crate::expr::EvalCtx {
+                    source: src.id,
+                    controller: src.controller,
+                    x: 0,
+                };
+                if !self.check_conditions(&a.conditions, &ctx) {
+                    continue;
+                }
+                if a.activator
+                    .as_ref()
+                    .is_some_and(|v| !self.player_matches(caster, v, src.controller))
+                {
+                    continue;
+                }
+                if !self.card_matches(spell, &a.valid_card, src.id, src.controller) {
+                    continue;
+                }
+                let n = self.eval(&a.amount, &ctx).max(0);
+                if a.reduce {
+                    reduce += n;
+                } else {
+                    raise += n;
+                }
+            }
+        }
+        let mut cost = base.clone();
+        let g = cost.generic as i32 + raise - reduce;
+        cost.generic = g.max(0) as u32;
+        cost
     }
 }

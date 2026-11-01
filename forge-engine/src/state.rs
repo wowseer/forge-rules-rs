@@ -712,6 +712,22 @@ impl GameState {
         ch
     }
 
+    /// Alle Objekte, die in einer Zone sind (ohne alte LKI-Objekte der Arena).
+    /// Deutlich schneller als `cards.iter()`, weil die Arena mit jedem
+    /// Zonenwechsel wächst.
+    pub fn live_cards(&self) -> impl Iterator<Item = CardId> + '_ {
+        self.battlefield
+            .iter()
+            .chain(self.exile.iter())
+            .chain(self.command.iter())
+            .copied()
+            .chain(self.players.iter().flat_map(|p| p.hand.iter().chain(p.graveyard.iter()).chain(p.library.iter()).copied()))
+            .chain(self.stack.iter().filter_map(|s| match s.kind {
+                StackKind::Spell { card } => Some(card),
+                _ => None,
+            }))
+    }
+
     pub fn is_creature(&self, id: CardId) -> bool {
         self.chars(id).types.is_creature()
     }
