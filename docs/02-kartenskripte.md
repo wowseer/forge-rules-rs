@@ -82,6 +82,16 @@ CompiledAbility {
 - Filterwörter (`Land.Basic`, `Creature.Elf`) werden gegen `TypeLists.txt`
   geprüft; unbekannte Wörter machen die Karte „nicht unterstützt“.
 - Filter (`ValidTgts$`, `Sac<1/Creature.Other>`) werden mit `valid::ValidSpec` geparst.
+- `UnlessCost$` gilt für **jede** Fähigkeit (`CompiledAbility::unless`, Java
+  `AbilityUtils.handleUnlessCost`): Kosten im `Cost$`-Format ohne `T`/`Q`/X
+  (Mana, `PayLife<n>`, `Sac<n/Typ>`, `Discard<n/Typ>`). `UnlessPayer$` (Standard
+  `TargetedController`) wird nacheinander gefragt, aber nur, wer zahlen kann
+  (`Decision::PayUnlessCost`); zahlt einer, entfällt der Effekt. `UnlessSwitched$`
+  kehrt das um, `UnlessResolveSubs$ WhenPaid|WhenNotPaid` steuert die Unterfähigkeiten.
+- `Sacrifice`: `SacValid$` (Standard `Self`), `Defined$` (wer opfert, Standard du),
+  `Amount$`, `Optional$` (bis zu), `StrictAmount$`, `Destroy$` (zerstören statt opfern),
+  `RememberSacrificed$`. Alle Spieler wählen zuerst, dann wird gleichzeitig geopfert
+  (CR 101.4) – Java opfert spielerweise nacheinander.
 
 ## Token und modale Fähigkeiten
 

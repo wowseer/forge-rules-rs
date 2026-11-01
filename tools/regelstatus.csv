@@ -118,7 +118,7 @@ Effect (ApiType);PumpAll;teilweise;mass_discard_counter::pump_all_own_creatures_
 Effect (ApiType);DestroyAll;teilweise;mass_discard_counter::wrath_destroys_all_simultaneously_with_dies_triggers;gleichzeitig mit Rückblick; Regeneration fehlt
 Effect (ApiType);DamageAll;teilweise;mass_discard_counter::damage_all_creatures_and_players;ValidCards/ValidPlayers; DamageSource fehlt
 Effect (ApiType);Discard;teilweise;mass_discard_counter::duress_caster_chooses_noncreature_nonland;TgtChoose, Hand, Random, RevealYouChoose, DiscardValid; RememberDiscarded fehlt
-Effect (ApiType);Counter;teilweise;mass_discard_counter::mana_leak_pay_or_countered;Zauber neutralisieren, UnlessCost (Zahl, automatische Zahlung); Fähigkeiten neutralisieren, Destination fehlen
+Effect (ApiType);Counter;teilweise;mass_discard_counter::mana_leak_pay_or_countered;Zauber neutralisieren, allgemeines UnlessCost; Fähigkeiten neutralisieren, Destination fehlen
 Effect (ApiType);Effect;teilweise;effects_objects::effect_grants_hexproof_to_remembered_until_end_of_turn;Effektobjekt in Command Zone mit Statics/Triggern/Ersatzeffekten, RememberObjects (Targeted/Self/Triggered…), Duration (Zugende, Permanent, UntilYourNextTurn, UntilTheEndOfYourNextTurn); RememberObjects Remembered, EffectOwner, weitere Dauern fehlen
 Static Ability;CantBlockBy;teilweise;combat_restrictions::cant_be_blocked_by_small_creatures_via_effect;ValidAttacker, ValidBlocker, Bedingungen; ValidDefender fehlt
 Static Ability;CantBlock;ja;combat_restrictions::cant_block;
@@ -208,3 +208,4 @@ Game Rule Option;Order combatants;n/a;;Regel vor Foundations, Zielformate nutzen
 Game Rule Option;Poison counters to lose;teilweise;sba::cr_704_5c_ten_poison_loses;fest 10, nicht konfigurierbar
 Game Rule Option;Play for ante;n/a;;Ante ausgeschlossen
 Game Rule Option;Ante rarity matching;n/a;;Ante ausgeschlossen
+Effect (ApiType);Sacrifice;teilweise;sacrifice_unless::edict_target_player_chooses_and_indestructible_can_be_sacrificed, sacrifice_unless::each_player_sacrifices_simultaneously_dies_triggers_see_all, sacrifice_unless::optional_up_to_amount_and_remembered, sacrifice_unless::strict_amount_sacrifices_nothing_if_not_enough;SacValid, Defined, Amount, Optional, StrictAmount, Destroy, RememberSacrificed, gleichzeitig (CR 101.4); Echo, CumulativeUpkeep, SacEachValid, Random, Devour/Exploit fehlen

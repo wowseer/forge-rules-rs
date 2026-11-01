@@ -127,7 +127,8 @@ pub enum Decision {
         player: PlayerId,
         cards: Vec<CardId>,
     },
-    /// „… es sei denn, sein Controller zahlt {N}“ (CR 118.12).
+    /// „… es sei denn, [Spieler] zahlt [Kosten]“ (CR 118.12). Wird nur
+    /// gestellt, wenn die Kosten bezahlbar sind.
     PayUnlessCost {
         player: PlayerId,
         cost: String,
@@ -152,6 +153,8 @@ pub enum CardChoiceReason {
     Search,
     /// CR 701.9: Abwerfen durch einen Effekt
     Discard,
+    /// CR 701.21: Opfern durch einen Effekt (auch `Destroy$`-Variante)
+    Sacrifice,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -66,6 +66,7 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             description: format!("{{T}}: Add {{{}}}. ({t})", c.symbol()),
             sorcery_speed: false,
             conditions: Vec::new(),
+            unless: None,
         })
     })
     .collect()
@@ -150,6 +151,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             description: format!("Enchant {}", face.name),
             sorcery_speed: false,
             conditions: Vec::new(),
+            unless: None,
         }));
     } else if face.types.has_subtype("Aura") {
         unsupported.push("Aura ohne Enchant-Keyword".into());
@@ -420,5 +422,6 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
         description: format!("Equip {}", k[1]),
         sorcery_speed: true,
         conditions: Vec::new(),
+        unless: None,
     })
 }

@@ -178,12 +178,17 @@ fn mana_leak_pay_or_countered() {
         };
         d.cast(ml, &[Target::Card(spell)]);
         d.pass_all();
-        match d.decision() {
-            Decision::PayUnlessCost { player, .. } => assert_eq!(*player, P1),
-            o => panic!("{o:?}"),
+        if can_pay {
+            match d.decision() {
+                Decision::PayUnlessCost { player, .. } => assert_eq!(*player, P1),
+                o => panic!("{o:?}"),
+            }
+            d.submit(if pay { Choice::Yes } else { Choice::No });
+            d.pass_all();
+        } else {
+            // Unbezahlbare Kosten werden gar nicht angeboten (Java: canPay).
+            assert!(!matches!(d.decision(), Decision::PayUnlessCost { .. }));
         }
-        d.submit(if pay { Choice::Yes } else { Choice::No });
-        d.pass_all();
         assert_eq!(
             find(d.g(), "Grizzly Bears", Zone::Battlefield).is_some(),
             expect_resolved,

@@ -423,7 +423,7 @@ impl GameState {
                     }
                 }
             }
-            Effect::Counter { unless_cost } => {
+            Effect::Counter => {
                 for t in targets {
                     let Target::Card(card) = *t else { continue };
                     let Some(pos) = self
@@ -433,23 +433,91 @@ impl GameState {
                     else {
                         continue;
                     };
-                    let spell_ctrl = self.stack[pos].controller;
-                    if let Some(cost) = unless_cost {
-                        // CR 118.12: Zahlung freiwillig; bezahlt wird aus Pool/automatisch.
-                        let wants = matches!(
-                            ch.ask(Decision::PayUnlessCost {
-                                player: spell_ctrl,
-                                cost: cost.to_string()
-                            })?,
-                            Choice::Yes
-                        );
-                        if wants && self.pay_unless_cost(spell_ctrl, cost) {
-                            continue;
-                        }
-                    }
                     // CR 701.5a: vom Stapel in den Friedhof des Besitzers
                     self.stack.remove(pos);
                     self.move_card(card, Zone::Graveyard, true);
+                }
+            }
+            Effect::Sacrifice {
+                who,
+                valid,
+                amount,
+                optional,
+                strict,
+                destroy,
+                remember,
+            } => {
+                let n = self.amount(amount, ctx).max(0) as usize;
+                // CR 101.4: erst wählen alle (APNAP-Reihenfolge der Defined-Liste),
+                // dann wird gleichzeitig geopfert.
+                let mut chosen: Vec<CardId> = Vec::new();
+                match valid {
+                    None => {
+                        // „Opfere ~“: nur wenn die Quelle noch unter deiner Kontrolle im Spiel ist.
+                        let src = self.card(ctx.source);
+                        if src.zone == Some(Zone::Battlefield) && src.controller == ctx.controller {
+                            let take = !*optional
+                                || matches!(
+                                    ch.ask(Decision::ChooseCards {
+                                        player: ctx.controller,
+                                        reason: crate::decision::CardChoiceReason::Sacrifice,
+                                        options: vec![ctx.source],
+                                        min: 0,
+                                        max: 1,
+                                    })?,
+                                    Choice::Cards(v) if !v.is_empty()
+                                );
+                            if take {
+                                chosen.push(ctx.source);
+                            }
+                        }
+                    }
+                    Some(v) => {
+                        for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                            if self.player(p).lost.is_some() {
+                                continue; // CR 800.4a
+                            }
+                            let options: Vec<CardId> = self
+                                .battlefield_of(p)
+                                .filter(|c| self.card_matches(*c, v, ctx.source, ctx.controller))
+                                .collect();
+                            if *strict && options.len() < n {
+                                continue;
+                            }
+                            let max = n.min(options.len()) as u32;
+                            let min = if *optional && !*strict { 0 } else { max };
+                            if max == 0 {
+                                continue;
+                            }
+                            if let Choice::Cards(cs) = ch.ask(Decision::ChooseCards {
+                                player: p,
+                                reason: crate::decision::CardChoiceReason::Sacrifice,
+                                options,
+                                min,
+                                max,
+                            })? {
+                                chosen.extend(cs);
+                            }
+                        }
+                    }
+                }
+                // Gleichzeitig, mit Rückblick für „stirbt“-Trigger (CR 603.10a).
+                let outer_lki = self.lki_battlefield.is_some();
+                if !outer_lki {
+                    self.lki_battlefield = Some(self.battlefield.clone());
+                }
+                for c in chosen {
+                    let done = if *destroy {
+                        self.destroy_ex(c, true)
+                    } else {
+                        self.sacrifice(c)
+                    };
+                    if done && *remember {
+                        self.card_mut(ctx.source).remembered.push(c);
+                    }
+                }
+                if !outer_lki {
+                    self.lki_battlefield = None;
                 }
             }
             Effect::CreateEffect {
@@ -802,7 +870,23 @@ impl GameState {
             if !self.check_conditions(&a.conditions, &ctx.eval()) {
                 continue;
             }
-            self.apply_effect(&a.effect, t, ctx, ch)?;
+            let Some(u) = &a.unless else {
+                self.apply_effect(&a.effect, t, ctx, ch)?;
+                continue;
+            };
+            // CR 118.12: „… es sei denn, [Spieler] zahlt …“
+            let paid = self.offer_unless_cost(u, t, ctx, ch)?;
+            if paid == u.switched {
+                self.apply_effect(&a.effect, t, ctx, ch)?;
+            }
+            let go_on = match u.subs {
+                super::UnlessSubs::Always => true,
+                super::UnlessSubs::WhenPaid => paid,
+                super::UnlessSubs::WhenNotPaid => !paid,
+            };
+            if !go_on {
+                break;
+            }
         }
         Ok(())
     }
@@ -915,6 +999,60 @@ impl GameState {
 }
 
 impl GameState {
+    /// Bietet den `UnlessPayer$`-Spielern nacheinander an, die Kosten zu
+    /// zahlen. Gefragt wird nur, wer sie bezahlen kann; sobald einer zahlt, ist
+    /// Schluss (Java fragt weitere Spieler mit `alreadyPaid`; die KI zahlt dann nie).
+    fn offer_unless_cost(
+        &mut self,
+        u: &super::UnlessSpec,
+        targets: &[Target],
+        ctx: &ResolveCtx,
+        ch: &mut Choices,
+    ) -> Res<bool> {
+        for p in Self::players_of(&self.resolve_defined(u.payer, targets, ctx)) {
+            if self.player(p).lost.is_some() || !self.can_pay_unless(p, &u.cost, ctx.source) {
+                continue; // CR 800.4f
+            }
+            let wants = matches!(
+                ch.ask(Decision::PayUnlessCost {
+                    player: p,
+                    cost: u.cost.to_string(),
+                })?,
+                Choice::Yes
+            );
+            if !wants {
+                continue;
+            }
+            if let Some(m) = &u.cost.mana
+                && !self.pay_unless_cost(p, m)
+            {
+                continue;
+            }
+            self.pay_nonmana_costs(p, ctx.source, &u.cost, ch)?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
+    /// Kann `p` die Unless-Kosten jetzt bezahlen?
+    fn can_pay_unless(&self, p: PlayerId, cost: &crate::cost::Cost, source: CardId) -> bool {
+        use crate::cost::CostPart;
+        // „Opfere ~“ als Kosten kann nur der Controller der Quelle zahlen.
+        if cost.parts.contains(&CostPart::SacrificeSelf) && self.card(source).controller != p {
+            return false;
+        }
+        if !self.can_pay_nonmana(cost, source, p) {
+            return false;
+        }
+        match &cost.mana {
+            None => true,
+            Some(m) => {
+                self.player(p).mana_pool.clone().try_pay(m, 0, &[])
+                    || self.auto_pay_plan(p, m, 0, &[]).is_some()
+            }
+        }
+    }
+
     /// Bezahlt Manakosten außerhalb des Wirkens (UnlessCost) aus Pool und
     /// einfachen Quellen. `false`, wenn nicht bezahlbar (nichts wird verändert).
     pub(crate) fn pay_unless_cost(&mut self, p: PlayerId, cost: &forge_types::ManaCost) -> bool {

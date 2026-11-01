@@ -300,7 +300,18 @@ impl GameState {
         true
     }
 
-    /// Auf den Friedhof legen ohne „zerstören“ (Opfern, SBA 704.5f).
+    /// CR 701.21: Opfern – vom Battlefield in den Friedhof des Besitzers, ohne
+    /// „zerstören“ (Unzerstörbarkeit und Regeneration greifen nicht).
+    pub fn sacrifice(&mut self, c: CardId) -> bool {
+        if self.card(c).zone != Some(Zone::Battlefield) {
+            return false;
+        }
+        self.push_event(crate::state::Event::Sacrificed(c));
+        self.move_card(c, Zone::Graveyard, true);
+        true
+    }
+
+    /// Auf den Friedhof legen ohne „zerstören“ (SBA 704.5f).
     pub fn put_into_graveyard(&mut self, c: CardId) {
         self.move_card(c, Zone::Graveyard, true);
     }

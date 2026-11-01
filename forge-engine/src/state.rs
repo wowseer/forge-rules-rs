@@ -331,6 +331,8 @@ pub enum Event {
         delta: i32,
     },
     Destroyed(CardId),
+    /// CR 701.21: geopfert (Kosten oder Effekt).
+    Sacrificed(CardId),
     AttackersDeclared(Vec<(CardId, PlayerId)>),
     BlockersDeclared(Vec<(CardId, CardId)>),
     PlayerLost {

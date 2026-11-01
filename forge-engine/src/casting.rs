@@ -29,7 +29,7 @@ impl GameState {
             && !self.has_keyword(c, &Keyword::Haste)
     }
 
-    fn can_pay_nonmana(&self, cost: &Cost, source: CardId, p: PlayerId) -> bool {
+    pub(crate) fn can_pay_nonmana(&self, cost: &Cost, source: CardId, p: PlayerId) -> bool {
         let src = self.card(source);
         cost.parts.iter().all(|part| match part {
             CostPart::Tap => {
@@ -414,7 +414,7 @@ impl GameState {
         self.apply_chain(ab, &[], &ctx, ch)
     }
 
-    fn pay_nonmana_costs(
+    pub(crate) fn pay_nonmana_costs(
         &mut self,
         p: PlayerId,
         source: CardId,
@@ -428,7 +428,9 @@ impl GameState {
             match part {
                 CostPart::Tap => self.card_mut(source).tapped = true,
                 CostPart::Untap => self.card_mut(source).tapped = false,
-                CostPart::SacrificeSelf => self.put_into_graveyard(source),
+                CostPart::SacrificeSelf => {
+                    self.sacrifice(source);
+                }
                 CostPart::PayLife(n) => self.lose_life(p, *n as i32),
                 CostPart::Sacrifice { amount, valid } => {
                     let options: Vec<CardId> = self
@@ -446,7 +448,7 @@ impl GameState {
                         _ => return Err(Interrupt::Cancelled),
                     };
                     for c in chosen {
-                        self.put_into_graveyard(c);
+                        self.sacrifice(c);
                     }
                 }
                 CostPart::Discard { amount, valid } => {

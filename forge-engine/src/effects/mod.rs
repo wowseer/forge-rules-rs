@@ -195,9 +195,24 @@ pub enum Effect {
         num: Amount,
         valid: Option<ValidSpec>,
     },
-    /// Zauber neutralisieren (`Counter`, CR 701.5); optional „es sei denn, … zahlt“.
-    Counter {
-        unless_cost: Option<forge_types::ManaCost>,
+    /// Zauber neutralisieren (`Counter`, CR 701.5). „Es sei denn, … zahlt“
+    /// regelt das allgemeine [`UnlessSpec`] der Fähigkeit.
+    Counter,
+    /// Bleibende Karten opfern (`Sacrifice`, CR 701.21) bzw. mit `Destroy$` zerstören.
+    Sacrifice {
+        /// Spieler, die opfern (`Defined$`, Standard: du).
+        who: Defined,
+        /// `SacValid$`; `None` = die Quelle selbst (`Self`).
+        valid: Option<ValidSpec>,
+        amount: Amount,
+        /// `Optional$`: der Spieler darf weniger (auch keine) wählen.
+        optional: bool,
+        /// `StrictAmount$`: bei zu wenigen passenden Karten wird nichts geopfert.
+        strict: bool,
+        /// `Destroy$`: zerstören statt opfern.
+        destroy: bool,
+        /// `RememberSacrificed$`: die Quelle merkt sich die geopferten Objekte.
+        remember: bool,
     },
     /// Effektobjekt in der Command Zone erzeugen (`Effect`): trägt eigene
     /// Statics/Trigger/Ersatzeffekte, merkt sich Objekte, endet nach `duration`.
@@ -251,6 +266,29 @@ pub enum DiscardMode {
     YouChoose,
 }
 
+/// „… es sei denn, [Spieler] zahlt [Kosten]“ (`UnlessCost$`, CR 118.12).
+///
+/// Java: `AbilityUtils.handleUnlessCost`. Zahlt einer der Spieler, wird der
+/// Effekt dieser Fähigkeit nicht ausgeführt (bei `switched` umgekehrt);
+/// Unterfähigkeiten laufen je nach `subs` weiter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnlessSpec {
+    pub cost: Cost,
+    /// `UnlessPayer$` (Standard: Controller des Ziels).
+    pub payer: Defined,
+    /// `UnlessSwitched$`: der Effekt passiert nur, *wenn* bezahlt wird.
+    pub switched: bool,
+    pub subs: UnlessSubs,
+}
+
+/// `UnlessResolveSubs$`: wann Unterfähigkeiten noch ausgeführt werden.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnlessSubs {
+    Always,
+    WhenPaid,
+    WhenNotPaid,
+}
+
 /// Modaler Effekt (`Charm`, CR 700.2): Modi werden beim Wirken/Stapeln gewählt.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CharmSpec {
@@ -284,6 +322,8 @@ pub struct CompiledAbility {
     pub sorcery_speed: bool,
     /// `ConditionPresent$`, `ConditionCheckSVar$` …: nur ausführen, wenn erfüllt.
     pub conditions: Vec<crate::expr::Condition>,
+    /// `UnlessCost$`: „… es sei denn, … zahlt“.
+    pub unless: Option<UnlessSpec>,
 }
 
 impl CompiledAbility {
@@ -902,18 +942,30 @@ fn compile_depth(
             if c.ab.params.has("Defined") {
                 return Err(c.unsupported("Defined", c.ab.params.get("Defined").unwrap_or("")));
             }
-            let unless_cost = match c.get("UnlessCost") {
-                Some(v) if v.trim().parse::<u32>().is_ok() => Some(
-                    forge_types::ManaCost::parse(v).map_err(|_| c.unsupported("UnlessCost", v))?,
-                ),
-                Some(v) => return Err(c.unsupported("UnlessCost", v)),
-                None => None,
+            Effect::Counter
+        }
+        "Sacrifice" => {
+            let valid = match c.get("SacValid").map(str::trim) {
+                None | Some("Self") => None,
+                Some(v) => Some(ValidSpec::parse(v)?),
             };
-            match c.get("UnlessPayer") {
-                None | Some("TargetedController") => {}
-                Some(v) => return Err(c.unsupported("UnlessPayer", v)),
+            let amount = c.amount("Amount", Some(1))?;
+            let flag = |c: &mut Ctx, k: &'static str| c.get(k).is_some();
+            let optional = flag(&mut c, "Optional");
+            let strict = flag(&mut c, "StrictAmount");
+            let destroy = flag(&mut c, "Destroy");
+            let remember = flag(&mut c, "RememberSacrificed");
+            c.get("SacMessage");
+            let who = c.defined(Defined::You)?;
+            Effect::Sacrifice {
+                who,
+                valid,
+                amount,
+                optional,
+                strict,
+                destroy,
+                remember,
             }
-            Effect::Counter { unless_cost }
         }
         "Effect" => compile_effect_object(&mut c, face)?,
         "Scry" => {
@@ -1145,6 +1197,8 @@ fn compile_depth(
         None => None,
     };
 
+    let unless = compile_unless(&mut c)?;
+
     let (conditions, cond_keys) =
         crate::expr::parse_conditions(face, &ab.params, crate::expr::CondStyle::Effect)?;
     c.used.extend(cond_keys);
@@ -1168,7 +1222,45 @@ fn compile_depth(
         description,
         sorcery_speed,
         conditions,
+        unless,
     })
+}
+
+/// `UnlessCost$`/`UnlessPayer$`/`UnlessSwitched$`/`UnlessResolveSubs$`.
+fn compile_unless(c: &mut Ctx) -> Result<Option<UnlessSpec>, CompileError> {
+    let Some(cost_s) = c.get("UnlessCost") else {
+        return Ok(None);
+    };
+    let cost = Cost::parse(cost_s.trim())?;
+    // {T}/{Q} beziehen sich auf die Quelle und ergeben als „Unless“-Kosten keinen Sinn.
+    if cost
+        .parts
+        .iter()
+        .any(|p| matches!(p, crate::cost::CostPart::Tap | crate::cost::CostPart::Untap))
+        || cost.mana.as_ref().is_some_and(|m| m.x_count() > 0)
+    {
+        return Err(c.unsupported("UnlessCost", cost_s));
+    }
+    let payer = if c.ab.params.has("UnlessPayer") {
+        c.defined_key("UnlessPayer", Defined::TargetedController)?
+    } else {
+        Defined::TargetedController
+    };
+    let switched = c.get("UnlessSwitched").is_some();
+    let subs = match c.get("UnlessResolveSubs") {
+        None => UnlessSubs::Always,
+        Some("WhenPaid") => UnlessSubs::WhenPaid,
+        Some("WhenNotPaid") => UnlessSubs::WhenNotPaid,
+        Some(v) => return Err(c.unsupported("UnlessResolveSubs", v)),
+    };
+    // Weitere Unless-Parameter (z. B. `UnlessAI$`) sind KI-Hinweise.
+    c.get("UnlessAI");
+    Ok(Some(UnlessSpec {
+        cost,
+        payer,
+        switched,
+        subs,
+    }))
 }
 
 impl CompiledAbility {

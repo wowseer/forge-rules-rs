@@ -37,6 +37,26 @@ pub enum CostError {
     Unsupported(String),
 }
 
+impl fmt::Display for Cost {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(m) = &self.mana {
+            parts.push(m.to_string());
+        }
+        for p in &self.parts {
+            parts.push(match p {
+                CostPart::Tap => "{T}".into(),
+                CostPart::Untap => "{Q}".into(),
+                CostPart::SacrificeSelf => "Sac<1/CARDNAME>".into(),
+                CostPart::Sacrifice { amount, valid } => format!("Sac<{amount}/{valid:?}>"),
+                CostPart::PayLife(n) => format!("PayLife<{n}>"),
+                CostPart::Discard { amount, valid } => format!("Discard<{amount}/{valid:?}>"),
+            });
+        }
+        write!(f, "{}", parts.join(" "))
+    }
+}
+
 impl fmt::Display for CostError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
