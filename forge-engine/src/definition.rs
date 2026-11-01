@@ -27,6 +27,8 @@ pub struct CompiledFace {
     pub replacements: Vec<Arc<crate::replacements::CompiledReplacement>>,
     /// `K:etbCounter`: (Markentyp, Anzahl) beim Ankommen.
     pub etb_counters: Vec<(String, crate::expr::Expr)>,
+    /// `K:Enchant:<Filter>`: woran die Aura angelegt sein darf (CR 303.4).
+    pub enchant: Option<crate::valid::ValidSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -78,8 +80,24 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         statics: Vec::new(),
         replacements: Vec::new(),
         etb_counters: Vec::new(),
+        enchant: None,
     };
+    let mut equip: Vec<Arc<CompiledAbility>> = Vec::new();
     for k in &face.keywords {
+        if let Some(spec) = k.strip_prefix("Enchant:") {
+            match crate::valid::ValidSpec::parse(spec) {
+                Ok(v) if !v.allows_players() => out.enchant = Some(v),
+                _ => unsupported.push(format!("Keyword: {k}")),
+            }
+            continue;
+        }
+        if k.starts_with("Equip:") {
+            match equip_ability(k) {
+                Some(a) => equip.push(Arc::new(a)),
+                None => unsupported.push(format!("Keyword: {k}")),
+            }
+            continue;
+        }
         if k.starts_with("etbCounter:") {
             match crate::replacements::parse_etb_counter(face, k) {
                 Ok(c) => out.etb_counters.push(c),
@@ -111,9 +129,32 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         unsupported.push("Spontanzauber/Hexerei ohne SP$".into());
     }
     if !is_spell_card && out.spell.is_some() {
-        // Auren (SP$ Attach) u. ä. – bleibende Karte mit eigener Spell-Fähigkeit
+        // bleibende Karte mit eigener Spell-Fähigkeit (z. B. Bestow) – noch nicht unterstützt
         unsupported.push("bleibende Karte mit SP$-Fähigkeit".into());
     }
+    // Aura-Zauber aus `K:Enchant` (CR 303.4a: Aura-Zauber hat ein Ziel)
+    if let Some(valid) = &out.enchant {
+        out.spell = Some(Arc::new(CompiledAbility {
+            kind: AbilityKind::Spell,
+            api: "Attach".into(),
+            cost: None,
+            target: Some(crate::effects::TargetSpec {
+                valid: valid.clone(),
+                min: 1,
+                max: 1,
+                prompt: None,
+                zones: vec![crate::zone::Zone::Battlefield],
+            }),
+            effect: Effect::AuraSpell,
+            sub: None,
+            description: format!("Enchant {}", face.name),
+            sorcery_speed: false,
+            conditions: Vec::new(),
+        }));
+    } else if face.types.has_subtype("Aura") {
+        unsupported.push("Aura ohne Enchant-Keyword".into());
+    }
+    out.activated.extend(equip);
     for t in &face.triggers {
         match crate::triggers::compile_trigger(face, t) {
             Ok(c) => out.triggers.push(Arc::new(c)),
@@ -121,8 +162,8 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         }
     }
     for s in &face.statics {
-        match crate::statics::compile_static(face, s) {
-            Ok(c) => out.statics.push(Arc::new(c)),
+        match crate::statics::compile_static_multi(face, s) {
+            Ok(cs) => out.statics.extend(cs.into_iter().map(Arc::new)),
             Err(e) => unsupported.push(format!("Static: {} ({e})", s.mode)),
         }
     }
@@ -342,4 +383,42 @@ impl CardDb {
 /// Fehler beim Kompilieren als Text (für Berichte).
 pub fn describe(e: &CompileError) -> String {
     e.to_string()
+}
+
+/// `K:Equip:<Kosten>[:<Filter>[:<Text>]]` → „Kosten: An Ziel-Kreatur anlegen. Nur als Hexerei.“
+/// (CR 702.6, Java `CardFactoryUtil` Equip)
+fn equip_ability(kw: &str) -> Option<CompiledAbility> {
+    let kw = match kw.find(":Flavor ") {
+        Some(i) => &kw[..i],
+        None => kw,
+    };
+    let k: Vec<&str> = kw.split(':').collect();
+    if k.len() > 4 && !k[4].is_empty() {
+        return None; // Sonderformen (ReduceCost, AlternateCost)
+    }
+    let cost = crate::cost::Cost::parse(k.get(1)?).ok()?;
+    let valid = k
+        .get(2)
+        .filter(|v| !v.is_empty())
+        .copied()
+        .unwrap_or("Creature.YouCtrl");
+    Some(CompiledAbility {
+        kind: AbilityKind::Activated,
+        api: "Attach".into(),
+        cost: Some(cost),
+        target: Some(crate::effects::TargetSpec {
+            valid: crate::valid::ValidSpec::parse(valid).ok()?,
+            min: 1,
+            max: 1,
+            prompt: None,
+            zones: vec![crate::zone::Zone::Battlefield],
+        }),
+        effect: Effect::Attach {
+            object: crate::effects::Defined::SelfCard,
+        },
+        sub: None,
+        description: format!("Equip {}", k[1]),
+        sorcery_speed: true,
+        conditions: Vec::new(),
+    })
 }

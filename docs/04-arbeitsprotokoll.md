@@ -108,9 +108,19 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
   Effektobjekten (z. B. „kann diesen Zug nicht von Kreaturen mit Stärke ≤ 2 geblockt werden“).
 - 5 neue Tests (152), 300 Zufallspartien; Zielpool 23,7 % → **24,7 %** (Pauper 38,5 %).
 
+### Nachtrag: Auren und Ausrüstung
+
+- `K:Enchant:<Filter>` → Aura-Zauber mit Ziel; kommt beim Auflösen angelegt ins Spiel
+  (CR 303.4f), fizzelt ohne legales Ziel. `K:Equip:<Kosten>[:<Filter>]` → Anlegen nur
+  als Hexerei (CR 702.6). `Attach`-Effekt. `CardObj::attached_to`.
+- Statics: `AffectedDefined$ Enchanted/Equipped`, Filter `EnchantedBy/EquippedBy/AttachedBy`,
+  mehrere Modi je Zeile (`Mode$ CantAttack,CantBlock`).
+- SBA 704.5m (Aura ohne legales Objekt → Friedhof), 704.5n (Ausrüstung lösen), 704.5p.
+- 6 neue Tests (158), 300 Zufallspartien; Zielpool 24,7 % → **26,1 %** (Pauper 41,2 %).
+
 ### Nächste Schritte
 
-1. **Auren und Ausrüstung** (`AffectedDefined$ Enchanted/Equipped`: 833 + 551 Vorkommen),
+1. Erledigt: Auren und Ausrüstung. Offen: (`AffectedDefined$ Enchanted/Equipped`: 833 + 551 Vorkommen),
    **ReduceCost** (483), **CantBlockBy/CantBlock/CantAttack/MustAttack** (≈ 700),
    **Animate** (257), **Dig** (202), **Regenerate**, **Scry**, **Mill**.
 2. (alt) **Effect** (367), **PumpAll** (313), **Discard** (288),

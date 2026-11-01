@@ -478,6 +478,26 @@ impl GameState {
                     created_turn: turn,
                 });
             }
+            Effect::AuraSpell => {}
+            Effect::Attach { object } => {
+                let to = self.cards_of(targets).into_iter().next();
+                let obj = self
+                    .resolve_defined(*object, &[], ctx)
+                    .into_iter()
+                    .find_map(|t| {
+                        if let Target::Card(c) = t {
+                            Some(c)
+                        } else {
+                            None
+                        }
+                    });
+                if let (Some(to), Some(obj)) = (to, obj)
+                    && self.card(obj).zone == Some(Zone::Battlefield)
+                    && obj != to
+                {
+                    self.card_mut(obj).attached_to = Some(to);
+                }
+            }
             // Modale Fähigkeiten werden vor dem Stapeln aufgelöst (choose_modes);
             // ein Charm ohne gewählte Modi tut nichts.
             Effect::Charm(_) => {}
@@ -724,7 +744,23 @@ impl GameState {
         let is_permanent = self.chars(card).types.is_permanent();
         if is_permanent && !fizzled {
             // CR 608.3a: unter Kontrolle des Zauberspruch-Controllers
-            self.move_card_as(card, Zone::Battlefield, true, Some(item.controller));
+            let new = self.move_card_as(card, Zone::Battlefield, true, Some(item.controller));
+            // CR 303.4f: Aura kommt an das (noch legale) Ziel angelegt ins Spiel
+            if let Some(ab) = &item.ability
+                && matches!(ab.effect, super::Effect::AuraSpell)
+            {
+                let target = item
+                    .targets
+                    .first()
+                    .and_then(|t| t.first())
+                    .and_then(|t| match t {
+                        Target::Card(c) => Some(*c),
+                        Target::Player(_) => None,
+                    });
+                if let Some(t) = target.filter(|t| self.card(*t).zone == Some(Zone::Battlefield)) {
+                    self.card_mut(new).attached_to = Some(t);
+                }
+            }
         } else {
             self.move_card(card, Zone::Graveyard, true);
         }

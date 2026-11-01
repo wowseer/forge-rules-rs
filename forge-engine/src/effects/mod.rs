@@ -168,6 +168,13 @@ pub enum Effect {
         duration: crate::state::EffectDuration,
         remember: Option<Defined>,
     },
+    /// Aura-Zauber (aus `K:Enchant`): die Aura kommt beim Auflösen an das Ziel
+    /// angelegt ins Spiel (CR 303.4f) – erledigt `finish_spell`.
+    AuraSpell,
+    /// `Attach`: `object` (Standard: Quelle) an das Ziel anlegen (CR 701.3).
+    Attach {
+        object: Defined,
+    },
     /// Platzhalter für modale Fähigkeiten; wird vor dem Stapeln durch die
     /// gewählten Modi ersetzt (`GameState::choose_modes`).
     Charm(CharmSpec),
@@ -558,6 +565,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         statics: Vec::new(),
         replacements: Vec::new(),
         etb_counters: Vec::new(),
+        enchant: None,
     };
     let svar = |n: &str| {
         face.svar(n)
@@ -566,10 +574,11 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
     for n in &statics_n {
         let st = forge_script::ScriptStatic::parse(forge_script::ParamMap::parse(svar(n)?))
             .map_err(|_| CompileError::MissingSvar(n.clone()))?;
-        let mut cs = crate::statics::compile_static(face, &st)?;
-        // Effektobjekte wirken aus der Command Zone.
-        *cs.effect_zones_mut() = vec![crate::zone::Zone::Command];
-        compiled.statics.push(Arc::new(cs));
+        for mut cs in crate::statics::compile_static_multi(face, &st)? {
+            // Effektobjekte wirken aus der Command Zone.
+            *cs.effect_zones_mut() = vec![crate::zone::Zone::Command];
+            compiled.statics.push(Arc::new(cs));
+        }
     }
     for n in &triggers_n {
         let t = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(svar(n)?))
@@ -867,6 +876,13 @@ fn compile_depth(
             Effect::Counter { unless_cost }
         }
         "Effect" => compile_effect_object(&mut c, face)?,
+        "Attach" => {
+            if c.ab.params.get("ValidTgts").is_none() {
+                return Err(c.unsupported("Attach", "ohne ValidTgts"));
+            }
+            let object = c.defined_key("Object", Defined::SelfCard)?;
+            Effect::Attach { object }
+        }
         "Token" => {
             let scripts_s = c.get("TokenScript").ok_or(CompileError::MissingParam {
                 api: api.into(),

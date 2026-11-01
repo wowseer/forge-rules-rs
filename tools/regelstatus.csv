@@ -124,3 +124,9 @@ Static Ability;CantBlockBy;teilweise;combat_restrictions::cant_be_blocked_by_sma
 Static Ability;CantBlock;ja;combat_restrictions::cant_block;
 Static Ability;CantAttack;teilweise;combat_restrictions::cant_attack;ValidCard, Bedingungen; Target/UnlessDefender fehlen
 Static Ability;MustAttack;teilweise;combat_restrictions::must_attack_if_able;ValidCreature (CR 508.1d); MustAttack$-Ziel, ValidPlayer fehlen
+Keyword;Enchant;teilweise;auras_equipment::aura_attaches_on_resolution_and_buffs;Aura-Zauber mit Ziel, angelegt beim Auflösen, Fizzle; Enchant Player fehlt
+Keyword;Equip;teilweise;auras_equipment::equip_sorcery_speed_own_creature_and_moves;Kosten, optionaler Filter, Hexerei-Geschwindigkeit; Sonderformen (ReduceCost, AlternateCost) fehlen
+Effect (ApiType);Attach;teilweise;auras_equipment::equip_sorcery_speed_own_creature_and_moves;Object (Standard Self) an Ziel anlegen; Choices/Optional fehlen
+State-Based Action;CR 704.5m;ja;auras_equipment::aura_goes_to_graveyard_when_creature_dies_and_trigger_returns_it;
+State-Based Action;CR 704.5n;ja;auras_equipment::equipment_stays_when_creature_dies;
+State-Based Action;CR 704.5p;teilweise;;Lösen angelegter Nicht-Aura/Nicht-Ausrüstung; ohne eigenen Test

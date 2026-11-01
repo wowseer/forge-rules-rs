@@ -24,6 +24,8 @@ pub struct ContinuousStatic {
     pub affected: Option<ValidSpec>,
     /// `AffectedDefined$ Self`: nur die Quelle selbst.
     pub affects_self_only: bool,
+    /// `AffectedDefined$ Enchanted|Equipped`: nur das Objekt, an dem die Quelle hängt.
+    pub affects_attached: bool,
     pub affected_zones: Vec<Zone>,
     pub effect_zones: Vec<Zone>,
     /// Layer 4: hinzugefügte Typen (Kartentypen, Supertypen, Untertypen)
@@ -212,9 +214,10 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         used.push(k);
         p.get(k)
     };
-    let affects_self_only = match get("AffectedDefined") {
-        None => false,
-        Some("Self") => true,
+    let (affects_self_only, affects_attached) = match get("AffectedDefined") {
+        None => (false, false),
+        Some("Self") => (true, false),
+        Some("Enchanted") | Some("Equipped") => (false, true),
         Some(v) => return Err(err("AffectedDefined", v)),
     };
     // CDAs (CR 604.3) wirken immer nur auf die Quelle, in jeder Zone.
@@ -224,7 +227,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
     let affects_self_only = affects_self_only || cda;
     let affected = match get("Affected") {
         Some(a) => Some(ValidSpec::parse(a).map_err(CompileError::Valid)?),
-        None if affects_self_only => None,
+        None if affects_self_only || affects_attached => None,
         None => {
             return Err(CompileError::MissingParam {
                 api: "Static Continuous".into(),
@@ -305,6 +308,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
     Ok(CompiledStatic::Continuous(ContinuousStatic {
         affected,
         affects_self_only,
+        affects_attached,
         affected_zones,
         effect_zones,
         add_types,
@@ -318,6 +322,25 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         conditions,
         description: p.get("Description").unwrap_or("").to_string(),
     }))
+}
+
+/// `Mode$ CantAttack,CantBlock` → je Modus eine statische Fähigkeit.
+pub fn compile_static_multi(
+    face: &CardFace,
+    s: &ScriptStatic,
+) -> Result<Vec<CompiledStatic>, CompileError> {
+    if !s.mode.contains(',') {
+        return Ok(vec![compile_static(face, s)?]);
+    }
+    s.mode
+        .split(',')
+        .map(|m| {
+            let mut one = s.clone();
+            one.mode = m.trim().to_string();
+            one.params.insert("Mode", m.trim());
+            compile_static(face, &one)
+        })
+        .collect()
 }
 
 #[cfg(test)]

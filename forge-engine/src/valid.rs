@@ -64,6 +64,8 @@ pub enum Prop {
     OppOwn,
     /// Von der Quelle gemerkt (`IsRemembered`)
     IsRemembered,
+    /// Die Quelle (Aura/Ausrüstung) ist an dieses Objekt angelegt.
+    AttachedBySource,
     /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
     Stat {
         stat: Stat,
@@ -150,6 +152,9 @@ fn is_type_word(w: &str) -> bool {
 fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     if let Some(rest) = p.strip_prefix('!') {
         return Ok(Prop::Not(Box::new(parse_prop(rest)?)));
+    }
+    if matches!(p, "EnchantedBy" | "EquippedBy" | "AttachedBy") {
+        return Ok(Prop::AttachedBySource);
     }
     if p == "IsRemembered" {
         return Ok(Prop::IsRemembered);

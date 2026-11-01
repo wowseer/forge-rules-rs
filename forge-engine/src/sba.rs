@@ -4,7 +4,7 @@
 //! Alle zutreffenden SBAs werden gleichzeitig ausgeführt (CR 704.3), dann
 //! wird erneut geprüft, bis keine mehr zutreffen.
 //!
-//! Umgesetzt: 704.5a, b, c, d, f, g, h, i, j, k, q, v. Siehe `docs/03-regelstand.md`.
+//! Umgesetzt: 704.5a, b, c, d, f, g, h, i, j, k, m, n, p, q, v. Siehe `docs/03-regelstand.md`.
 
 use crate::decision::{CardChoiceReason, Choice, Decision};
 use crate::ids::{CardId, PlayerId};
@@ -156,6 +156,33 @@ impl GameState {
             }
         }
 
+        // 704.5m/n/p: Angelegte Objekte prüfen.
+        let mut unattach: Vec<CardId> = Vec::new();
+        for &id in &self.battlefield {
+            let c = self.card(id);
+            let ch = self.chars(id);
+            let target_ok = |t: CardId| self.card(t).zone == Some(Zone::Battlefield) && t != id;
+            if ch.types.has_subtype("Aura") {
+                // 704.5m: Aura an nichts oder an illegalem Objekt → Friedhof
+                let legal = c.attached_to.is_some_and(|t| {
+                    target_ok(t)
+                        && c.compiled()
+                            .enchant
+                            .as_ref()
+                            .is_none_or(|v| self.card_matches(t, v, id, c.controller))
+                });
+                if !legal {
+                    to_graveyard.push(id);
+                }
+            } else if let Some(t) = c.attached_to {
+                // 704.5n: Ausrüstung an Nicht-Kreatur/weg → lösen; 704.5p: andere → lösen
+                let is_equipment = ch.types.has_subtype("Equipment");
+                if !is_equipment || !target_ok(t) || !self.is_creature(t) {
+                    unattach.push(id);
+                }
+            }
+        }
+
         // --- Ausführen ---
         for (p, reason) in losers {
             self.player_mut(p).lost = Some(reason);
@@ -165,6 +192,10 @@ impl GameState {
         }
         for id in cease {
             self.cease_to_exist(id);
+            performed = true;
+        }
+        for id in unattach {
+            self.card_mut(id).attached_to = None;
             performed = true;
         }
         for (id, n) in annihilate {

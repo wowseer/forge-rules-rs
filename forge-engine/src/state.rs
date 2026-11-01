@@ -128,6 +128,8 @@ pub struct CardObj {
     pub remembered: Vec<CardId>,
     /// Nur bei Effektobjekten (`Effect`): wann sie enden.
     pub effect: Option<EffectInfo>,
+    /// Aura/Ausrüstung: an welches Objekt angelegt (CR 301.5, 303.4).
+    pub attached_to: Option<CardId>,
 }
 
 /// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).
@@ -579,6 +581,7 @@ impl GameState {
         let applies = |this: &GameState, s: &mut Src, ch: &Characteristics| -> bool {
             *s.affected.get_or_insert_with(|| {
                 (!s.st.affects_self_only || id == s.source)
+                    && (!s.st.affects_attached || this.card(s.source).attached_to == Some(id))
                     && s.st
                         .affected
                         .as_ref()
