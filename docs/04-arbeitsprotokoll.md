@@ -5,6 +5,53 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-01 – Sitzung 3: Performance-Cache, neuer Tracker, Sacrifice, UnlessCost, Remembered
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| `CharsCache`: `chars()` in lesenden Phasen gecacht | ✅ Benchmark 6,9 s → 3,6 s (20 Partien) |
+| Neuer Tracker (`Forge_Rules_Engine.xlsx` im Repo-Root, 870 Regeln, 14 Kategorien) | ✅ Sync-Skript angepasst, neue Kategorien eingeordnet |
+| Sacrifice (CR 701.21) | ✅ Grundform inkl. Optional/StrictAmount/Destroy/RememberSacrificed |
+| Allgemeines `UnlessCost$` (CR 118.12) | ✅ Mana, PayLife, Sac, Discard; Switched, ResolveSubs |
+| Cleanup, `Defined$ Remembered`, `ConditionDefined$ Remembered`, `Remembered$Amount` | ✅ |
+| Tests | 179 (11 neue), 1.000 + 300 Zufallspartien ohne Absturz |
+| Unterstützte Karten im Zielpool | 28,9 % → **29,7 %** (Pauper 45,7 %, Modern 32,2 %) |
+
+### Entscheidungen
+
+- Der Nutzer hat den Tracker neu erzeugt (Forge-Commit cec1aaea, alle Status zurückgesetzt);
+  `sync_regelstatus.py` findet die Gesamtdatei jetzt im Repo-Root (Fallback `Forge_Rules/`)
+  und kennt die Kategorien Combat Rule, Mana Rule, Zone, Mulligan, Game Variant,
+  Game Rule Option. Ausgeschlossene Varianten/Zonen/Mulligan-Arten als `n/a` eingetragen.
+- Opfern „jeder Spieler“: erst wählen alle (APNAP), dann gleichzeitig (CR 101.4). Java
+  opfert spielerweise nacheinander – bekannte Abweichung zugunsten der CR.
+- Unless-Kosten werden nur angeboten, wenn bezahlbar (wie Java `canPay`); sobald einer
+  zahlt, werden weitere Zahler nicht mehr gefragt. Counter nutzt denselben Mechanismus.
+- `Defined$ Remembered` folgt `moved_to` (Java `getCardState`), außer bei Effektobjekten,
+  weil `ForgetOnMoved$` dort weiterhin über die neue ID vereinfacht ist. `Card.IsRemembered`
+  vergleicht weiter IDs. Spieler können noch nicht gemerkt werden → `Remembered` nur bei
+  Karten-Effekten zugelassen.
+
+### Bekannte Lücken
+
+- Performance-Ausreißer: eine Benchmark-Partie (Seed 8) braucht 3,9 s statt < 1 s –
+  vermutlich dynamische Statics mit O(n²)-Auswertung außerhalb der gecachten Phasen.
+- Fehlerberichte zeigen nur den ersten Fehler je Fähigkeitskette; „einziger fehlender
+  Baustein“ ist daher eine Untergrenze (Cleanup brachte 0 Karten, weil dahinter
+  `Remembered`-Bezüge standen).
+- Trigger `Sacrificed` fehlt noch (107 Karten), obwohl `Event::Sacrificed` existiert.
+
+### Nächste Schritte
+
+1. Trigger `Sacrificed` (Event ist da), `AttackersDeclared` (111), `DelayedTrigger` (107).
+2. DealDamage mit X ohne Kosten-X (128), Schadens-Ersatzeffekte `DamageDone` (116).
+3. Performance-Ausreißer analysieren (Profiler fehlt: `perf` installieren oder Zeitmessung je Phase).
+4. Cycling (99), RepeatEach (92).
+
+---
+
 ## 2026-11-01 – Sitzung 2: Branch `rust-godot`, Trigger-System
 
 ### Ergebnis
