@@ -17,6 +17,8 @@ impl GameState {
     /// mindestens eine ausgeführt wurde.
     pub fn check_state_based_actions(&mut self, ch: &mut Choices) -> Res<bool> {
         let mut any = false;
+        // Kontrolleffekte „solange …“ enden sofort (CR 611.2b), vor den SBAs geprüft.
+        self.expire_control_effects(false);
         loop {
             if self.winner.is_some() {
                 return Ok(any);

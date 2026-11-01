@@ -486,6 +486,52 @@ impl GameState {
                     self.move_card(card, Zone::Graveyard, true);
                 }
             }
+            Effect::GainControl {
+                what,
+                new_controller,
+                until_eot,
+                until_end_of_next_turn,
+                leaves_play,
+                lose_control,
+                untap,
+                keywords,
+            } => {
+                let Some(new) =
+                    Self::players_of(&self.resolve_defined(*new_controller, targets, ctx))
+                        .into_iter()
+                        .next()
+                else {
+                    return Ok(());
+                };
+                let source_controller = self.card(ctx.source).controller;
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    self.control_effects.push(crate::state::ControlEffect {
+                        card: c,
+                        controller: new,
+                        source: ctx.source,
+                        source_controller,
+                        created_turn: self.turn,
+                        until_eot: *until_eot,
+                        until_end_of_next_turn: *until_end_of_next_turn,
+                        leaves_play: *leaves_play,
+                        lose_control: *lose_control,
+                    });
+                    self.apply_control(c);
+                    if *untap {
+                        self.card_mut(c).tapped = false;
+                    }
+                    if !keywords.is_empty() {
+                        let timestamp = self.timestamp();
+                        self.effects.push(ContinuousEffect {
+                            affected: c,
+                            keywords: keywords.clone(),
+                            duration: Duration::UntilEndOfTurn,
+                            timestamp,
+                            ..Default::default()
+                        });
+                    }
+                }
+            }
             Effect::PreventDamage { what, amount } => {
                 let n = self.amount(amount, ctx, targets).max(0) as u32;
                 for t in self.resolve_defined(*what, targets, ctx) {

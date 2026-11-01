@@ -27,6 +27,7 @@ impl GameState {
             token,
             tapped: false,
             controlled_since_turn_start: false,
+            base_controller: owner,
             damage: 0,
             deathtouch_damage: false,
             counters: Default::default(),
@@ -105,6 +106,7 @@ impl GameState {
             token: old.token,
             tapped: false,
             controlled_since_turn_start: false,
+            base_controller: controller,
             damage: 0,
             deathtouch_damage: false,
             counters: Default::default(),
@@ -317,6 +319,67 @@ impl GameState {
         if src.has(&Keyword::Lifelink) {
             let ctrl = self.card(source).controller;
             self.gain_life(ctrl, amount as i32);
+        }
+    }
+
+    /// Setzt den Controller von `c` aus Kontrolleffekten neu (CR 613.1b, jüngster
+    /// gewinnt). Ein Kontrollwechsel macht „krank“ (CR 302.6) und entfernt aus
+    /// dem Kampf (CR 506.4).
+    pub fn apply_control(&mut self, c: CardId) {
+        let new = self
+            .control_effects
+            .iter()
+            .rev()
+            .find(|e| e.card == c)
+            .map(|e| e.controller)
+            .unwrap_or(self.card(c).base_controller);
+        if self.card(c).controller == new {
+            return;
+        }
+        let o = self.card_mut(c);
+        o.controller = new;
+        o.controlled_since_turn_start = false;
+        if let Some(cb) = self.combat.as_mut() {
+            cb.attackers.retain(|a| a.card != c);
+            cb.blocks.retain(|(b, a)| *b != c && *a != c);
+        }
+    }
+
+    /// Beendet abgelaufene Kontrolleffekte (CR 611.2b) und setzt Controller neu.
+    pub fn expire_control_effects(&mut self, at_cleanup: bool) {
+        if self.control_effects.is_empty() {
+            return;
+        }
+        let (turn, active) = (self.turn, self.active);
+        let before = self.control_effects.clone();
+        let keep: Vec<bool> = before
+            .iter()
+            .map(|e| {
+                let src = self.card(e.source);
+                !(self.card(e.card).zone != Some(Zone::Battlefield)
+                    || (at_cleanup && e.until_eot)
+                    || (at_cleanup
+                        && e.until_end_of_next_turn
+                        && active == e.source_controller
+                        && turn > e.created_turn)
+                    || (e.leaves_play && src.zone != Some(Zone::Battlefield))
+                    || (e.lose_control
+                        && (src.zone != Some(Zone::Battlefield)
+                            || src.controller != e.source_controller)))
+            })
+            .collect();
+        if keep.iter().all(|k| *k) {
+            return;
+        }
+        let mut i = 0;
+        self.control_effects.retain(|_| {
+            i += 1;
+            keep[i - 1]
+        });
+        for (e, k) in before.iter().zip(&keep) {
+            if !k && self.card(e.card).zone == Some(Zone::Battlefield) {
+                self.apply_control(e.card);
+            }
         }
     }
 

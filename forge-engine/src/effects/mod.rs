@@ -221,6 +221,18 @@ pub enum Effect {
         remember: Option<Defined>,
         scope: DelayScope,
     },
+    /// Kontrolle übernehmen (`GainControl`, CR 613.1b).
+    GainControl {
+        what: Defined,
+        new_controller: Defined,
+        until_eot: bool,
+        until_end_of_next_turn: bool,
+        leaves_play: bool,
+        lose_control: bool,
+        untap: bool,
+        /// `AddKWs$`: Schlüsselwörter bis Zugende (nur mit `LoseControl$ EOT`).
+        keywords: Vec<Keyword>,
+    },
     /// „Verhindere die nächsten N Schaden, die … in diesem Zug zugefügt würden“
     /// (`PreventDamage`, CR 615.7).
     PreventDamage {
@@ -1032,6 +1044,45 @@ fn compile_depth(
             Effect::Counter
         }
         "DelayedTrigger" => compile_delayed(&mut c, face)?,
+        "GainControl" => {
+            let (mut eot, mut next, mut leaves, mut lose) = (false, false, false, false);
+            if let Some(v) = c.get("LoseControl") {
+                for part in v.split(',').map(str::trim) {
+                    match part {
+                        "EOT" => eot = true,
+                        "UntilTheEndOfYourNextTurn" => next = true,
+                        "LeavesPlay" => leaves = true,
+                        "LoseControl" => lose = true,
+                        other => return Err(c.unsupported("LoseControl", other)),
+                    }
+                }
+            }
+            let untap = c
+                .get("Untap")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let keywords = c.get("AddKWs").map(Keyword::parse_list).unwrap_or_default();
+            if let Some(k) = keywords.iter().find(|k| !k.is_supported()) {
+                return Err(c.unsupported("AddKWs", &format!("{k:?}")));
+            }
+            if !keywords.is_empty() && !eot {
+                return Err(c.unsupported("AddKWs", "ohne LoseControl$ EOT"));
+            }
+            let new_controller = if c.ab.params.has("NewController") {
+                c.defined_key("NewController", Defined::You)?
+            } else {
+                Defined::You
+            };
+            Effect::GainControl {
+                what: c.defined(Defined::Targeted)?,
+                new_controller,
+                until_eot: eot,
+                until_end_of_next_turn: next,
+                leaves_play: leaves,
+                lose_control: lose,
+                untap,
+                keywords,
+            }
+        }
         "PreventDamage" => Effect::PreventDamage {
             amount: c.amount("Amount", None)?,
             what: c.defined(Defined::Targeted)?,

@@ -117,6 +117,8 @@ pub struct CardObj {
     pub tapped: bool,
     /// CR 302.6: seit Beginn des letzten eigenen Zuges ununterbrochen kontrolliert.
     pub controlled_since_turn_start: bool,
+    /// Controller ohne Kontrolleffekte (beim Ankommen festgelegt, CR 110.2).
+    pub base_controller: PlayerId,
     pub damage: u32,
     /// CR 704.5h
     pub deathtouch_damage: bool,
@@ -202,6 +204,25 @@ pub struct ContinuousEffect {
     pub set_toughness: Option<i32>,
     pub duration: Duration,
     pub timestamp: u64,
+}
+
+/// Kontrollwechsel (Layer 2, CR 613.1b) durch `GainControl`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ControlEffect {
+    pub card: CardId,
+    pub controller: PlayerId,
+    pub source: CardId,
+    /// Controller der Quelle beim Entstehen (für „solange du … kontrollierst“).
+    pub source_controller: PlayerId,
+    pub created_turn: u32,
+    /// `LoseControl$ EOT`
+    pub until_eot: bool,
+    /// `LoseControl$ UntilTheEndOfYourNextTurn`
+    pub until_end_of_next_turn: bool,
+    /// `LoseControl$ LeavesPlay`: endet, wenn die Quelle das Battlefield verlässt.
+    pub leaves_play: bool,
+    /// `LoseControl$ LoseControl`: endet, wenn der Controller die Quelle nicht mehr kontrolliert.
+    pub lose_control: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -401,6 +422,8 @@ pub struct GameState {
     pub lki_battlefield: Option<Vec<CardId>>,
     /// Verzögerte Trigger (CR 603.7), in Erzeugungsreihenfolge.
     pub delayed_triggers: Vec<crate::triggers::DelayedTrigger>,
+    /// Kontrolleffekte in Zeitstempelreihenfolge (jüngster zuletzt).
+    pub control_effects: Vec<ControlEffect>,
     /// Gleichzeitig zugefügter Schaden (Quelle, Ziel, Menge, Kampf) für
     /// `DamageDoneOnce`; `None` = jeder Schaden ist ein eigenes Ereignis.
     pub damage_batch: Option<Vec<(CardId, crate::decision::Target, u32, bool)>>,
@@ -850,6 +873,7 @@ impl GameState {
             pending_triggers: Vec::new(),
             lki_battlefield: None,
             delayed_triggers: Vec::new(),
+            control_effects: Vec::new(),
             damage_batch: None,
             log: Vec::new(),
             token_defs: Arc::default(),
