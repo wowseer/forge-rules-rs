@@ -551,24 +551,25 @@ impl GameState {
     /// im ersten Layer bestimmt, in dem er wirkt (613.6). Abhängigkeiten
     /// (613.8) fehlen noch.
     pub fn chars(&self, id: CardId) -> Characteristics {
-        // Cache nur in lesenden Phasen (CharsCache) und nicht in verschachtelten
-        // Auswertungen (dort sind die Ergebnisse absichtlich unvollständig).
-        let key = (self as *const GameState as usize, id);
-        let cacheable = !crate::expr::DepthGuard::active();
-        if cacheable
-            && let Some(hit) =
-                CHARS_CACHE.with(|c| c.borrow().as_ref().and_then(|m| m.get(&key).cloned()))
+        // Während eines Aufrufs ist der Zustand unveränderlich (`&self`): Cache
+        // aktivieren, damit verschachtelte Auswertungen (Statics, die Eigenschaften
+        // anderer Objekte brauchen) nicht quadratisch oft neu rechnen. Verschachtelte
+        // Ergebnisse sind absichtlich unvollständig (nur nicht-dynamische Statics)
+        // und haben daher einen eigenen Schlüssel.
+        let _guard = CharsCache::enter();
+        let nested = crate::expr::DepthGuard::active();
+        let key = (self as *const GameState as usize, id, nested);
+        if let Some(hit) =
+            CHARS_CACHE.with(|c| c.borrow().as_ref().and_then(|m| m.get(&key).cloned()))
         {
             return hit;
         }
         let ch = self.chars_uncached(id);
-        if cacheable {
-            CHARS_CACHE.with(|c| {
-                if let Some(m) = c.borrow_mut().as_mut() {
-                    m.insert(key, ch.clone());
-                }
-            });
-        }
+        CHARS_CACHE.with(|c| {
+            if let Some(m) = c.borrow_mut().as_mut() {
+                m.insert(key, ch.clone());
+            }
+        });
         ch
     }
 
@@ -918,8 +919,11 @@ impl GameState {
     }
 }
 
+/// (Zustandsadresse, Objekt, verschachtelt) → Eigenschaften.
+type CharsMap = std::collections::HashMap<(usize, CardId, bool), Characteristics>;
+
 thread_local! {
-    static CHARS_CACHE: std::cell::RefCell<Option<std::collections::HashMap<(usize, CardId), Characteristics>>> =
+    static CHARS_CACHE: std::cell::RefCell<Option<CharsMap>> =
         const { std::cell::RefCell::new(None) };
 }
 

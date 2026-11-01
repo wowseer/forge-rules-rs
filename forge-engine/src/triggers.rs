@@ -1054,12 +1054,20 @@ impl GameState {
 
     /// Meldet ein Ereignis; passende Trigger werden vorgemerkt.
     pub fn fire(&mut self, ev: TriggerEvent) {
+        // Die Prüfung verändert keine Eigenschaften → `chars()` cachen.
+        let _cache = crate::state::CharsCache::enter();
         // Kandidaten: Objekte in Zonen + Rückblick bei Verlassen des Battlefields.
         let mut sources: Vec<(CardId, Zone)> = self
             .live_cards()
             .map(|id| self.card(id))
-            .filter(|c| !c.compiled().triggers.is_empty())
-            .filter_map(|c| c.zone.map(|z| (c.id, z)))
+            .filter_map(|c| c.zone.map(|z| (c, z)))
+            .filter(|(c, z)| {
+                c.compiled()
+                    .triggers
+                    .iter()
+                    .any(|t| t.active_zones.contains(z))
+            })
+            .map(|(c, z)| (c.id, z))
             .collect();
         let left_battlefield = match &ev {
             TriggerEvent::ChangesZone {
