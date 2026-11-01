@@ -625,6 +625,8 @@ impl GameState {
             source: s.source,
             controller: s.you,
             x: 0,
+            targets: &[],
+            trig: None,
         };
         {
             let _g = crate::expr::DepthGuard::enter();

@@ -229,6 +229,8 @@ impl GameState {
                     source: host,
                     controller: h.controller,
                     x: 0,
+                    targets: &[],
+                    trig: None,
                 };
                 if !self.check_conditions(&r.conditions, &ctx) {
                     continue;
@@ -243,6 +245,8 @@ impl GameState {
                             source: id,
                             controller: mover_ctrl,
                             x: 0,
+                            targets: &[],
+                            trig: None,
                         };
                         if self.check_conditions(conds, &ctx) {
                             mods.tapped = true;
@@ -258,6 +262,8 @@ impl GameState {
                 source: id,
                 controller: mover_ctrl,
                 x: moving.cast_x,
+                targets: &[],
+                trig: None,
             };
             for (kind, amount) in &moving.compiled().etb_counters {
                 let n = self.eval(amount, &ctx).max(0) as u32;

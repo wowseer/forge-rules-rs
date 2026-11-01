@@ -53,9 +53,60 @@ pub enum Expr {
     CardsInYourHand,
     /// Anzahl Standardlandtypen unter deinen Ländern.
     Domain,
-    /// Anzahl der von der Quelle gemerkten Objekte (`Remembered$Amount`).
-    RememberedCount,
+    /// `<Objekte>$<Eigenschaft>` (Java `calculateAmount` → `handlePaid` /
+    /// `playerXProperty`): Summe der Eigenschaft über die Objekte.
+    ObjProp {
+        objs: ObjRef,
+        prop: ObjPropKind,
+    },
     Math(Box<Expr>, MathOp, Box<Expr>),
+}
+
+/// Objekte eines `<Objekte>$…`-Ausdrucks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ObjRef {
+    /// `Targeted`, `ParentTargeted` (Ziele der Fähigkeit bzw. geerbt)
+    Targeted,
+    /// `Remembered` (wie gemerkt)
+    Remembered,
+    /// `TriggeredCard`
+    TriggeredCard,
+    /// `TargetedPlayer`
+    TargetedPlayer,
+    /// `TriggeredPlayer`
+    TriggeredPlayer,
+}
+
+impl ObjRef {
+    fn parse(s: &str) -> Option<ObjRef> {
+        Some(match s {
+            "Targeted" | "ParentTargeted" => ObjRef::Targeted,
+            "Remembered" => ObjRef::Remembered,
+            "TriggeredCard" => ObjRef::TriggeredCard,
+            "TargetedPlayer" => ObjRef::TargetedPlayer,
+            "TriggeredPlayer" => ObjRef::TriggeredPlayer,
+            _ => return None,
+        })
+    }
+
+    fn is_player(self) -> bool {
+        matches!(self, ObjRef::TargetedPlayer | ObjRef::TriggeredPlayer)
+    }
+}
+
+/// Eigenschaft eines `<Objekte>$…`-Ausdrucks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ObjPropKind {
+    /// Anzahl der Objekte
+    Amount,
+    Power,
+    Toughness,
+    /// `CardManaCost` (Manabetrag)
+    ManaValue,
+    /// Spieler: Karten auf der Hand
+    CardsInHand,
+    /// Spieler: Lebenspunkte
+    LifeTotal,
 }
 
 /// Vergleich wie `GE3`, `EQ0`, `LTX`.
@@ -115,10 +166,14 @@ pub enum Condition {
 
 /// Kontext einer Auswertung.
 #[derive(Debug, Clone, Copy)]
-pub struct EvalCtx {
+pub struct EvalCtx<'a> {
     pub source: CardId,
     pub controller: PlayerId,
     pub x: u32,
+    /// Ziele der auflösenden Fähigkeit (für `Targeted$…`-Ausdrücke).
+    pub targets: &'a [crate::decision::Target],
+    /// Trigger-Kontext (für `TriggeredCard$…`-Ausdrücke).
+    pub trig: Option<&'a crate::triggers::TriggerInfo>,
 }
 
 // ---------------------------------------------------------------------------
@@ -184,17 +239,32 @@ impl Expr {
                 .map(Expr::Const)
                 .map_err(|_| bad("Number", sv));
         }
-        let Some(rest) = sv
-            .strip_prefix("Count$")
-            .or_else(|| sv.strip_prefix("Remembered$").map(|_| sv))
-        else {
+        let (base, op) = if let Some(rest) = sv.strip_prefix("Count$") {
+            let (main, op) = match rest.split_once('/') {
+                Some((m, o)) => (m, Some(o)),
+                None => (rest, None),
+            };
+            (Expr::parse_count(main).ok_or_else(|| bad("Count", sv))?, op)
+        } else if let Some((head, rest)) = sv.split_once('$')
+            && let Some(objs) = ObjRef::parse(head)
+        {
+            let (main, op) = match rest.split_once('/') {
+                Some((m, o)) => (m, Some(o)),
+                None => (rest, None),
+            };
+            let prop = match (objs.is_player(), main) {
+                (_, "Amount") => ObjPropKind::Amount,
+                (false, "CardPower") => ObjPropKind::Power,
+                (false, "CardToughness") => ObjPropKind::Toughness,
+                (false, "CardManaCost") => ObjPropKind::ManaValue,
+                (true, "CardsInHand") => ObjPropKind::CardsInHand,
+                (true, "LifeTotal") => ObjPropKind::LifeTotal,
+                _ => return Err(bad("SVar", sv)),
+            };
+            (Expr::ObjProp { objs, prop }, op)
+        } else {
             return Err(bad("SVar", sv));
         };
-        let (main, op) = match rest.split_once('/') {
-            Some((m, o)) => (m, Some(o)),
-            None => (rest, None),
-        };
-        let base = Expr::parse_count(main).ok_or_else(|| bad("Count", sv))?;
         let Some(op) = op else { return Ok(base) };
         let (name, arg) = match op.split_once('.') {
             Some((n, a)) => (n, Some(a)),
@@ -227,9 +297,6 @@ impl Expr {
                 zones,
                 spec: ValidSpec::parse(spec).ok()?,
             });
-        }
-        if main == "Remembered$Amount" {
-            return Some(Expr::RememberedCount);
         }
         if let Some(kind) = main.strip_prefix("CardCounters.") {
             return Some(Expr::CardCounters(kind.to_string()));
@@ -493,6 +560,64 @@ impl GameState {
         v
     }
 
+    fn eval_obj_prop(&self, objs: ObjRef, prop: ObjPropKind, ctx: &EvalCtx) -> i32 {
+        use crate::decision::Target;
+        if objs.is_player() {
+            let players: Vec<PlayerId> = match objs {
+                ObjRef::TargetedPlayer => ctx
+                    .targets
+                    .iter()
+                    .filter_map(|t| match t {
+                        Target::Player(p) => Some(*p),
+                        Target::Card(_) => None,
+                    })
+                    .collect(),
+                _ => ctx.trig.and_then(|t| t.player).into_iter().collect(),
+            };
+            return players
+                .iter()
+                .map(|p| match prop {
+                    ObjPropKind::CardsInHand => self.player(*p).hand.len() as i32,
+                    ObjPropKind::LifeTotal => self.player(*p).life,
+                    _ => 1,
+                })
+                .sum();
+        }
+        let cards: Vec<CardId> = match objs {
+            ObjRef::Targeted => ctx
+                .targets
+                .iter()
+                .filter_map(|t| match t {
+                    Target::Card(c) => Some(*c),
+                    Target::Player(_) => None,
+                })
+                .collect(),
+            ObjRef::Remembered => self.card(ctx.source).remembered.clone(),
+            // Nach Verlassen des Battlefields zählt das alte Objekt (LKI).
+            _ => ctx
+                .trig
+                .and_then(|t| match t.card {
+                    Some(c) if self.card(c).zone == Some(Zone::Battlefield) => Some(c),
+                    c => t.card_lki.or(c),
+                })
+                .into_iter()
+                .collect(),
+        };
+        cards
+            .iter()
+            .map(|c| match prop {
+                ObjPropKind::Power => self.chars(*c).power.unwrap_or(0),
+                ObjPropKind::Toughness => self.chars(*c).toughness.unwrap_or(0),
+                ObjPropKind::ManaValue => self
+                    .chars(*c)
+                    .mana_cost
+                    .as_ref()
+                    .map_or(0, |m| m.mana_value() as i32),
+                _ => 1,
+            })
+            .sum()
+    }
+
     pub fn eval(&self, e: &Expr, ctx: &EvalCtx) -> i32 {
         match e {
             Expr::Const(n) => *n,
@@ -510,7 +635,7 @@ impl GameState {
             Expr::YourLifeTotal => self.player(ctx.controller).life,
             Expr::YourStartingLife => self.rules.starting_life,
             Expr::CardsInYourHand => self.player(ctx.controller).hand.len() as i32,
-            Expr::RememberedCount => self.card(ctx.source).remembered.len() as i32,
+            Expr::ObjProp { objs, prop } => self.eval_obj_prop(*objs, *prop, ctx),
             Expr::Domain => {
                 let mut n = 0;
                 for t in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {

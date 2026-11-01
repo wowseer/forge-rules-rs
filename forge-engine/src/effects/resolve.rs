@@ -22,21 +22,28 @@ pub struct ResolveCtx {
 }
 
 impl ResolveCtx {
-    pub fn eval(&self) -> crate::expr::EvalCtx {
+    pub fn eval(&self) -> crate::expr::EvalCtx<'_> {
+        self.eval_with(&[])
+    }
+
+    /// Wie [`ResolveCtx::eval`], mit den Zielen der auflösenden Fähigkeit.
+    pub fn eval_with<'a>(&'a self, targets: &'a [Target]) -> crate::expr::EvalCtx<'a> {
         crate::expr::EvalCtx {
             source: self.source,
             controller: self.controller,
             x: self.x,
+            targets,
+            trig: self.trig.as_ref(),
         }
     }
 }
 
 impl GameState {
-    fn amount(&self, a: &Amount, ctx: &ResolveCtx) -> i32 {
+    fn amount(&self, a: &Amount, ctx: &ResolveCtx, targets: &[Target]) -> i32 {
         match a {
             Amount::Fixed(n) => *n,
             Amount::XPaid => ctx.x as i32,
-            Amount::Expr(e) => self.eval(e, &ctx.eval()),
+            Amount::Expr(e) => self.eval(e, &ctx.eval_with(targets)),
         }
     }
 
@@ -182,25 +189,25 @@ impl GameState {
     ) -> Res<()> {
         match eff {
             Effect::DealDamage { amount, to } => {
-                let n = self.amount(amount, ctx).max(0) as u32;
+                let n = self.amount(amount, ctx, targets).max(0) as u32;
                 for t in self.resolve_defined(*to, targets, ctx) {
                     self.deal_damage(ctx.source, t, n);
                 }
             }
             Effect::Draw { amount, who } => {
-                let n = self.amount(amount, ctx).max(0) as u32;
+                let n = self.amount(amount, ctx, targets).max(0) as u32;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     self.draw_n(p, n);
                 }
             }
             Effect::GainLife { amount, who } => {
-                let n = self.amount(amount, ctx);
+                let n = self.amount(amount, ctx, targets);
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     self.gain_life(p, n);
                 }
             }
             Effect::LoseLife { amount, who } => {
-                let n = self.amount(amount, ctx);
+                let n = self.amount(amount, ctx, targets);
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     self.lose_life(p, n);
                 }
@@ -218,8 +225,8 @@ impl GameState {
                 toughness,
                 keywords,
             } => {
-                let p = self.amount(power, ctx);
-                let t = self.amount(toughness, ctx);
+                let p = self.amount(power, ctx, targets);
+                let t = self.amount(toughness, ctx, targets);
                 let ts = self.resolve_defined(*what, targets, ctx);
                 for c in self.cards_of(&ts) {
                     let timestamp = self.timestamp();
@@ -282,7 +289,7 @@ impl GameState {
                 counter,
                 amount,
             } => {
-                let n = self.amount(amount, ctx).max(0) as u32;
+                let n = self.amount(amount, ctx, targets).max(0) as u32;
                 let ts = self.resolve_defined(*what, targets, ctx);
                 for c in self.cards_of(&ts) {
                     self.add_counters(c, counter, n);
@@ -296,9 +303,9 @@ impl GameState {
                 power,
                 toughness,
             } => {
-                let n = self.amount(amount, ctx).max(0) as u32;
-                let p_override = power.as_ref().map(|a| self.amount(a, ctx));
-                let t_override = toughness.as_ref().map(|a| self.amount(a, ctx));
+                let n = self.amount(amount, ctx, targets).max(0) as u32;
+                let p_override = power.as_ref().map(|a| self.amount(a, ctx, targets));
+                let t_override = toughness.as_ref().map(|a| self.amount(a, ctx, targets));
                 let owners = Self::players_of(&self.resolve_defined(*owner, targets, ctx));
                 for p in owners {
                     for _ in 0..n {
@@ -343,8 +350,8 @@ impl GameState {
                 toughness,
                 keywords,
             } => {
-                let p = self.amount(power, ctx);
-                let t = self.amount(toughness, ctx);
+                let p = self.amount(power, ctx, targets);
+                let t = self.amount(toughness, ctx, targets);
                 let affected: Vec<CardId> = self
                     .battlefield
                     .iter()
@@ -383,7 +390,7 @@ impl GameState {
                 valid_cards,
                 valid_players,
             } => {
-                let n = self.amount(amount, ctx).max(0) as u32;
+                let n = self.amount(amount, ctx, targets).max(0) as u32;
                 let mut recipients: Vec<Target> = Vec::new();
                 if let Some(v) = valid_cards {
                     recipients.extend(
@@ -412,7 +419,7 @@ impl GameState {
                 num,
                 valid,
             } => {
-                let n = self.amount(num, ctx).max(0) as usize;
+                let n = self.amount(num, ctx, targets).max(0) as usize;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let hand: Vec<CardId> = self
                         .player(p)
@@ -517,7 +524,7 @@ impl GameState {
                 destroy,
                 remember,
             } => {
-                let n = self.amount(amount, ctx).max(0) as usize;
+                let n = self.amount(amount, ctx, targets).max(0) as usize;
                 // CR 101.4: erst wählen alle (APNAP-Reihenfolge der Defined-Liste),
                 // dann wird gleichzeitig geopfert.
                 let mut chosen: Vec<CardId> = Vec::new();
@@ -620,7 +627,7 @@ impl GameState {
             }
             Effect::AuraSpell => {}
             Effect::Scry { who, num } => {
-                let n = self.amount(num, ctx).max(0) as usize;
+                let n = self.amount(num, ctx, targets).max(0) as usize;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let lib = &self.player(p).library;
                     let k = n.min(lib.len());
@@ -648,7 +655,7 @@ impl GameState {
                 }
             }
             Effect::Mill { who, num } => {
-                let n = self.amount(num, ctx).max(0) as usize;
+                let n = self.amount(num, ctx, targets).max(0) as usize;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let top: Vec<CardId> = self
                         .player(p)
@@ -674,7 +681,7 @@ impl GameState {
                 dest2_bottom,
                 optional,
             } => {
-                let n = self.amount(dig, ctx).max(0) as usize;
+                let n = self.amount(dig, ctx, targets).max(0) as usize;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let top: Vec<CardId> = self
                         .player(p)
@@ -697,8 +704,8 @@ impl GameState {
                         // ChangeNum$ All: alle passenden
                         None => options.clone(),
                         Some(a) => {
-                            let max =
-                                (self.amount(a, ctx).max(0) as usize).min(options.len()) as u32;
+                            let max = (self.amount(a, ctx, targets).max(0) as usize)
+                                .min(options.len()) as u32;
                             let min = if *optional { 0 } else { max };
                             if max == 0 {
                                 Vec::new()
@@ -741,8 +748,8 @@ impl GameState {
                 colors,
                 permanent,
             } => {
-                let sp = power.as_ref().map(|a| self.amount(a, ctx));
-                let st = toughness.as_ref().map(|a| self.amount(a, ctx));
+                let sp = power.as_ref().map(|a| self.amount(a, ctx, targets));
+                let st = toughness.as_ref().map(|a| self.amount(a, ctx, targets));
                 let ts = self.resolve_defined(*what, targets, ctx);
                 for c in self.cards_of(&ts) {
                     let timestamp = self.timestamp();
@@ -817,7 +824,7 @@ impl GameState {
                 shuffle,
             } => {
                 let p = ctx.controller;
-                let n = self.amount(num, ctx).max(0) as u32;
+                let n = self.amount(num, ctx, targets).max(0) as u32;
                 // Kandidaten: eigene Karten in der Ursprungszone (Battlefield: kontrolliert).
                 let pool: Vec<CardId> = match origin {
                     Zone::Battlefield => self.battlefield_of(p).collect(),
@@ -937,7 +944,7 @@ impl GameState {
                 inherited
             };
             // CR 608.2c: bedingte Teile nur, wenn die Bedingung erfüllt ist.
-            if !self.check_conditions(&a.conditions, &ctx.eval()) {
+            if !self.check_conditions(&a.conditions, &ctx.eval_with(t)) {
                 continue;
             }
             let Some(u) = &a.unless else {

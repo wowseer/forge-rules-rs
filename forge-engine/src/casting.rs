@@ -671,6 +671,8 @@ impl GameState {
                     source: src.id,
                     controller: src.controller,
                     x: 0,
+                    targets: &[],
+                    trig: None,
                 };
                 if !self.check_conditions(&a.conditions, &ctx) {
                     continue;

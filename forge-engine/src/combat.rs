@@ -30,6 +30,8 @@ impl GameState {
                         source: *c,
                         controller: o.controller,
                         x: 0,
+                        targets: &[],
+                        trig: None,
                     };
                     if r.kind == kind
                         && r.effect_zones.contains(&zone)

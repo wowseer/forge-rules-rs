@@ -515,6 +515,8 @@ impl GameState {
                         source,
                         controller,
                         x: 0,
+                        targets: &[],
+                        trig: None,
                     };
                     if !cmp.holds(n, self.eval(&cmp.rhs, &ectx)) {
                         return None;
@@ -644,14 +646,18 @@ impl GameState {
                 if !t.active_zones.contains(&zone) {
                     continue;
                 }
-                let ectx = crate::expr::EvalCtx {
-                    source: src,
-                    controller,
-                    x: 0,
-                };
                 if let Some(info) = self
                     .trigger_matches(t, src, controller, &ev)
-                    .filter(|_| self.check_conditions(&t.conditions, &ectx))
+                    .filter(|info| {
+                        let ectx = crate::expr::EvalCtx {
+                            source: src,
+                            controller,
+                            x: 0,
+                            targets: &[],
+                            trig: Some(info),
+                        };
+                        self.check_conditions(&t.conditions, &ectx)
+                    })
                 {
                     found.push(PendingTrigger {
                         trigger: t.clone(),
@@ -667,15 +673,19 @@ impl GameState {
         while i < self.delayed_triggers.len() {
             let d = &self.delayed_triggers[i];
             let active = self.turn >= d.from_turn && d.until_turn.is_none_or(|u| self.turn <= u);
-            let ectx = crate::expr::EvalCtx {
-                source: d.source,
-                controller: d.controller,
-                x: 0,
-            };
             let hit = active
                 .then(|| self.trigger_matches(&d.trigger, d.source, d.controller, &ev))
                 .flatten()
-                .filter(|_| self.check_conditions(&d.trigger.conditions, &ectx));
+                .filter(|info| {
+                    let ectx = crate::expr::EvalCtx {
+                        source: d.source,
+                        controller: d.controller,
+                        x: 0,
+                        targets: &[],
+                        trig: Some(info),
+                    };
+                    self.check_conditions(&d.trigger.conditions, &ectx)
+                });
             if let Some(mut info) = hit {
                 let d = self.delayed_triggers.remove(i);
                 info.delay_remembered = d.remembered;

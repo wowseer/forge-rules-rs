@@ -155,3 +155,40 @@ fn filter_power_comparison() {
         o => panic!("{o:?}"),
     }
 }
+
+#[test]
+fn object_property_expressions() {
+    // Java AbilityUtils.calculateAmount: <Defined>$<Eigenschaft>
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 1);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 1);
+    let bite = put(&db, &mut g, "Bite Lite", P1, Zone::Hand);
+    let burn = put(&db, &mut g, "Hand Burn Lite", P1, Zone::Hand);
+    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    put_n(&db, &mut g, "Island", P2, Zone::Hand, 4);
+    let mut d = Driver::new(g);
+    d.cast(bite, &[Target::Card(bear)]);
+    d.pass_all();
+    assert_eq!(
+        d.g().player(P2).life,
+        17,
+        "Stärke nach +1/+0 (ParentTargeted$CardPower)"
+    );
+    d.cast(burn, &[Target::Player(P2)]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 13, "TargetedPlayer$CardsInHand");
+}
+
+#[test]
+fn triggered_card_power_uses_last_known_information() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 1);
+    put(&db, &mut g, "Death Echo Lite", P1, Zone::Battlefield);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let giant = put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(bolt, &[Target::Card(giant)]);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().player(P1).life, 23);
+}

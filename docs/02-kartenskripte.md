@@ -104,6 +104,11 @@ CompiledAbility {
   `ThisTurn$` endet im Cleanup, `NextTurn$` gilt nur im nächsten Zug. Gemerkte Objekte
   (auch Spieler) liest die Execute-Fähigkeit über `DelayTriggerRemembered` (folgt
   `moved_to`) bzw. `DelayTriggerRememberedLKI`.
+- Objekt-Ausdrücke `<Objekte>$<Eigenschaft>` (Java `calculateAmount`): Objekte
+  `Targeted`/`ParentTargeted`, `Remembered`, `TriggeredCard` (LKI nach Verlassen des
+  Battlefields), `TargetedPlayer`, `TriggeredPlayer`; Eigenschaften `Amount`, `CardPower`,
+  `CardToughness`, `CardManaCost`, `CardsInHand`, `LifeTotal`; Summe über alle Objekte,
+  danach `/Plus.N` usw. `EvalCtx` trägt dafür Ziele und Trigger-Kontext.
 - Trigger `Sacrificed`, `AttackersDeclared`, `AttackersDeclaredOneTarget`
   (`TriggeredAttackingPlayer`, `TriggeredAttackedTarget`).
 
