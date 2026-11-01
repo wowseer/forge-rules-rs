@@ -74,6 +74,14 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Darkest Hour\nManaCost:B\nTypes:Enchantment\nS:Mode$ Continuous | Affected$ Creature | SetColor$ Black | Description$ All creatures are black.\nOracle:\n",
     "Name:Akroma's Memorial Lite\nManaCost:7\nTypes:Legendary Artifact\nS:Mode$ Continuous | Affected$ Creature.YouCtrl | AddKeyword$ Flying & First Strike | Description$ Creatures you control have flying and first strike.\nOracle:\n",
     "Name:Zero Field Lite\nManaCost:2\nTypes:Artifact\nS:Mode$ Continuous | Affected$ Creature.Goblin | SetToughness$ 0 | Description$ Goblins have base toughness 0.\nOracle:\n",
+    "Name:Overrun Count Lite\nManaCost:2 G\nTypes:Sorcery\nA:SP$ DealDamage | ValidTgts$ Any | NumDmg$ X | SpellDescription$ Deal damage equal to the number of creatures you control.\nSVar:X:Count$Valid Creature.YouCtrl\nOracle:\n",
+    "Name:Crusade Count Lite\nManaCost:2 W\nTypes:Enchantment\nS:Mode$ Continuous | Affected$ Creature.YouCtrl | AddPower$ X | AddToughness$ X | Description$ Creatures you control get +1/+1 for each creature you control.\nSVar:X:Count$Valid Creature.YouCtrl\nOracle:\n",
+    "Name:Goyf Lite\nManaCost:1 G\nTypes:Creature Lhurgoyf\nPT:*/1+*\nS:Mode$ Continuous | EffectZone$ All | CharacteristicDefining$ True | SetPower$ X | SetToughness$ Y | Description$ P/T equal to cards in all graveyards (+1 toughness).\nSVar:X:Count$ValidGraveyard Card\nSVar:Y:Count$ValidGraveyard Card/Plus.1\nOracle:\n",
+    "Name:Turn Fighter Lite\nManaCost:1 R\nTypes:Creature Human Warrior\nPT:1/1\nS:Mode$ Continuous | Affected$ Card.Self | AddPower$ 2 | Condition$ PlayerTurn | Description$ As long as it's your turn, CARDNAME gets +2/+0.\nOracle:\n",
+    "Name:Island Flyer Lite\nManaCost:1 U\nTypes:Creature Fish\nPT:2/2\nS:Mode$ Continuous | Affected$ Card.Self | AddKeyword$ Flying | IsPresent$ Island.YouCtrl | Description$ CARDNAME has flying as long as you control an Island.\nOracle:\n",
+    "Name:Low Life Healer Lite\nManaCost:1 W\nTypes:Enchantment\nT:Mode$ Phase | Phase$ Upkeep | ValidPlayer$ You | TriggerZones$ Battlefield | CheckSVar$ L | SVarCompare$ LE10 | Execute$ TrigGain | TriggerDescription$ At the beginning of your upkeep, if you have 10 or less life, you gain 2 life.\nSVar:TrigGain:DB$ GainLife | LifeAmount$ 2\nSVar:L:Count$YourLifeTotal\nOracle:\n",
+    "Name:Forest Insight Lite\nManaCost:1 G\nTypes:Sorcery\nA:SP$ GainLife | LifeAmount$ 1 | SubAbility$ DBDraw | SpellDescription$ Gain 1 life. If you control a Forest, draw a card.\nSVar:DBDraw:DB$ Draw | NumCards$ 1 | ConditionPresent$ Forest.YouCtrl | ConditionCompare$ GE1\nOracle:\n",
+    "Name:Big Game Hunter Lite\nManaCost:B\nTypes:Instant\nA:SP$ Destroy | ValidTgts$ Creature.powerGE4 | SpellDescription$ Destroy target creature with power 4 or greater.\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
 ];
 

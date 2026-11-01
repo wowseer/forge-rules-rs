@@ -12,6 +12,7 @@ pub mod decision;
 pub mod definition;
 pub mod effects;
 pub mod engine;
+pub mod expr;
 pub mod flow;
 pub mod ids;
 pub mod keyword;

@@ -23,6 +23,8 @@ pub enum Amount {
     Fixed(i32),
     /// Der für X bezahlte Wert (`Count$xPaid`).
     XPaid,
+    /// Beliebiger Ausdruck (`Count$…`), siehe `expr.rs`.
+    Expr(Arc<crate::expr::Expr>),
 }
 
 /// Wen/was ein Effekt betrifft (`Defined$`, Java `AbilityUtils.getDefined…`).
@@ -154,6 +156,8 @@ pub struct CompiledAbility {
     pub description: String,
     /// `SorcerySpeed$ True` bei aktivierten Fähigkeiten.
     pub sorcery_speed: bool,
+    /// `ConditionPresent$`, `ConditionCheckSVar$` …: nur ausführen, wenn erfüllt.
+    pub conditions: Vec<crate::expr::Condition>,
 }
 
 impl CompiledAbility {
@@ -276,25 +280,11 @@ impl<'a> Ctx<'a> {
     }
 
     fn amount_value(&self, key: &str, v: &str) -> Result<Amount, CompileError> {
-        let t = v.trim().trim_start_matches('+');
-        if let Ok(n) = t.parse::<i32>() {
-            return Ok(Amount::Fixed(n));
-        }
-        // Verweis auf eine SVar (z. B. X → Count$xPaid)
-        let (neg, name) = match t.strip_prefix('-') {
-            Some(n) => (true, n),
-            None => (false, t),
-        };
-        match self.face.svar(name) {
-            Some(sv) if sv.trim() == "Count$xPaid" && !neg => Ok(Amount::XPaid),
-            Some(sv) if sv.trim().starts_with("Number$") => {
-                let n: i32 = sv.trim()["Number$".len()..]
-                    .parse()
-                    .map_err(|_| self.unsupported(key, sv))?;
-                Ok(Amount::Fixed(if neg { -n } else { n }))
-            }
-            Some(sv) => Err(self.unsupported(key, sv)),
-            None => Err(self.unsupported(key, v)),
+        use crate::expr::Expr;
+        match Expr::parse_value(self.face, v).map_err(|_| self.unsupported(key, v))? {
+            Expr::Const(n) => Ok(Amount::Fixed(n)),
+            Expr::XPaid => Ok(Amount::XPaid),
+            e => Ok(Amount::Expr(Arc::new(e))),
         }
     }
 
@@ -613,6 +603,10 @@ fn compile_depth(
         None => None,
     };
 
+    let (conditions, cond_keys) =
+        crate::expr::parse_conditions(face, &ab.params, crate::expr::CondStyle::Effect)?;
+    c.used.extend(cond_keys);
+
     // Alle übrigen Parameter müssen neutral sein.
     for (k, v) in ab.params.iter() {
         let known = c.used.iter().any(|u| u.eq_ignore_ascii_case(k))
@@ -631,6 +625,7 @@ fn compile_depth(
         sub,
         description,
         sorcery_speed,
+        conditions,
     })
 }
 

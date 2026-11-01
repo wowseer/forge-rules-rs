@@ -102,6 +102,7 @@ Der Test `turn_structure::deterministic_with_same_seed` prüft das.
 | `casting` | legale Aktionen, Land spielen, wirken, aktivieren, Kosten und Mana bezahlen, Auto-Bezahlung | 117, 305, 601, 602, 605 |
 | `combat` | Angreifer, Blocker, Kampfschaden | 506–511 |
 | `sba` | zustandsbasierte Aktionen | 704 |
+| `expr` | Ausdrücke (`Count$…`, `Number$`, Rechenoperationen) und Bedingungen (`IsPresent$`, `CheckSVar$`, `Condition$`, `ConditionPresent$` …) | 603.4, 608.2c |
 | `statics` | statische Fähigkeiten (`S:Mode$ Continuous`) kompilieren | 604 |
 | `triggers` | Trigger kompilieren (`T:`), Ereignisse (`fire`), Rückblick beim Verlassen des Battlefields, APNAP-Stapeln, optionale Trigger | 603 |
 | `flow` | Aufbau, Mulligan, Schritte, Priorität | 103, 117, 500–514 |
@@ -143,7 +144,13 @@ Battlefields immer Battlefield.
    wirkt, gegen die Zwischen-Eigenschaften (CR 613.6) – deshalb
    `card_matches_with(id, &chars, …)` statt `card_matches`.
 
-Fehlt noch: Layer 1 (Kopie), 2 (Kontrolle), 3 (Text), 7a (CDAs mit `Count$`),
+Dynamische Werte (`AddPower$ X` mit `Count$…`) und Bedingungen werden bei jeder
+Abfrage ausgewertet. Rekursionsschutz (`expr::DepthGuard`): Innerhalb einer solchen
+Auswertung ignorieren verschachtelte `chars()`-Aufrufe dynamische Statics. „+1/+1 für
+jede Kreatur“ zählt also Kreaturen, ohne sich selbst endlos auszuwerten.
+CDAs (`CharacteristicDefining$ True`) gelten in allen Zonen in Layer 7a.
+
+Fehlt noch: Layer 1 (Kopie), 2 (Kontrolle), 3 (Text),
 Abhängigkeiten (613.8), Entfernen von Fähigkeiten.
 
 ## Tests

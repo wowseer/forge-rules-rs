@@ -62,8 +62,15 @@ CompiledAbility {
 
 - `SubAbility$ DBName` verweist auf eine SVar mit `DB$ …` und wird rekursiv zu
   einer Kette kompiliert (`CompiledAbility::chain`).
-- Zahlen (`NumDmg$ 3`, `NumAtt$ +2`, `X` mit `SVar:X:Count$xPaid`, `Number$N`)
-  werden zu `Amount`. Andere `Count$`-Ausdrücke sind noch nicht unterstützt.
+- Zahlen (`NumDmg$ 3`, `NumAtt$ +2`, SVar-Namen) werden zu `Amount`; SVars werden mit
+  `expr::Expr` übersetzt: `Number$N`, `Count$xPaid`, `Count$Valid[Zone] <Filter>`,
+  `CardPower`, `CardToughness`, `CardCounters.<Typ>`, `YourLifeTotal`,
+  `YourStartingLife`, `CardsInYourHand`, `Domain`, jeweils mit einer Rechenoperation
+  `/Plus.N`, `/Minus.N`, `/Times.N`, `/Twice`, `/HalfUp` … (wie Java `doXMath`).
+- Bedingungen: Statics/Trigger `IsPresent$`/`PresentCompare$`/`PresentZone$`/
+  `PresentPlayer$`, `CheckSVar$`/`SVarCompare$`, `Condition$` (PlayerTurn, Threshold, …),
+  `PlayerTurn$`, `OpponentTurn$`; Effekte `ConditionPresent$`, `ConditionCheckSVar$` …
+  Trigger prüfen beim Auslösen und – außer bei `NoResolvingCheck$` – beim Auflösen (CR 603.4).
 - `Defined$` (You, Self, Targeted/ParentTarget, TargetedController, Player,
   Opponent, Triggered…) wird zu `Defined`. Ohne `Defined$` gilt `Targeted`, falls
   `ValidTgts$` existiert; sonst bei Karten-Effekten `Self` (wie Java

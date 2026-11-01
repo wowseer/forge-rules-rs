@@ -59,6 +59,7 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             sub: None,
             description: format!("{{T}}: Add {{{}}}. ({t})", c.symbol()),
             sorcery_speed: false,
+            conditions: Vec::new(),
         })
     })
     .collect()
@@ -124,7 +125,14 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             .as_ref()
             .is_some_and(|p| !matches!(p, forge_script::StatValue::Fixed(_)))
     {
-        unsupported.push("variable Stärke/Widerstandskraft (*)".into());
+        // `*` ist nur mit charakteristik-definierender Fähigkeit spielbar (CR 604.3).
+        let has_cda = out.statics.iter().any(|s| {
+            let crate::statics::CompiledStatic::Continuous(c) = s.as_ref();
+            c.characteristic_defining && c.has_layer7b()
+        });
+        if !has_cda {
+            unsupported.push("variable Stärke/Widerstandskraft (*) ohne CDA".into());
+        }
     }
     if face.types.has_core(CoreType::Planeswalker) {
         unsupported.push("Planeswalker".into());

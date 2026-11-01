@@ -65,6 +65,10 @@ pub struct CompiledTrigger {
     pub active_zones: Vec<Zone>,
     /// `OptionalDecider$ You`: „you may“.
     pub optional: bool,
+    /// Bedingungen (CR 603.4 „intervening if“), geprüft beim Auslösen und Auflösen.
+    pub conditions: Vec<crate::expr::Condition>,
+    /// `NoResolvingCheck$ True`: beim Auflösen nicht erneut prüfen.
+    pub recheck_on_resolve: bool,
     pub description: String,
 }
 
@@ -232,6 +236,10 @@ pub fn compile_trigger(
         other => return Err(CompileError::UnsupportedApi(format!("Trigger {other}"))),
     };
 
+    let (conditions, cond_keys) =
+        crate::expr::parse_conditions(face, p, crate::expr::CondStyle::Requirement)?;
+    used.extend(cond_keys);
+
     for (k, v) in p.iter() {
         if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
             return Err(unsupported(k, v));
@@ -289,6 +297,10 @@ pub fn compile_trigger(
         execute,
         active_zones,
         optional,
+        conditions,
+        recheck_on_resolve: !p
+            .get("NoResolvingCheck")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
         description: p.get("TriggerDescription").unwrap_or("").to_string(),
     })
 }
@@ -476,7 +488,15 @@ impl GameState {
                 if !t.active_zones.contains(&zone) {
                     continue;
                 }
-                if let Some(info) = self.trigger_matches(t, src, controller, &ev) {
+                let ectx = crate::expr::EvalCtx {
+                    source: src,
+                    controller,
+                    x: 0,
+                };
+                if let Some(info) = self
+                    .trigger_matches(t, src, controller, &ev)
+                    .filter(|_| self.check_conditions(&t.conditions, &ectx))
+                {
                     found.push(PendingTrigger {
                         trigger: t.clone(),
                         source: src,
@@ -533,6 +553,11 @@ impl GameState {
                         info: t.info.clone(),
                         optional: t.trigger.optional,
                         description: t.trigger.description.clone(),
+                        conditions: if t.trigger.recheck_on_resolve {
+                            t.trigger.conditions.clone()
+                        } else {
+                            Vec::new()
+                        },
                     },
                     source: t.source,
                     controller: p,

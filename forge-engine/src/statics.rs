@@ -11,6 +11,7 @@
 //! Abhängigkeiten (CR 613.8) sind noch nicht umgesetzt.
 
 use crate::effects::CompileError;
+use crate::expr::{CondStyle, Condition, Expr, parse_conditions};
 use crate::keyword::Keyword;
 use crate::valid::ValidSpec;
 use crate::zone::Zone;
@@ -31,12 +32,16 @@ pub struct ContinuousStatic {
     pub set_color: Option<ColorSet>,
     /// Layer 6
     pub add_keywords: Vec<Keyword>,
-    /// Layer 7b
-    pub set_power: Option<i32>,
-    pub set_toughness: Option<i32>,
+    /// Layer 7b (bzw. 7a bei `CharacteristicDefining$ True`)
+    pub set_power: Option<Expr>,
+    pub set_toughness: Option<Expr>,
     /// Layer 7c
-    pub add_power: i32,
-    pub add_toughness: i32,
+    pub add_power: Option<Expr>,
+    pub add_toughness: Option<Expr>,
+    /// `CharacteristicDefining$ True` (CR 604.3): wirkt nur auf die Quelle, in allen Zonen, Layer 7a.
+    pub characteristic_defining: bool,
+    /// Bedingungen (`IsPresent$`, `CheckSVar$`, `Condition$` …)
+    pub conditions: Vec<Condition>,
     pub description: String,
 }
 
@@ -54,7 +59,21 @@ impl ContinuousStatic {
         self.set_power.is_some() || self.set_toughness.is_some()
     }
     pub fn has_layer7c(&self) -> bool {
-        self.add_power != 0 || self.add_toughness != 0
+        self.add_power.is_some() || self.add_toughness.is_some()
+    }
+
+    /// Hängt das Ergebnis vom Spielzustand ab (Bedingungen, Zähler)? Solche
+    /// Statics werden bei verschachtelten Auswertungen übersprungen.
+    pub fn is_dynamic(&self) -> bool {
+        !self.conditions.is_empty()
+            || [
+                &self.set_power,
+                &self.set_toughness,
+                &self.add_power,
+                &self.add_toughness,
+            ]
+            .iter()
+            .any(|e| e.as_ref().is_some_and(|e| !e.is_const()))
     }
 }
 
@@ -65,27 +84,22 @@ pub enum CompiledStatic {
 
 const NEUTRAL: &[&str] = &["Mode", "Description", "Secondary", "AILogic"];
 
-fn zones(s: &str) -> Option<Vec<Zone>> {
-    s.split(',').map(Zone::parse).collect()
-}
+const ALL: [Zone; 7] = [
+    Zone::Library,
+    Zone::Hand,
+    Zone::Battlefield,
+    Zone::Graveyard,
+    Zone::Stack,
+    Zone::Exile,
+    Zone::Command,
+];
 
-/// Feste Zahl oder SVar mit `Number$N`; andere Ausdrücke sind (noch) nicht unterstützt.
-fn number(face: &CardFace, v: &str) -> Option<i32> {
-    let t = v.trim().trim_start_matches('+');
-    if let Ok(n) = t.parse() {
-        return Some(n);
+/// Zonenliste; `All` = alle Zonen.
+fn zones(s: &str) -> Option<Vec<Zone>> {
+    if s.trim() == "All" {
+        return Some(ALL.to_vec());
     }
-    let (neg, name) = match t.strip_prefix('-') {
-        Some(n) => (true, n),
-        None => (false, t),
-    };
-    let n: i32 = face
-        .svar(name)?
-        .trim()
-        .strip_prefix("Number$")?
-        .parse()
-        .ok()?;
-    Some(if neg { -n } else { n })
+    s.split(',').map(Zone::parse).collect()
 }
 
 pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStatic, CompileError> {
@@ -108,6 +122,11 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         Some("Self") => true,
         Some(v) => return Err(err("AffectedDefined", v)),
     };
+    // CDAs (CR 604.3) wirken immer nur auf die Quelle, in jeder Zone.
+    let cda = p
+        .get("CharacteristicDefining")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let affects_self_only = affects_self_only || cda;
     let affected = match get("Affected") {
         Some(a) => Some(ValidSpec::parse(a).map_err(CompileError::Valid)?),
         None if affects_self_only => None,
@@ -123,10 +142,12 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
     }
     let affected_zones = match get("AffectedZone") {
         Some(z) => zones(z).ok_or_else(|| err("AffectedZone", z))?,
+        None if cda => ALL.to_vec(),
         None => vec![Zone::Battlefield],
     };
     let effect_zones = match get("EffectZone") {
         Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+        None if cda => ALL.to_vec(),
         None => vec![Zone::Battlefield],
     };
     let add_types = match get("AddType") {
@@ -163,17 +184,23 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         None => Vec::new(),
     };
     let num =
-        |k: &'static str, used: &mut Vec<&'static str>| -> Result<Option<i32>, CompileError> {
+        |k: &'static str, used: &mut Vec<&'static str>| -> Result<Option<Expr>, CompileError> {
             used.push(k);
             match p.get(k) {
-                Some(v) => number(face, v).map(Some).ok_or_else(|| err(k, v)),
+                Some(v) => Expr::parse_value(face, v).map(Some).map_err(|_| err(k, v)),
                 None => Ok(None),
             }
         };
     let set_power = num("SetPower", &mut used)?;
     let set_toughness = num("SetToughness", &mut used)?;
-    let add_power = num("AddPower", &mut used)?.unwrap_or(0);
-    let add_toughness = num("AddToughness", &mut used)?.unwrap_or(0);
+    let add_power = num("AddPower", &mut used)?;
+    let add_toughness = num("AddToughness", &mut used)?;
+    used.push("CharacteristicDefining");
+    let characteristic_defining = p
+        .get("CharacteristicDefining")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let (conditions, cond_keys) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(cond_keys);
 
     for (k, v) in p.iter() {
         if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
@@ -192,6 +219,8 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         set_toughness,
         add_power,
         add_toughness,
+        characteristic_defining,
+        conditions,
         description: p.get("Description").unwrap_or("").to_string(),
     }))
 }
@@ -215,10 +244,17 @@ mod tests {
     fn anthem_and_unsupported() {
         let CompiledStatic::Continuous(a) =
             st("S:Mode$ Continuous | Affected$ Creature.YouCtrl | AddPower$ 1 | AddToughness$ 1 | Description$ x").unwrap();
-        assert_eq!((a.add_power, a.add_toughness), (1, 1));
+        assert_eq!(
+            (a.add_power, a.add_toughness),
+            (Some(Expr::Const(1)), Some(Expr::Const(1)))
+        );
         assert!(st("S:Mode$ Continuous | Affected$ Creature | AddPower$ X").is_ok());
         assert!(
             st("S:Mode$ Continuous | Affected$ Creature | IsPresent$ Card.Self | AddPower$ 1")
+                .is_ok()
+        );
+        assert!(
+            st("S:Mode$ Continuous | Affected$ Creature | IsPresent2$ Card.Self | AddPower$ 1")
                 .is_err()
         );
         assert!(st("S:Mode$ Continuous | Affected$ You | AddKeyword$ Hexproof").is_err());

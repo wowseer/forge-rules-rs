@@ -20,11 +20,22 @@ pub struct ResolveCtx {
     pub trig: Option<crate::triggers::TriggerInfo>,
 }
 
+impl ResolveCtx {
+    pub fn eval(&self) -> crate::expr::EvalCtx {
+        crate::expr::EvalCtx {
+            source: self.source,
+            controller: self.controller,
+            x: self.x,
+        }
+    }
+}
+
 impl GameState {
     fn amount(&self, a: &Amount, ctx: &ResolveCtx) -> i32 {
         match a {
             Amount::Fixed(n) => *n,
             Amount::XPaid => ctx.x as i32,
+            Amount::Expr(e) => self.eval(e, &ctx.eval()),
         }
     }
 
@@ -392,6 +403,10 @@ impl GameState {
             } else {
                 inherited
             };
+            // CR 608.2c: bedingte Teile nur, wenn die Bedingung erfüllt ist.
+            if !self.check_conditions(&a.conditions, &ctx.eval()) {
+                continue;
+            }
             self.apply_effect(&a.effect, t, ctx, ch)?;
         }
         Ok(())
@@ -438,7 +453,14 @@ impl GameState {
                 legal_targets.push(legal);
             }
         }
-        let fizzle = had_targets && !any_legal;
+        // CR 603.4: „intervening if“ beim Auflösen erneut prüfen – sonst passiert nichts.
+        let condition_failed = match &item.kind {
+            StackKind::Trigger { conditions, .. } => {
+                !self.check_conditions(conditions, &ctx.eval())
+            }
+            _ => false,
+        };
+        let fizzle = (had_targets && !any_legal) || condition_failed;
 
         self.stack.pop();
         if fizzle {

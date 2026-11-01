@@ -164,6 +164,8 @@ pub enum StackKind {
         info: crate::triggers::TriggerInfo,
         optional: bool,
         description: String,
+        /// Beim Auflösen erneut zu prüfende Bedingungen (CR 603.4).
+        conditions: Vec<crate::expr::Condition>,
     },
 }
 
@@ -477,6 +479,7 @@ impl GameState {
             affected: Option<bool>,
         }
         let mut statics: Vec<Src> = Vec::new();
+        let nested = crate::expr::DepthGuard::active();
         if let Some(zone) = c.zone {
             let sources = self
                 .battlefield
@@ -488,11 +491,22 @@ impl GameState {
                 .players
                 .iter()
                 .flat_map(|p| p.graveyard.iter().chain(p.hand.iter()).copied());
-            for sid in sources.chain(player_zone_sources) {
+            // Das Objekt selbst immer (CDAs gelten in jeder Zone, auch Bibliothek/Stapel).
+            let own = std::iter::once(id).filter(|_| {
+                !matches!(
+                    zone,
+                    Zone::Battlefield | Zone::Exile | Zone::Command | Zone::Graveyard | Zone::Hand
+                )
+            });
+            for sid in sources.chain(player_zone_sources).chain(own) {
                 let s = self.card(sid);
                 let Some(szone) = s.zone else { continue };
                 for cs in &s.compiled().statics {
                     let CompiledStatic::Continuous(st) = cs.as_ref();
+                    // Rekursionsschutz: in verschachtelten Auswertungen nur statische Werte.
+                    if nested && st.is_dynamic() {
+                        continue;
+                    }
                     if st.effect_zones.contains(&szone) && st.affected_zones.contains(&zone) {
                         statics.push(Src {
                             st,
@@ -506,6 +520,21 @@ impl GameState {
             }
         }
         statics.sort_by_key(|s| s.ts);
+        let ectx = |s: &Src| crate::expr::EvalCtx {
+            source: s.source,
+            controller: s.you,
+            x: 0,
+        };
+        {
+            let _g = crate::expr::DepthGuard::enter();
+            statics.retain(|s| {
+                s.st.conditions.is_empty() || self.check_conditions(&s.st.conditions, &ectx(s))
+            });
+        }
+        let value = |this: &GameState, s: &Src, e: &Option<crate::expr::Expr>| -> Option<i32> {
+            let _g = crate::expr::DepthGuard::enter();
+            e.as_ref().map(|e| this.eval(e, &ectx(s)))
+        };
         let mut pumps: Vec<&ContinuousEffect> =
             self.effects.iter().filter(|e| e.affected == id).collect();
         pumps.sort_by_key(|e| e.timestamp);
@@ -514,7 +543,10 @@ impl GameState {
         let applies = |this: &GameState, s: &mut Src, ch: &Characteristics| -> bool {
             *s.affected.get_or_insert_with(|| {
                 (!s.st.affects_self_only || id == s.source)
-                    && s.st.affected.as_ref().is_none_or(|a| this.card_matches_with(id, ch, a, s.source, s.you))
+                    && s.st
+                        .affected
+                        .as_ref()
+                        .is_none_or(|a| this.card_matches_with(id, ch, a, s.source, s.you))
             })
         };
 
@@ -548,14 +580,19 @@ impl GameState {
                 }
             }
         }
-        // Layer 7b
-        for s in statics.iter_mut().filter(|s| s.st.has_layer7b()) {
-            if applies(self, s, &ch) {
-                if let Some(p) = s.st.set_power {
-                    ch.power = Some(p);
-                }
-                if let Some(t) = s.st.set_toughness {
-                    ch.toughness = Some(t);
+        // Layer 7a (CDAs), dann 7b
+        for cda_pass in [true, false] {
+            for s in statics
+                .iter_mut()
+                .filter(|s| s.st.has_layer7b() && s.st.characteristic_defining == cda_pass)
+            {
+                if applies(self, s, &ch) {
+                    if let Some(p) = value(self, s, &s.st.set_power) {
+                        ch.power = Some(p);
+                    }
+                    if let Some(t) = value(self, s, &s.st.set_toughness) {
+                        ch.toughness = Some(t);
+                    }
                 }
             }
         }
@@ -564,8 +601,8 @@ impl GameState {
         let mut dt = 0;
         for s in statics.iter_mut().filter(|s| s.st.has_layer7c()) {
             if applies(self, s, &ch) {
-                dp += s.st.add_power;
-                dt += s.st.add_toughness;
+                dp += value(self, s, &s.st.add_power).unwrap_or(0);
+                dt += value(self, s, &s.st.add_toughness).unwrap_or(0);
             }
         }
         for e in &pumps {

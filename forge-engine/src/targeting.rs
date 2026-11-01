@@ -56,6 +56,25 @@ impl GameState {
             Prop::With(k) => ch.has(k),
             Prop::Without(k) => !ch.has(k),
             Prop::PlayerOpponent => false,
+            Prop::Stat { stat, op, value } => {
+                let v = match stat {
+                    crate::valid::Stat::Power => ch.power,
+                    crate::valid::Stat::Toughness => ch.toughness,
+                    crate::valid::Stat::ManaValue => Some(
+                        ch.mana_cost
+                            .as_ref()
+                            .map(|m| m.mana_value() as i32)
+                            .unwrap_or(0),
+                    ),
+                };
+                v.is_some_and(|v| {
+                    crate::expr::Compare {
+                        op: *op,
+                        rhs: crate::expr::Expr::Const(*value),
+                    }
+                    .holds(v, *value)
+                })
+            }
         }
     }
 

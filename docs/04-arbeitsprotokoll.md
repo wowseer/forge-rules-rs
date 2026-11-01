@@ -47,12 +47,23 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
   Statics Bedingungen (`IsPresent$`, `Condition$`, `CheckSVar$`), `X`-Werte
   (`Count$…`) oder Auren/Ausrüstung (`AffectedDefined$ Enchanted/Equipped`, 1.010×) brauchen.
 
+### Nachtrag: Ausdrücke und Bedingungen
+
+- `expr.rs`: `Count$`-Zähler mit Rechenoperationen, Vergleiche (`GE3`, `EQX`),
+  Bedingungen für Statics, Trigger (intervening if, CR 603.4) und Effekte.
+- CDAs (`CharacteristicDefining$`, Layer 7a, alle Zonen) – Karten mit `*`-P/T spielbar.
+- Filter: `powerGE4`, `toughnessLE2`, `cmcEQ3`, `StrictlySelf`; `EffectZone$ All`.
+- 8 neue Tests (123 gesamt), 1.000 Zufallspartien ohne Absturz.
+- Unterstützung: 14,7 % → **17,4 %** (Pauper 29,0 %, Modern 18,8 %).
+- **Bekanntes Problem – Performance:** Der Lasttest dauert ~4× länger (403 s statt 107 s
+  für 1.000 Partien), weil `chars()` dynamische Statics bei jeder Abfrage neu auswertet.
+  Lösung später: Eigenschaften pro Zustandsversion cachen.
+
 ### Nächste Schritte
 
-1. **Ausdrücke und Bedingungen**: `Count$…`-SVars, `IsPresent$`/`PresentCompare$`,
-   `CheckSVar$`/`SVarCompare$`, `Condition$` – gemeinsam genutzt von Statics, Triggern
-   und Effekten.
-2. **Auren und Ausrüstung**: `Enchant`, `Attach`, `Equip`, `AffectedDefined$ Enchanted/Equipped`,
+1. **Token** (442 + 343 über Trigger), **Charm** (434), **Effect** (350), **Discard**, **PumpAll**, **Counter**.
+2. **Replacement-Effekte** (`Moved`: 394, ETB getappt usw.).
+3. **Auren und Ausrüstung**: `Enchant`, `Attach`, `Equip`, `AffectedDefined$ Enchanted/Equipped`,
    SBA 704.5m/n/p.
 3. **Charm** (modale Zauber), **Token**, **Effect**, **Discard**, **Counter**, **PumpAll**.
 4. Trigger-Bedingungen (`IsPresent`, `CheckSVar`) und `Count$`-Ausdrücke.

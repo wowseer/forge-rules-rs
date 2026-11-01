@@ -58,6 +58,19 @@ pub enum Prop {
     Without(Keyword),
     /// Spieler-Eigenschaft `Opponent` in `Player.Opponent`.
     PlayerOpponent,
+    /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
+    Stat {
+        stat: Stat,
+        op: crate::expr::CmpOp,
+        value: i32,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Stat {
+    Power,
+    Toughness,
+    ManaValue,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -136,7 +149,7 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
         "OppCtrl" => Prop::OppCtrl,
         "YouOwn" => Prop::YouOwn,
         "Other" | "StrictlyOther" => Prop::Other,
-        "Self" => Prop::SelfCard,
+        "Self" | "StrictlySelf" => Prop::SelfCard,
         "tapped" => Prop::Tapped,
         "untapped" => Prop::Untapped,
         "attacking" => Prop::Attacking,
@@ -148,6 +161,28 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
         "Colorless" | "colorless" => Prop::Colorless,
         "nonColorless" => Prop::NonColorless,
         _ => {
+            for (prefix, stat) in [
+                ("power", Stat::Power),
+                ("toughness", Stat::Toughness),
+                ("cmc", Stat::ManaValue),
+            ] {
+                if let Some(rest) = p.strip_prefix(prefix)
+                    && rest.len() > 2
+                {
+                    let op = match &rest[..2] {
+                        "LT" => Some(crate::expr::CmpOp::Lt),
+                        "LE" => Some(crate::expr::CmpOp::Le),
+                        "EQ" => Some(crate::expr::CmpOp::Eq),
+                        "GE" => Some(crate::expr::CmpOp::Ge),
+                        "GT" => Some(crate::expr::CmpOp::Gt),
+                        "NE" => Some(crate::expr::CmpOp::Ne),
+                        _ => None,
+                    };
+                    if let (Some(op), Ok(value)) = (op, rest[2..].parse::<i32>()) {
+                        return Ok(Prop::Stat { stat, op, value });
+                    }
+                }
+            }
             if let Some(rest) = p.strip_prefix("non") {
                 if let Some(c) = colors(rest) {
                     return Ok(Prop::NonColor(c));
@@ -281,6 +316,7 @@ mod tests {
             assert!(ValidSpec::parse(s).is_ok(), "{s}");
         }
         assert_eq!(ValidSpec::parse("Any").unwrap().alternatives.len(), 4);
-        assert!(ValidSpec::parse("Creature.powerGE3").is_err());
+        assert!(ValidSpec::parse("Creature.powerGE3").is_ok());
+        assert!(ValidSpec::parse("Creature.enchanted").is_err());
     }
 }
