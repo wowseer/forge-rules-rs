@@ -59,6 +59,7 @@ impl GameState {
 
     /// CR 508.1a: Kreaturen, die angreifen können.
     pub fn attack_candidates(&self, p: PlayerId) -> Vec<CardId> {
+        let _cache = crate::state::CharsCache::enter();
         self.battlefield_of(p)
             .filter(|c| {
                 self.is_creature(*c)
@@ -72,6 +73,7 @@ impl GameState {
 
     /// CR 509.1a: Kreaturen von `p`, die blocken können.
     pub fn block_candidates(&self, p: PlayerId) -> Vec<CardId> {
+        let _cache = crate::state::CharsCache::enter();
         self.battlefield_of(p)
             .filter(|c| {
                 self.is_creature(*c)

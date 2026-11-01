@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Überträgt rust/tools/regelstatus.csv in die Fortschritts-Tabellen und die Doku.
 
-- Forge_Rules/Forge_Rules_Engine.xlsx (Sheet „Rules“, Spalte G) und Forge_Rules/Forge_*.xlsx (Spalte F):
+- Forge_Rules_Engine.xlsx (Repo-Root, früher Forge_Rules/; Sheet „Rules“, Spalte G) und Forge_Rules/Forge_*.xlsx (Spalte F):
   ja → TRUE, n/a → Text "n/a", sonst FALSE.
 - Summary-/Fortschrittsformeln zählen "n/a"-Zeilen nicht mehr mit.
 - Erzeugt rust/docs/03-regelstand.md.
@@ -20,7 +20,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CSV = ROOT / "rust/tools/regelstatus.csv"
 DOC = ROOT / "rust/docs/03-regelstand.md"
-ENGINE = ROOT / "Forge_Rules" / "Forge_Rules_Engine.xlsx"
+# Gesamtdatei: neuer Tracker liegt im Repo-Root, ältere Stände unter Forge_Rules/.
+ENGINE = next(
+    (p for p in (ROOT / "Forge_Rules_Engine.xlsx", ROOT / "Forge_Rules" / "Forge_Rules_Engine.xlsx") if p.exists()),
+    ROOT / "Forge_Rules_Engine.xlsx",
+)
 CATEGORY_FILES = {
     "Keyword": "Forge_Keyword.xlsx",
     "Trigger": "Forge_Trigger.xlsx",
@@ -30,6 +34,12 @@ CATEGORY_FILES = {
     "Cost": "Forge_Cost.xlsx",
     "Turn Structure": "Forge_Turn_Structure.xlsx",
     "State-Based Action": "Forge_State_Based_Action.xlsx",
+    "Combat Rule": "Forge_Combat_Rule.xlsx",
+    "Mana Rule": "Forge_Mana_Rule.xlsx",
+    "Zone": "Forge_Zone.xlsx",
+    "Mulligan": "Forge_Mulligan.xlsx",
+    "Game Variant": "Forge_Game_Variant.xlsx",
+    "Game Rule Option": "Forge_Game_Rule_Option.xlsx",
 }
 ORDER = list(CATEGORY_FILES)
 
@@ -126,8 +136,11 @@ def main():
         summary = z.read("xl/worksheets/sheet1.xml").decode("utf-8")
     rules, all_rows = update_rules_sheet(rules, "C", "B", "G", None, status, seen)
     summary = re.sub(
-        r"<f>COUNTIF\(Rules!\$B\$2:\$B\$770,(A\d+)\)(?:-COUNTIFS\([^<]*\))?</f>",
-        lambda m: f'<f>COUNTIF(Rules!$B$2:$B$770,{m.group(1)})-COUNTIFS(Rules!$B$2:$B$770,{m.group(1)},Rules!$G$2:$G$770,"n/a")</f>',
+        r"<f>COUNTIF\(Rules!\$B\$2:\$B\$(\d+),(A\d+)\)(?:-COUNTIFS\([^<]*\))?</f>",
+        lambda m: (
+            f"<f>COUNTIF(Rules!$B$2:$B${m.group(1)},{m.group(2)})"
+            f'-COUNTIFS(Rules!$B$2:$B${m.group(1)},{m.group(2)},Rules!$G$2:$G${m.group(1)},"n/a")</f>'
+        ),
         summary,
     )
     summary = summary.replace(

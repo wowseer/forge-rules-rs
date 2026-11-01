@@ -170,6 +170,7 @@ impl GameState {
 
     /// Alle legalen Prioritätsaktionen von `p` (CR 117.1).
     pub fn legal_actions(&self, p: PlayerId) -> Vec<Action> {
+        let _cache = crate::state::CharsCache::enter();
         let mut acts = vec![Action::Pass];
         let pl = self.player(p);
         for &c in &pl.hand {
@@ -642,7 +643,13 @@ impl GameState {
     ) -> ManaCost {
         let mut raise = 0i32;
         let mut reduce = 0i32;
-        let sources = self.live_cards().map(|id| self.card(id)).filter(|c| {
+        // Der Zauber selbst zählt immer (beim Wirken liegt er schon in der Stack-Zone,
+        // ist aber noch kein StackItem).
+        let sources = self
+            .live_cards()
+            .chain(std::iter::once(spell))
+            .collect::<std::collections::BTreeSet<_>>();
+        let sources = sources.into_iter().map(|id| self.card(id)).filter(|c| {
             c.zone.is_some()
                 && c.compiled()
                     .statics

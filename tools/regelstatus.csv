@@ -1,4 +1,4 @@
-# Status der Regeln aus Forge_Rules/Forge_Rules_Engine.xlsx und Forge_Rules/Forge_*.xlsx.
+# Status der Regeln aus Forge_Rules_Engine.xlsx (Repo-Root) und Forge_Rules/Forge_*.xlsx.
 # Wird von tools/sync_regelstatus.py in die xlsx-Dateien und nach docs/03-regelstand.md übertragen.
 # Spalten: Kategorie;Regel;Status;Tests;Hinweis
 # Status: ja = umgesetzt + CR-Regeltests (xlsx: TRUE) | teilweise = Teilumfang (xlsx: FALSE) | n/a = außerhalb des Scopes (xlsx: n/a)

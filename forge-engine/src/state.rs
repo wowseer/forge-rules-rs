@@ -501,6 +501,28 @@ impl GameState {
     /// im ersten Layer bestimmt, in dem er wirkt (613.6). Abhängigkeiten
     /// (613.8) fehlen noch.
     pub fn chars(&self, id: CardId) -> Characteristics {
+        // Cache nur in lesenden Phasen (CharsCache) und nicht in verschachtelten
+        // Auswertungen (dort sind die Ergebnisse absichtlich unvollständig).
+        let key = (self as *const GameState as usize, id);
+        let cacheable = !crate::expr::DepthGuard::active();
+        if cacheable
+            && let Some(hit) =
+                CHARS_CACHE.with(|c| c.borrow().as_ref().and_then(|m| m.get(&key).cloned()))
+        {
+            return hit;
+        }
+        let ch = self.chars_uncached(id);
+        if cacheable {
+            CHARS_CACHE.with(|c| {
+                if let Some(m) = c.borrow_mut().as_mut() {
+                    m.insert(key, ch.clone());
+                }
+            });
+        }
+        ch
+    }
+
+    fn chars_uncached(&self, id: CardId) -> Characteristics {
         use crate::statics::{CompiledStatic, ContinuousStatic};
         let c = self.card(id);
         let face = c.face();
@@ -721,7 +743,13 @@ impl GameState {
             .chain(self.exile.iter())
             .chain(self.command.iter())
             .copied()
-            .chain(self.players.iter().flat_map(|p| p.hand.iter().chain(p.graveyard.iter()).chain(p.library.iter()).copied()))
+            .chain(self.players.iter().flat_map(|p| {
+                p.hand
+                    .iter()
+                    .chain(p.graveyard.iter())
+                    .chain(p.library.iter())
+                    .copied()
+            }))
             .chain(self.stack.iter().filter_map(|s| match s.kind {
                 StackKind::Spell { card } => Some(card),
                 _ => None,
@@ -801,5 +829,42 @@ impl GameState {
             }
         }
         g
+    }
+}
+
+thread_local! {
+    static CHARS_CACHE: std::cell::RefCell<Option<std::collections::HashMap<(usize, CardId), Characteristics>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Aktiviert für die Lebensdauer des Wächters einen Cache für `chars()`.
+///
+/// **Nur in Phasen verwenden, in denen der Zustand nicht verändert wird**
+/// (legale Aktionen, Zielkandidaten, Controller-Entscheidungen). Verschachtelte
+/// Wächter teilen den äußeren Cache.
+pub struct CharsCache {
+    owner: bool,
+}
+
+impl CharsCache {
+    pub fn enter() -> CharsCache {
+        let owner = CHARS_CACHE.with(|c| {
+            let mut c = c.borrow_mut();
+            if c.is_none() {
+                *c = Some(Default::default());
+                true
+            } else {
+                false
+            }
+        });
+        CharsCache { owner }
+    }
+}
+
+impl Drop for CharsCache {
+    fn drop(&mut self) {
+        if self.owner {
+            CHARS_CACHE.with(|c| *c.borrow_mut() = None);
+        }
     }
 }

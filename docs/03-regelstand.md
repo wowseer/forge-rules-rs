@@ -20,7 +20,13 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Cost | 42 | 5 | 2 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 14 | 1 | 3 |
-| **Summe** | **729** | **45** | **47** | **40** |
+| Combat Rule | 26 | 0 | 0 | 0 |
+| Mana Rule | 15 | 0 | 0 | 0 |
+| Zone | 20 | 0 | 0 | 0 |
+| Mulligan | 6 | 0 | 0 | 0 |
+| Game Variant | 27 | 0 | 0 | 0 |
+| Game Rule Option | 7 | 0 | 0 | 0 |
+| **Summe** | **830** | **45** | **47** | **40** |
 
 ## Keyword
 
@@ -207,3 +213,45 @@ Offen (35): tapXType, untapXType, Draw, DamageYou, GainLife, PayEnergy, Exile, E
 | Scheme | ⚪ n/a |  | Archenemy | GameAction.java (checkStateEffects) |
 
 Offen (8): CR 704.5r, CR 704.5s, CR 704.5t, CR 704.5w/x, CR 704.5y, CR 704.5z, CR 704.6c, CR 704.6d
+
+## Combat Rule
+
+| Regel | Status | Test | Hinweis | Java-Quelle |
+|---|---|---|---|---|
+
+Offen (26): Attack legality, Summoning sickness, Attack requirements, Attack restrictions, Attack restriction: ONLY_ALONE, Attack restriction: NOT_ALONE, Attack restriction: NEED_TWO_OTHERS, Attack restriction: NEED_GREATER_POWER, Attack restriction: NEED_BLACK_OR_GREEN, Attack restriction: NEVER, Global attack restrictions, Attack costs, Attack targets, Block legality, Evasion, Block requirements, Block costs, Minimum blockers, Banding, Damage assignment order, Combat damage assignment, Trample, Simultaneous combat damage, Removal from combat, Combat LKI, Multiple combat phases
+
+## Mana Rule
+
+| Regel | Status | Test | Hinweis | Java-Quelle |
+|---|---|---|---|---|
+
+Offen (15): Mana pool, Mana emptying, Mana burn, Paying mana costs, Generic mana, Hybrid mana, Phyrexian mana, Snow mana, Colorless mana, X costs, Mana restrictions, Mana conversion, Convoke payment, Sunburst, Mana refund
+
+## Zone
+
+| Regel | Status | Test | Hinweis | Java-Quelle |
+|---|---|---|---|---|
+
+Offen (20): Hand, Library, Graveyard, Battlefield, Exile, Flashback, Command, Stack, Sideboard, Ante, Merged, SchemeDeck, PlanarDeck, AttractionDeck, Junkyard, ContraptionDeck, StickerSheets, Subgame, ExtraHand, None
+
+## Mulligan
+
+| Regel | Status | Test | Hinweis | Java-Quelle |
+|---|---|---|---|---|
+
+Offen (6): London, Vancouver, Paris, Original, Houston, Free first mulligan
+
+## Game Variant
+
+| Regel | Status | Test | Hinweis | Java-Quelle |
+|---|---|---|---|---|
+
+Offen (27): Constructed, Sealed, Draft, CommanderDraft, Winston, Gauntlet, Tournament, CommanderGauntlet, Quest, QuestCommander, QuestDraft, PlanarConquest, Adventure, AdventureEvent, Puzzle, DeckManager, Vanguard, Commander, Oathbreaker, TinyLeaders, Brawl, Planeswalker, Planechase, Archenemy, ArchenemyRumble, MomirBasic, MoJhoSto
+
+## Game Rule Option
+
+| Regel | Status | Test | Hinweis | Java-Quelle |
+|---|---|---|---|---|
+
+Offen (7): Mana burn option, Order combatants, Poison counters to lose, Games per match, Play for ante, Ante rarity matching, Applied variants

@@ -130,7 +130,11 @@ pub fn run_game(
             Status::GameOver(w) => return Some(w),
             Status::NeedsDecision(d) => {
                 let p = d.player();
-                let choice = controllers[p.0 as usize].decide(engine.state(), &d);
+                let choice = {
+                    // Controller sehen den Zustand nur lesend.
+                    let _cache = crate::state::CharsCache::enter();
+                    controllers[p.0 as usize].decide(engine.state(), &d)
+                };
                 status = match engine.submit(choice) {
                     Ok(s) => s,
                     Err(e) => panic!("Controller von {p} lieferte ungültige Wahl für {d:?}: {e}"),

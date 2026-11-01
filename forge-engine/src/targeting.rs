@@ -172,6 +172,7 @@ impl GameState {
         source: CardId,
         you: PlayerId,
     ) -> Vec<Target> {
+        let _cache = crate::state::CharsCache::enter();
         let mut v: Vec<Target> = Vec::new();
         if spec.valid.allows_players() {
             v.extend(

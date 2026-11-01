@@ -30,6 +30,8 @@ impl GameState {
     }
 
     fn sba_pass(&mut self, ch: &mut Choices) -> Res<bool> {
+        // Sammelphase ist rein lesend → Eigenschaften cachen (vor dem Ausführen freigeben).
+        let cache = crate::state::CharsCache::enter();
         let mut performed = false;
 
         // --- Spieler (704.5a–c) ---
@@ -183,6 +185,7 @@ impl GameState {
             }
         }
 
+        drop(cache);
         // --- Ausführen ---
         for (p, reason) in losers {
             self.player_mut(p).lost = Some(reason);
