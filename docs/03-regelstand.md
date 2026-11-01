@@ -15,12 +15,12 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Keyword | 198 | 13 | 2 | 4 |
 | Trigger | 137 | 0 | 5 | 11 |
 | Replacement Effect | 35 | 0 | 0 | 5 |
-| Static Ability | 90 | 0 | 0 | 0 |
+| Static Ability | 90 | 0 | 1 | 0 |
 | Effect (ApiType) | 188 | 0 | 12 | 16 |
 | Cost | 42 | 5 | 2 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 12 | 0 | 3 |
-| **Summe** | **729** | **40** | **27** | **40** |
+| **Summe** | **729** | **40** | **28** | **40** |
 
 ## Keyword
 
@@ -87,8 +87,9 @@ Offen (35): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Casca
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
+| Continuous | 🟡 teilweise | `layers::affected_set_determined_after_type_change` | Affected/AffectedDefined Self, AddType, SetColor, AddKeyword, Set/AddPower/Toughness (feste Werte) | staticability/StaticAbility.java |
 
-Offen (90): Continuous, CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, AlternativeCost, CantBeCast, CantBeActivated, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CantAttack, CanAttackDefender, CantBlock, CantBlockBy, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, MinMaxBlocker, BlockTapped, AttackVigilance, MustAttack, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, CastWithFlash, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
+Offen (89): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, AlternativeCost, CantBeCast, CantBeActivated, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CantAttack, CanAttackDefender, CantBlock, CantBlockBy, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, MinMaxBlocker, BlockTapped, AttackVigilance, MustAttack, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, CastWithFlash, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
 
 ## Effect (ApiType)
 
@@ -158,7 +159,7 @@ Offen (35): tapXType, untapXType, Draw, DamageYou, GainLife, PayEnergy, Exile, E
 | End step | ✅ ja | `turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects` |  | phase/PhaseType.java (END_OF_TURN) |
 | Cleanup step | ✅ ja | `turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects` | inkl. CR 514.3a (erneuter Cleanup) | phase/PhaseType.java (CLEANUP) |
 | Priority and stack | ✅ ja | `turn_structure::stack_resolves_last_in_first_out` | CR 117, 405, 608 inkl. Fizzle (608.2b) | phase/ / GameAction.java |
-| Layer system | 🟡 teilweise | `spells::draw_gain_lose_life_and_pump` | nur Layer 6 (Fähigkeiten hinzufügen) und 7c | phase/ / GameAction.java |
+| Layer system | 🟡 teilweise | `layers::layer_7b_before_7c_regardless_of_timestamp` | Layer 4 (Typ hinzufügen), 5, 6, 7b, 7c nach Zeitstempel, betroffene Menge nach CR 613.6 | phase/ / GameAction.java |
 | Mulligan | ✅ ja | `turn_structure::london_mulligan` | London-Mulligan | phase/ / GameAction.java |
 
 ## State-Based Action

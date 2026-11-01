@@ -21,6 +21,8 @@ pub struct CompiledFace {
     pub activated: Vec<Arc<CompiledAbility>>,
     /// Ausgelöste Fähigkeiten (`T:`).
     pub triggers: Vec<Arc<crate::triggers::CompiledTrigger>>,
+    /// Statische Fähigkeiten (`S:`).
+    pub statics: Vec<Arc<crate::statics::CompiledStatic>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -68,6 +70,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         spell: None,
         activated: basic_land_mana(face),
         triggers: Vec::new(),
+        statics: Vec::new(),
     };
     for k in &face.keywords {
         let kw = Keyword::parse(k);
@@ -104,7 +107,10 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         }
     }
     for s in &face.statics {
-        unsupported.push(format!("Static: {}", s.mode));
+        match crate::statics::compile_static(face, s) {
+            Ok(c) => out.statics.push(Arc::new(c)),
+            Err(e) => unsupported.push(format!("Static: {} ({e})", s.mode)),
+        }
     }
     for r in &face.replacements {
         unsupported.push(format!("Replacement: {}", r.mode));

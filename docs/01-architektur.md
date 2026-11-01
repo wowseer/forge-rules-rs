@@ -102,6 +102,7 @@ Der Test `turn_structure::deterministic_with_same_seed` prüft das.
 | `casting` | legale Aktionen, Land spielen, wirken, aktivieren, Kosten und Mana bezahlen, Auto-Bezahlung | 117, 305, 601, 602, 605 |
 | `combat` | Angreifer, Blocker, Kampfschaden | 506–511 |
 | `sba` | zustandsbasierte Aktionen | 704 |
+| `statics` | statische Fähigkeiten (`S:Mode$ Continuous`) kompilieren | 604 |
 | `triggers` | Trigger kompilieren (`T:`), Ereignisse (`fire`), Rückblick beim Verlassen des Battlefields, APNAP-Stapeln, optionale Trigger | 603 |
 | `flow` | Aufbau, Mulligan, Schritte, Priorität | 103, 117, 500–514 |
 | `engine` | Treiber, `Controller`-Trait, `run_game` | – |
@@ -130,10 +131,20 @@ Battlefields immer Battlefield.
 ## Layer-System (Stand)
 
 `GameState::chars(id)` berechnet die Eigenschaften bei jeder Abfrage neu:
-Basiswerte der Seite → Layer 6 (Fähigkeiten aus `ContinuousEffect`) → Layer 7c
-(P/T-Änderungen und ±1/±1-Marken, seit CR 613.4c gemeinsam). Layer 1–5, 7a/7b,
-Abhängigkeiten (613.8) und statische Fähigkeiten fehlen noch. Das ist der nächste
-große Baustein (siehe Arbeitsprotokoll).
+
+1. Basiswerte der Kartenseite.
+2. Wirkende statische Fähigkeiten sammeln: Quelle in einer ihrer `EffectZone$`
+   (Standard Battlefield), Objekt in einer `AffectedZone$` (Standard Battlefield).
+   Zeitstempel = Zeitstempel der Quelle (CR 613.7a).
+3. Layer 4 (Typ hinzufügen) → 5 (Farbe setzen) → 6 (Keywords; statisch und
+   Pump-Effekte gemeinsam nach Zeitstempel) → 7b (P/T setzen) → 7c (P/T ändern,
+   ±1/±1-Marken).
+4. Ob ein Objekt betroffen ist, wird im ersten Layer entschieden, in dem der Effekt
+   wirkt, gegen die Zwischen-Eigenschaften (CR 613.6) – deshalb
+   `card_matches_with(id, &chars, …)` statt `card_matches`.
+
+Fehlt noch: Layer 1 (Kopie), 2 (Kontrolle), 3 (Text), 7a (CDAs mit `Count$`),
+Abhängigkeiten (613.8), Entfernen von Fähigkeiten.
 
 ## Tests
 

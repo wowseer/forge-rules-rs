@@ -20,6 +20,7 @@ pub mod rng;
 pub mod sba;
 pub mod simple_ai;
 pub mod state;
+pub mod statics;
 pub mod targeting;
 pub mod triggers;
 pub mod turn;

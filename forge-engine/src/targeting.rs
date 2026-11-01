@@ -4,13 +4,12 @@ use crate::decision::Target;
 use crate::effects::TargetSpec;
 use crate::ids::{CardId, PlayerId};
 use crate::keyword::Keyword;
-use crate::state::GameState;
+use crate::state::{Characteristics, GameState};
 use crate::valid::{Alternative, CardBase, PlayerBase, Prop, ValidSpec};
 use crate::zone::Zone;
 
 impl GameState {
-    fn card_base_matches(&self, id: CardId, base: &CardBase) -> bool {
-        let ch = self.chars(id);
+    fn card_base_matches(&self, id: CardId, ch: &Characteristics, base: &CardBase) -> bool {
         match base {
             CardBase::Card => true,
             CardBase::Permanent => {
@@ -24,9 +23,15 @@ impl GameState {
         }
     }
 
-    fn prop_matches(&self, id: CardId, prop: &Prop, source: CardId, you: PlayerId) -> bool {
+    fn prop_matches(
+        &self,
+        id: CardId,
+        ch: &Characteristics,
+        prop: &Prop,
+        source: CardId,
+        you: PlayerId,
+    ) -> bool {
         let c = self.card(id);
-        let ch = self.chars(id);
         let combat = self.combat.as_ref();
         match prop {
             Prop::YouCtrl => c.controller == you,
@@ -41,8 +46,8 @@ impl GameState {
             Prop::Blocking => combat.is_some_and(|cb| cb.is_blocking(id)),
             Prop::Token => c.token,
             Prop::NonToken => !c.token,
-            Prop::Is(b) => self.card_base_matches(id, b),
-            Prop::Non(b) => !self.card_base_matches(id, b),
+            Prop::Is(b) => self.card_base_matches(id, ch, b),
+            Prop::Non(b) => !self.card_base_matches(id, ch, b),
             Prop::Color(col) => ch.colors.contains(*col),
             Prop::NonColor(col) => !ch.colors.contains(*col),
             Prop::Multicolor => ch.colors.is_multicolor(),
@@ -62,10 +67,26 @@ impl GameState {
         source: CardId,
         you: PlayerId,
     ) -> bool {
+        let ch = self.chars(id);
+        self.card_matches_with(id, &ch, spec, source, you)
+    }
+
+    /// Wie [`GameState::card_matches`], aber gegen gegebene (Zwischen-)Eigenschaften –
+    /// nötig im Layer-System, um Rekursion zu vermeiden (CR 613.6).
+    pub fn card_matches_with(
+        &self,
+        id: CardId,
+        ch: &Characteristics,
+        spec: &ValidSpec,
+        source: CardId,
+        you: PlayerId,
+    ) -> bool {
         spec.alternatives.iter().any(|a| match a {
             Alternative::Card { base, props } => {
-                self.card_base_matches(id, base)
-                    && props.iter().all(|p| self.prop_matches(id, p, source, you))
+                self.card_base_matches(id, ch, base)
+                    && props
+                        .iter()
+                        .all(|p| self.prop_matches(id, ch, p, source, you))
             }
             Alternative::Player { .. } => false,
         })

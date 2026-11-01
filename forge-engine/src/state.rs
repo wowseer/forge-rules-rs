@@ -447,7 +447,14 @@ impl GameState {
 
     /// Eigenschaften nach Layer-System (aktuell: Basis + Layer 6 Fähigkeiten
     /// hinzufügen + Layer 7c P/T-Modifikationen und Marken).
+    /// Eigenschaften nach dem Layer-System (CR 613). Umgesetzt: Layer 4
+    /// (Typ hinzufügen), 5 (Farbe setzen), 6 (Keywords hinzufügen), 7b (P/T
+    /// setzen), 7c (P/T ändern inkl. ±1/±1-Marken). Innerhalb eines Layers nach
+    /// Zeitstempel (613.7); die betroffene Menge eines statischen Effekts wird
+    /// im ersten Layer bestimmt, in dem er wirkt (613.6). Abhängigkeiten
+    /// (613.8) fehlen noch.
     pub fn chars(&self, id: CardId) -> Characteristics {
+        use crate::statics::{CompiledStatic, ContinuousStatic};
         let c = self.card(id);
         let face = c.face();
         let compiled = c.compiled();
@@ -460,27 +467,115 @@ impl GameState {
             toughness: face.toughness.as_ref().map(|t| t.base()),
             keywords: compiled.keywords.clone(),
         };
-        let mut effs: Vec<&ContinuousEffect> =
+
+        // Wirkende statische Fähigkeiten: Quelle in einer EffectZone, Objekt in einer AffectedZone.
+        struct Src<'a> {
+            st: &'a ContinuousStatic,
+            source: CardId,
+            you: PlayerId,
+            ts: u64,
+            affected: Option<bool>,
+        }
+        let mut statics: Vec<Src> = Vec::new();
+        if let Some(zone) = c.zone {
+            let sources = self
+                .battlefield
+                .iter()
+                .chain(self.exile.iter())
+                .chain(self.command.iter())
+                .copied();
+            let player_zone_sources = self
+                .players
+                .iter()
+                .flat_map(|p| p.graveyard.iter().chain(p.hand.iter()).copied());
+            for sid in sources.chain(player_zone_sources) {
+                let s = self.card(sid);
+                let Some(szone) = s.zone else { continue };
+                for cs in &s.compiled().statics {
+                    let CompiledStatic::Continuous(st) = cs.as_ref();
+                    if st.effect_zones.contains(&szone) && st.affected_zones.contains(&zone) {
+                        statics.push(Src {
+                            st,
+                            source: sid,
+                            you: s.controller,
+                            ts: s.timestamp,
+                            affected: None,
+                        });
+                    }
+                }
+            }
+        }
+        statics.sort_by_key(|s| s.ts);
+        let mut pumps: Vec<&ContinuousEffect> =
             self.effects.iter().filter(|e| e.affected == id).collect();
-        effs.sort_by_key(|e| e.timestamp);
-        // Layer 6
-        for e in &effs {
-            for k in &e.keywords {
-                if !ch.keywords.contains(k) {
-                    ch.keywords.push(k.clone());
+        pumps.sort_by_key(|e| e.timestamp);
+
+        // Betroffen? Im ersten wirkenden Layer festgelegt (CR 613.6).
+        let applies = |this: &GameState, s: &mut Src, ch: &Characteristics| -> bool {
+            *s.affected.get_or_insert_with(|| {
+                (!s.st.affects_self_only || id == s.source)
+                    && s.st.affected.as_ref().is_none_or(|a| this.card_matches_with(id, ch, a, s.source, s.you))
+            })
+        };
+
+        // Layer 4
+        for s in statics.iter_mut().filter(|s| s.st.has_layer4()) {
+            if applies(self, s, &ch) {
+                for t in &s.st.add_types {
+                    ch.types.add(t);
+                }
+            }
+        }
+        // Layer 5
+        for s in statics.iter_mut().filter(|s| s.st.has_layer5()) {
+            if applies(self, s, &ch) {
+                ch.colors = s.st.set_color.unwrap_or(ch.colors);
+            }
+        }
+        // Layer 6 (statisch und Pump-Effekte gemeinsam nach Zeitstempel)
+        let mut l6: Vec<(u64, Vec<Keyword>)> = Vec::new();
+        for s in statics.iter_mut().filter(|s| s.st.has_layer6()) {
+            if applies(self, s, &ch) {
+                l6.push((s.ts, s.st.add_keywords.clone()));
+            }
+        }
+        l6.extend(pumps.iter().map(|e| (e.timestamp, e.keywords.clone())));
+        l6.sort_by_key(|x| x.0);
+        for (_, kws) in l6 {
+            for k in kws {
+                if !ch.keywords.contains(&k) {
+                    ch.keywords.push(k);
+                }
+            }
+        }
+        // Layer 7b
+        for s in statics.iter_mut().filter(|s| s.st.has_layer7b()) {
+            if applies(self, s, &ch) {
+                if let Some(p) = s.st.set_power {
+                    ch.power = Some(p);
+                }
+                if let Some(t) = s.st.set_toughness {
+                    ch.toughness = Some(t);
                 }
             }
         }
         // Layer 7c
-        if let (Some(p), Some(t)) = (ch.power.as_mut(), ch.toughness.as_mut()) {
-            for e in &effs {
-                *p += e.power;
-                *t += e.toughness;
+        let mut dp = 0;
+        let mut dt = 0;
+        for s in statics.iter_mut().filter(|s| s.st.has_layer7c()) {
+            if applies(self, s, &ch) {
+                dp += s.st.add_power;
+                dt += s.st.add_toughness;
             }
-            let plus = c.counter("P1P1") as i32;
-            let minus = c.counter("M1M1") as i32;
-            *p += plus - minus;
-            *t += plus - minus;
+        }
+        for e in &pumps {
+            dp += e.power;
+            dt += e.toughness;
+        }
+        let counters = c.counter("P1P1") as i32 - c.counter("M1M1") as i32;
+        if let (Some(p), Some(t)) = (ch.power.as_mut(), ch.toughness.as_mut()) {
+            *p += dp + counters;
+            *t += dt + counters;
         }
         ch
     }

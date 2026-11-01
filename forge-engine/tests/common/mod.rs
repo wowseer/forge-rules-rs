@@ -67,6 +67,13 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Evacuation\nManaCost:3 U U\nTypes:Instant\nA:SP$ ChangeZoneAll | ChangeType$ Creature | Origin$ Battlefield | Destination$ Hand | SpellDescription$ Return all creatures to their owners' hands.\nOracle:\n",
     "Name:Bottom Lite\nManaCost:W\nTypes:Instant\nA:SP$ ChangeZone | ValidTgts$ Creature | Origin$ Battlefield | Destination$ Library | LibraryPosition$ -1 | SpellDescription$ Put target creature on the bottom of its owner's library.\nOracle:\n",
     "Name:Undying Lite\nManaCost:1 B\nTypes:Creature Zombie\nPT:2/1\nT:Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Card.Self | Execute$ TrigReturn | TriggerDescription$ When CARDNAME dies, return it to its owner's hand.\nSVar:TrigReturn:DB$ ChangeZone | Defined$ TriggeredNewCardLKICopy | Origin$ Graveyard | Destination$ Hand\nOracle:\n",
+    "Name:Glorious Anthem\nManaCost:1 W W\nTypes:Enchantment\nS:Mode$ Continuous | Affected$ Creature.YouCtrl | AddPower$ 1 | AddToughness$ 1 | Description$ Creatures you control get +1/+1.\nOracle:\n",
+    "Name:Goblin Lord Lite\nManaCost:R R\nTypes:Creature Goblin\nPT:2/2\nS:Mode$ Continuous | Affected$ Creature.Goblin+Other | AddPower$ 1 | AddToughness$ 1 | AddKeyword$ Haste | Description$ Other Goblins get +1/+1 and have haste.\nOracle:\n",
+    "Name:Humility Lite\nManaCost:2 W W\nTypes:Enchantment\nS:Mode$ Continuous | Affected$ Creature | SetPower$ 1 | SetToughness$ 1 | Description$ Each creature has base power and toughness 1/1.\nOracle:\n",
+    "Name:Living Lands Lite\nManaCost:3 G\nTypes:Enchantment\nS:Mode$ Continuous | Affected$ Forest | AddType$ Creature | SetPower$ 1 | SetToughness$ 1 | Description$ All Forests are 1/1 creatures that are still lands.\nOracle:\n",
+    "Name:Darkest Hour\nManaCost:B\nTypes:Enchantment\nS:Mode$ Continuous | Affected$ Creature | SetColor$ Black | Description$ All creatures are black.\nOracle:\n",
+    "Name:Akroma's Memorial Lite\nManaCost:7\nTypes:Legendary Artifact\nS:Mode$ Continuous | Affected$ Creature.YouCtrl | AddKeyword$ Flying & First Strike | Description$ Creatures you control have flying and first strike.\nOracle:\n",
+    "Name:Zero Field Lite\nManaCost:2\nTypes:Artifact\nS:Mode$ Continuous | Affected$ Creature.Goblin | SetToughness$ 0 | Description$ Goblins have base toughness 0.\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
 ];
 

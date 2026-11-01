@@ -36,9 +36,24 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 - 9 neue Tests (104 gesamt), 1.000 Zufallspartien ohne Absturz.
 - Unterstützung Zielpool: 11,6 % → **13,9 %** (Pauper 25,2 %).
 
+### Nachtrag: Static Continuous + Layer-System
+
+- `statics.rs`: `Affected$`, `AffectedDefined$ Self`, `AffectedZone$`, `EffectZone$`,
+  `AddType`, `SetColor`, `AddKeyword`, `SetPower/SetToughness`, `AddPower/AddToughness`
+  (feste Werte oder `Number$`).
+- Layer 4/5/6/7b/7c mit Zeitstempeln, betroffene Menge nach CR 613.6.
+- 9 neue Tests (114 gesamt), 1.000 Zufallspartien ohne Absturz.
+- Unterstützung: 13,9 % → **14,7 %**. Kleiner Zuwachs, weil die meisten übrigen
+  Statics Bedingungen (`IsPresent$`, `Condition$`, `CheckSVar$`), `X`-Werte
+  (`Count$…`) oder Auren/Ausrüstung (`AffectedDefined$ Enchanted/Equipped`, 1.010×) brauchen.
+
 ### Nächste Schritte
 
-1. **Static Continuous** + Layer-System (1.081 Karten fehlt nur dieser Baustein).
+1. **Ausdrücke und Bedingungen**: `Count$…`-SVars, `IsPresent$`/`PresentCompare$`,
+   `CheckSVar$`/`SVarCompare$`, `Condition$` – gemeinsam genutzt von Statics, Triggern
+   und Effekten.
+2. **Auren und Ausrüstung**: `Enchant`, `Attach`, `Equip`, `AffectedDefined$ Enchanted/Equipped`,
+   SBA 704.5m/n/p.
 3. **Charm** (modale Zauber), **Token**, **Effect**, **Discard**, **Counter**, **PumpAll**.
 4. Trigger-Bedingungen (`IsPresent`, `CheckSVar`) und `Count$`-Ausdrücke.
 

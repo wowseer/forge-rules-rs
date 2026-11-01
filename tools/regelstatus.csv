@@ -17,7 +17,7 @@ Turn Structure;Postcombat main phase;teilweise;turn_structure::steps_in_order_an
 Turn Structure;End step;ja;turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects;
 Turn Structure;Cleanup step;ja;turn_structure::cleanup_discards_to_hand_size_removes_damage_ends_effects;inkl. CR 514.3a (erneuter Cleanup)
 Turn Structure;Priority and stack;ja;turn_structure::stack_resolves_last_in_first_out;CR 117, 405, 608 inkl. Fizzle (608.2b); Trigger nach APNAP (603.3b)
-Turn Structure;Layer system;teilweise;spells::draw_gain_lose_life_and_pump;nur Layer 6 (Fähigkeiten hinzufügen) und 7c
+Turn Structure;Layer system;teilweise;layers::layer_7b_before_7c_regardless_of_timestamp;Layer 4 (Typ hinzufügen), 5, 6, 7b, 7c nach Zeitstempel, betroffene Menge nach CR 613.6; Layer 1–3, 7a, Abhängigkeiten (613.8) fehlen
 Turn Structure;Mulligan;ja;turn_structure::london_mulligan;London-Mulligan; freier Mulligan (Multiplayer/Commander) fehlt noch
 State-Based Action;CR 704.5a;ja;sba::cr_704_5a_zero_life_loses;
 State-Based Action;CR 704.5b;ja;sba::cr_704_5b_draw_from_empty_library_loses;
@@ -110,3 +110,4 @@ Trigger;SpellCast;teilweise;triggers::spell_cast_trigger_resolves_before_spell;V
 Trigger;DamageDone;teilweise;triggers::combat_damage_trigger;ValidSource/ValidTarget/CombatDamage
 Effect (ApiType);ChangeZone;teilweise;change_zone::search_library_tapped_then_shuffle;Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1; RememberChanged u. a. fehlen
 Effect (ApiType);ChangeZoneAll;teilweise;change_zone::change_zone_all_bounces_everything;ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger)
+Static Ability;Continuous;teilweise;layers::affected_set_determined_after_type_change;Affected/AffectedDefined Self, AddType, SetColor, AddKeyword, Set/AddPower/Toughness (feste Werte); Enchanted/Equipped, Bedingungen, X-Werte, Spieler-Effekte fehlen
