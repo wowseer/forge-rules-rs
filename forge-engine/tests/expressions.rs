@@ -68,3 +68,58 @@ fn player_counts() {
     assert_eq!(eval(&db, &g, "PlayerCountPlayers$LowestLifeTotal"), 7);
     assert_eq!(eval(&db, &g, "PlayerCountPlayers$LifeTotal"), 27);
 }
+
+#[test]
+fn pump_double_power_and_toughness() {
+    let (db, mut g) = game_at(Step::Main1, 5);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 1);
+    let giant = put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
+    let dbl = put(&db, &mut g, "Double Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(dbl, &[forge_engine::decision::Target::Card(giant)]);
+    d.pass_all();
+    assert_eq!(d.g().chars(giant).power, Some(6));
+    assert_eq!(d.g().chars(giant).toughness, Some(6));
+}
+
+#[test]
+fn condition_self_was_cast_from_hand() {
+    let (db, mut g) = game_at(Step::Main1, 5);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 1);
+    let elf = put(&db, &mut g, "Cast Bonus Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    let hand = d.g().player(P1).hand.len();
+    d.cast(elf, &[]);
+    d.pass_all(); // Kreatur
+    d.pass_all(); // ETB
+    assert_eq!(d.g().player(P1).hand.len(), hand, "−1 gewirkt, +1 gezogen");
+    // direkt ins Spiel gebracht: nicht gewirkt → kein Ziehen
+    let (db, mut g) = game_at(Step::Main1, 5);
+    let elf = put(&db, &mut g, "Cast Bonus Lite", P1, Zone::Hand);
+    g.move_card(elf, Zone::Battlefield, true);
+    let mut d = Driver::new(g);
+    let hand = d.g().player(P1).hand.len();
+    d.pass_all();
+    assert_eq!(d.g().player(P1).hand.len(), hand);
+}
+
+#[test]
+fn search_any_number() {
+    let (db, mut g) = game_at(Step::Main1, 3);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 1);
+    let forests: Vec<_> = (0..3)
+        .map(|_| put(&db, &mut g, "Forest", P1, Zone::Library))
+        .collect();
+    let s = put(&db, &mut g, "Search Any Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(s, &[]);
+    d.pass_all();
+    match d.decision().clone() {
+        forge_engine::decision::Decision::ChooseCards { min, max, .. } => {
+            assert_eq!((min, max), (0, 3));
+        }
+        o => panic!("{o:?}"),
+    }
+    d.submit(forge_engine::decision::Choice::Cards(forests.clone()));
+    assert_eq!(count(d.g(), "Forest", Zone::Hand), 3);
+}

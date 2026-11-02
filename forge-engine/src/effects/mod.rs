@@ -117,6 +117,9 @@ pub enum Effect {
         power: Amount,
         toughness: Amount,
         keywords: Vec<Keyword>,
+        /// `NumAtt$ Double`/`NumDef$ Double`: zusätzlich + aktuelle Stärke bzw.
+        /// Widerstandskraft (verdoppeln, CR 701.10)
+        double: (bool, bool),
     },
     AddMana {
         produce: ManaProduce,
@@ -933,7 +936,13 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
             return Err(c.unsupported("Origin", origin_s));
         };
         let ct = c.get("ChangeType").unwrap_or("Card");
-        let num = c.amount("ChangeNum", Some(1))?;
+        // `ChangeNum$ Any`: beliebig viele (CR 701.19b)
+        let num = if c.ab.params.get("ChangeNum") == Some("Any") {
+            c.get("ChangeNum");
+            Amount::Fixed(i32::MAX)
+        } else {
+            c.amount("ChangeNum", Some(1))?
+        };
         let shuffle = shuffle_param.unwrap_or(*o == Zone::Library);
         return Ok(Effect::ChangeZoneSearch {
             origin: *o,
@@ -1216,8 +1225,20 @@ fn compile_depth(
         }
         "Pump" => {
             let what = c.defined(Defined::SelfCard)?;
-            let power = c.amount("NumAtt", Some(0))?;
-            let toughness = c.amount("NumDef", Some(0))?;
+            let dbl = |c: &Ctx, k: &str| c.ab.params.get(k) == Some("Double");
+            let double = (dbl(&c, "NumAtt"), dbl(&c, "NumDef"));
+            let power = if double.0 {
+                c.get("NumAtt");
+                Amount::Fixed(0)
+            } else {
+                c.amount("NumAtt", Some(0))?
+            };
+            let toughness = if double.1 {
+                c.get("NumDef");
+                Amount::Fixed(0)
+            } else {
+                c.amount("NumDef", Some(0))?
+            };
             let keywords = c.get("KW").map(Keyword::parse_list).unwrap_or_default();
             if let Some(k) = keywords.iter().find(|k| !k.is_supported()) {
                 return Err(c.unsupported("KW", &format!("{k:?}")));
@@ -1227,6 +1248,7 @@ fn compile_depth(
                 power,
                 toughness,
                 keywords,
+                double,
             }
         }
         "Mana" => {

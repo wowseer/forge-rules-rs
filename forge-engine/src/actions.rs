@@ -50,6 +50,7 @@ impl GameState {
             monstrous: false,
             exile_from_stack: false,
             last_x: 0,
+            cast_from: None,
             prevent_next: 0,
             copy: None,
         });
@@ -171,6 +172,11 @@ impl GameState {
             monstrous: false,
             exile_from_stack: false,
             last_x: 0,
+            cast_from: if from == Some(Zone::Stack) && to == Zone::Battlefield {
+                old.cast_from
+            } else {
+                None
+            },
             prevent_next: 0,
             copy: None,
         });

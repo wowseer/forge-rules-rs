@@ -90,6 +90,10 @@ pub enum Prop {
     HasCounters,
     /// `IsMonstrous`/`monstrous` (CR 701.37b)
     Monstrous,
+    /// `wasCast[From<Zone>|FromYourHand]` (Java `CardProperty` „wasCast“)
+    WasCast {
+        from: Option<crate::zone::Zone>,
+    },
     /// Spieler: Controller des Objekts, an dem die Quelle hängt (`EnchantedController`)
     EnchantedController,
     /// Karte: eine Aura (`enchanted`) bzw. Ausrüstung (`equipped`) hängt daran
@@ -265,6 +269,20 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     if p == "HasCounters" {
         return Ok(Prop::HasCounters);
+    }
+    if let Some(rest) = p.strip_prefix("wasCast") {
+        let from = match rest {
+            "" => None,
+            "FromYourHand" | "FromHand" | "FromTheirHand" => Some(crate::zone::Zone::Hand),
+            "FromYourGraveyard" | "FromGraveyard" => Some(crate::zone::Zone::Graveyard),
+            "FromExile" => Some(crate::zone::Zone::Exile),
+            "FromLibrary" => Some(crate::zone::Zone::Library),
+            _ => return Err(ValidError::Unsupported(p.to_string())),
+        };
+        return Ok(Prop::WasCast { from });
+    }
+    if p == "wasNotCast" {
+        return Ok(Prop::Not(Box::new(Prop::WasCast { from: None })));
     }
     match p {
         "EnchantedController" | "EquippedController" => return Ok(Prop::EnchantedController),

@@ -161,6 +161,9 @@ pub struct CardObj {
     pub may_play_uses: Vec<(usize, u32)>,
     /// CR 701.37b: ist monströs (durch Monstrosity).
     pub monstrous: bool,
+    /// Gewirkt aus dieser Zone (auf dem Stapel und als daraus entstandene
+    /// bleibende Karte; Java `getCastFrom`).
+    pub cast_from: Option<Zone>,
     /// Zuletzt für einen Zauber/eine Fähigkeit dieser Quelle gewähltes X
     /// (für Filter wie `cmcLEX` mit `X = Count$xPaid`).
     pub last_x: u32,

@@ -98,6 +98,9 @@ impl GameState {
             }
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
+            Prop::WasCast { from } => {
+                c.cast_from.is_some() && from.is_none_or(|z| c.cast_from == Some(z))
+            }
             Prop::EnchantedController => false,
             Prop::Enchanted | Prop::Equipped => {
                 let sub = if matches!(prop, Prop::Enchanted) {

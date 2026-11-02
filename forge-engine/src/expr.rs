@@ -305,6 +305,8 @@ pub enum Condition {
         targeted: bool,
         /// `ConditionDefined$ ChosenCard`: die gewählten Karten der Quelle.
         chosen: bool,
+        /// `ConditionDefined$ Self`: die Quelle selbst.
+        self_card: bool,
     },
 }
 
@@ -626,7 +628,7 @@ pub fn parse_conditions(
         // Java: ohne ConditionPresent$ wird ConditionDefined$ nicht geprüft.
         if !matches!(
             d,
-            "Remembered" | "RememberedLKI" | "Targeted" | "ChosenCard"
+            "Remembered" | "RememberedLKI" | "Targeted" | "ChosenCard" | "Self"
         ) {
             return Err(bad("ConditionDefined", d));
         }
@@ -640,6 +642,7 @@ pub fn parse_conditions(
                 lki: d == "RememberedLKI",
                 targeted: d == "Targeted",
                 chosen: d == "ChosenCard",
+                self_card: d == "Self",
             });
         }
     } else if let Some(p) = params.get(k_present) {
@@ -1172,6 +1175,7 @@ impl GameState {
                 lki,
                 targeted,
                 chosen,
+                self_card,
             } => {
                 if *targeted {
                     let n = ctx
@@ -1188,7 +1192,9 @@ impl GameState {
                         .count() as i32;
                     return cmp.holds(n, self.eval(&cmp.rhs, ctx));
                 }
-                let objs = if *chosen {
+                let objs = if *self_card {
+                    vec![ctx.source]
+                } else if *chosen {
                     self.card(ctx.source)
                         .chosen_cards
                         .iter()

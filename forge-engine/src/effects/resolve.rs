@@ -304,16 +304,24 @@ impl GameState {
                 power,
                 toughness,
                 keywords,
+                double,
             } => {
                 let p = self.amount(power, ctx, targets);
                 let t = self.amount(toughness, ctx, targets);
                 let ts = self.resolve_defined(*what, targets, ctx);
                 for c in self.cards_of(&ts) {
+                    let ch = self.chars(c);
+                    let dp = if double.0 { ch.power.unwrap_or(0) } else { 0 };
+                    let dt = if double.1 {
+                        ch.toughness.unwrap_or(0)
+                    } else {
+                        0
+                    };
                     let timestamp = self.timestamp();
                     self.effects.push(ContinuousEffect {
                         affected: c,
-                        power: p,
-                        toughness: t,
+                        power: p + dp,
+                        toughness: t + dt,
                         keywords: keywords.clone(),
                         duration: Duration::UntilEndOfTurn,
                         timestamp,
