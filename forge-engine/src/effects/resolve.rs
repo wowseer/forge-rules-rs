@@ -411,6 +411,106 @@ impl GameState {
                     }
                 }
             }
+            Effect::DigUntil {
+                players,
+                valid,
+                amount,
+                max_revealed,
+                found_dest,
+                revealed_dest,
+                random_order,
+                shuffle,
+                optional,
+                remember_found,
+                remember_revealed,
+                tapped,
+                gain_control,
+            } => {
+                let until = self.amount(amount, ctx, targets).max(0) as usize;
+                if until == 0 {
+                    return Ok(());
+                }
+                let max = max_revealed
+                    .as_ref()
+                    .map(|a| self.amount(a, ctx, targets).max(0) as usize);
+                for p in Self::players_of(&self.resolve_defined(*players, targets, ctx)) {
+                    if !self.player(p).is_in_game() {
+                        continue;
+                    }
+                    if *optional
+                        && !matches!(
+                            ch.ask(Decision::Confirm {
+                                player: p,
+                                prompt: "Bibliothek aufdecken?".into(),
+                            })?,
+                            Choice::Yes
+                        )
+                    {
+                        continue;
+                    }
+                    // oberste Karte = letztes Element
+                    let lib: Vec<CardId> = self.player(p).library.iter().rev().copied().collect();
+                    let limit = max.map_or(lib.len(), |m| m.min(lib.len()));
+                    let mut revealed = Vec::new();
+                    let mut found = Vec::new();
+                    for &c in &lib[..limit] {
+                        revealed.push(c);
+                        if self.card_matches(c, valid, ctx.source, ctx.controller) {
+                            found.push(c);
+                            if *remember_found {
+                                self.card_mut(ctx.source).remembered.push(c);
+                            }
+                            if found.len() == until {
+                                break;
+                            }
+                        }
+                    }
+                    self.push_event(Event::Revealed {
+                        player: p,
+                        cards: revealed.clone(),
+                    });
+                    // Java: gleiche Zielzone → alle aufgedeckten Karten der Reihe nach bewegen
+                    let sequential = found_dest.is_some()
+                        && found_dest.map(|d| d.0) == revealed_dest.map(|d| d.0);
+                    if let Some((zone, top)) = found_dest {
+                        let movers = if sequential {
+                            revealed.clone()
+                        } else {
+                            found.clone()
+                        };
+                        for c in movers {
+                            if *zone == Zone::Battlefield {
+                                let ctrl = gain_control.then_some(ctx.controller);
+                                let new = self.move_card_as(c, Zone::Battlefield, true, ctrl);
+                                if *tapped {
+                                    self.card_mut(new).tapped = true;
+                                }
+                            } else {
+                                self.move_card(c, *zone, *top);
+                            }
+                        }
+                        revealed.retain(|c| !found.contains(c));
+                    }
+                    if *remember_revealed {
+                        self.card_mut(ctx.source)
+                            .remembered
+                            .extend(revealed.iter().copied());
+                    }
+                    if *random_order {
+                        self.rng.shuffle(&mut revealed);
+                    }
+                    if !sequential && let Some((zone, top)) = revealed_dest {
+                        for c in revealed {
+                            if self.card(c).zone == Some(Zone::Library) || *zone != Zone::Library {
+                                self.move_card(c, *zone, *top);
+                            }
+                        }
+                    }
+                    if *shuffle {
+                        self.shuffle_library(p);
+                    }
+                }
+            }
             Effect::CopySpellAbility {
                 triggered_sa,
                 amount,

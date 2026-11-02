@@ -131,6 +131,24 @@ pub enum Effect {
         amount: Amount,
         mode: CounterMode,
     },
+    /// Bibliothek aufdecken, bis passende Karten gefunden sind (Java `DigUntilEffect`).
+    DigUntil {
+        players: Defined,
+        valid: ValidSpec,
+        amount: Amount,
+        max_revealed: Option<Amount>,
+        /// `None` = gefundene Karten bleiben bei den übrigen
+        found_dest: Option<(crate::zone::Zone, bool)>,
+        /// (Zone, oben in der Bibliothek); `None` = `NoMoveRevealed$`
+        revealed_dest: Option<(crate::zone::Zone, bool)>,
+        random_order: bool,
+        shuffle: bool,
+        optional: bool,
+        remember_found: bool,
+        remember_revealed: bool,
+        tapped: bool,
+        gain_control: bool,
+    },
     /// Zauber/Fähigkeit auf dem Stapel kopieren (CR 707.10, Java `CopySpellAbilityEffect`).
     CopySpellAbility {
         /// `true`: das auslösende Stapelobjekt (`TriggeredSpellAbility`), sonst die Ziele
@@ -1217,6 +1235,60 @@ fn compile_depth(
         "Tap" => Effect::Tap {
             what: c.defined(Defined::Targeted)?,
         },
+        "DigUntil" => {
+            for k in ["ValidDescription", "IsCurse"] {
+                c.get(k);
+            }
+            let flag = |c: &mut Ctx, k: &'static str| {
+                c.get(k).is_some_and(|v| v.eq_ignore_ascii_case("true"))
+            };
+            let dest = |c: &mut Ctx,
+                        zk: &'static str,
+                        pk: &'static str|
+             -> Result<Option<(crate::zone::Zone, bool)>, CompileError> {
+                let Some(z) = c.get(zk) else { return Ok(None) };
+                let zone = crate::zone::Zone::parse(z).ok_or_else(|| c.unsupported(zk, z))?;
+                let top = match c.get(pk) {
+                    None | Some("0") => true,
+                    Some("-1") => false,
+                    Some(v) => return Err(c.unsupported(pk, v)),
+                };
+                Ok(Some((zone, top)))
+            };
+            let found_dest = dest(&mut c, "FoundDestination", "FoundLibraryPosition")?;
+            let no_move_revealed = flag(&mut c, "NoMoveRevealed");
+            let revealed_dest = dest(&mut c, "RevealedDestination", "RevealedLibraryPosition")?;
+            if revealed_dest.is_none() && !no_move_revealed {
+                return Err(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "RevealedDestination",
+                });
+            }
+            let valid = ValidSpec::parse(c.get("Valid").unwrap_or("Card"))?;
+            let max_revealed = match c.get("MaxRevealed") {
+                Some(v) => Some(c.amount_value("MaxRevealed", v)?),
+                None => None,
+            };
+            Effect::DigUntil {
+                players: c.defined(Defined::You)?,
+                valid,
+                amount: c.amount("Amount", Some(1))?,
+                max_revealed,
+                found_dest,
+                revealed_dest: if no_move_revealed {
+                    None
+                } else {
+                    revealed_dest
+                },
+                random_order: flag(&mut c, "RevealRandomOrder"),
+                shuffle: flag(&mut c, "Shuffle"),
+                optional: flag(&mut c, "Optional"),
+                remember_found: flag(&mut c, "RememberFound"),
+                remember_revealed: flag(&mut c, "RememberRevealed"),
+                tapped: flag(&mut c, "Tapped"),
+                gain_control: flag(&mut c, "GainControl"),
+            }
+        }
         "CopySpellAbility" => {
             match c.get("TargetType") {
                 Some("Spell") | None => {}

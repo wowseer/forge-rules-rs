@@ -419,6 +419,11 @@ pub enum Flow {
 /// Protokoll für Tests, Replays und den Abgleich mit der Java-Engine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    /// Karten wurden aufgedeckt (CR 701.20).
+    Revealed {
+        player: PlayerId,
+        cards: Vec<CardId>,
+    },
     /// Ein Stapelobjekt wurde kopiert (CR 707.10).
     Copied {
         item: u32,
