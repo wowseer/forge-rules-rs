@@ -110,6 +110,12 @@ impl GameState {
                 .and_then(|t| t.target)
                 .into_iter()
                 .collect(),
+            Defined::ChosenPlayer => self
+                .card(ctx.source)
+                .chosen_player
+                .map(Target::Player)
+                .into_iter()
+                .collect(),
             Defined::ExiledWith => self
                 .exile
                 .iter()
@@ -1408,13 +1414,87 @@ impl GameState {
             Effect::Cleanup {
                 what,
                 clear_remembered,
+                clear_chosen,
             } => {
                 for t in self.resolve_defined(*what, targets, ctx) {
-                    if let (Target::Card(c), true) = (t, *clear_remembered) {
-                        let o = self.card_mut(c);
+                    let Target::Card(c) = t else { continue };
+                    let o = self.card_mut(c);
+                    if *clear_remembered {
                         o.remembered.clear();
                         o.remembered_players.clear();
                     }
+                    if clear_chosen[0] {
+                        o.chosen_cards.clear();
+                    }
+                    if clear_chosen[1] {
+                        o.chosen_player = None;
+                    }
+                    if clear_chosen[2] {
+                        o.chosen_color = None;
+                    }
+                    if clear_chosen[3] {
+                        o.chosen_type = None;
+                    }
+                }
+            }
+            Effect::ChoosePlayer {
+                who,
+                choices,
+                random,
+                remember,
+            } => {
+                for chooser in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let options: Vec<PlayerId> = self
+                        .players_from(self.active)
+                        .into_iter()
+                        .filter(|p| {
+                            self.player(*p).is_in_game()
+                                && self.player_matches_src(*p, choices, chooser, ctx.source)
+                        })
+                        .collect();
+                    if options.is_empty() {
+                        continue;
+                    }
+                    let chosen = if *random || options.len() == 1 {
+                        options[self.rng.below(options.len() as u64) as usize]
+                    } else {
+                        match ch.ask(Decision::ChooseTargets {
+                            player: chooser,
+                            source: ctx.source,
+                            description: "Spieler wählen".into(),
+                            candidates: options.iter().map(|p| Target::Player(*p)).collect(),
+                            min: 1,
+                            max: 1,
+                        })? {
+                            Choice::Targets(v) => v
+                                .iter()
+                                .find_map(|t| match t {
+                                    Target::Player(p) if options.contains(p) => Some(*p),
+                                    _ => None,
+                                })
+                                .unwrap_or(options[0]),
+                            _ => options[0],
+                        }
+                    };
+                    let o = self.card_mut(ctx.source);
+                    o.chosen_player = Some(chosen);
+                    if *remember {
+                        o.remembered_players.push(chosen);
+                    }
+                }
+            }
+            Effect::Branch {
+                check,
+                cmp,
+                then,
+                otherwise,
+            } => {
+                let ectx = ctx.eval_with(targets);
+                let v = self.eval(check, &ectx);
+                let rhs = self.eval(&cmp.rhs, &ectx);
+                let branch = if cmp.holds(v, rhs) { then } else { otherwise };
+                if let Some(ab) = branch {
+                    self.apply_chain_inherit(ab, targets, ctx, ch)?;
                 }
             }
             Effect::Sacrifice {

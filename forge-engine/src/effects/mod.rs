@@ -63,6 +63,8 @@ pub enum Defined {
     RememberedLki,
     /// Von der Quelle gewählte Karten in ihrem aktuellen Zustand (`ChosenCard`).
     ChosenCard,
+    /// Von der Quelle gewählter Spieler (`ChosenPlayer`).
+    ChosenPlayer,
     /// Von der Quelle exilierte Karten (`ExiledWith`, `ExiledWithSource`).
     ExiledWith,
     /// Objekt, an dem die Quelle (Aura/Ausrüstung) hängt (`Enchanted`, `Equipped`).
@@ -444,6 +446,22 @@ pub enum Effect {
     Cleanup {
         what: Defined,
         clear_remembered: bool,
+        /// `ClearChosenCard/Player/Color/Type$`
+        clear_chosen: [bool; 4],
+    },
+    /// Spieler wählen (Java `ChoosePlayerEffect`) → `CardObj::chosen_player` der Quelle.
+    ChoosePlayer {
+        who: Defined,
+        choices: ValidSpec,
+        random: bool,
+        remember: bool,
+    },
+    /// `Branch`: je nach Bedingung `TrueSubAbility$` oder `FalseSubAbility$`.
+    Branch {
+        check: crate::expr::Expr,
+        cmp: crate::expr::Compare,
+        then: Option<Arc<CompiledAbility>>,
+        otherwise: Option<Arc<CompiledAbility>>,
     },
     /// Bleibende Karten opfern (`Sacrifice`, CR 701.21) bzw. mit `Destroy$` zerstören.
     Sacrifice {
@@ -842,6 +860,7 @@ impl<'a> Ctx<'a> {
                 "ChosenCard" => Defined::ChosenCard,
                 "Enchanted" | "Equipped" | "AttachedTo" => Defined::Enchanted,
                 "ExiledWith" | "ExiledWithSource" => Defined::ExiledWith,
+                "ChosenPlayer" => Defined::ChosenPlayer,
                 "EnchantedController" | "EquippedController" => Defined::EnchantedController,
                 "RememberedLKI" => Defined::RememberedLki,
                 other => return Err(self.unsupported(key, other)),
@@ -1703,24 +1722,74 @@ fn compile_depth(
         }
         "Cleanup" => {
             let clear_remembered = c.get("ClearRemembered").is_some();
-            // Diese Zustände erzeugt die Engine (noch) nicht; Leeren ist daher
-            // ohne Wirkung und korrekt. Wer sie setzt (ChooseCard, Imprint …),
-            // ist selbst noch nicht unterstützt.
-            for k in [
-                "ClearImprinted",
-                "ClearChosenCard",
-                "ClearChosenPlayer",
-                "ClearChosenColor",
-                "ClearChosenType",
-                "ClearNamedCard",
-                "ClearCoinFlips",
-                "Log",
-            ] {
+            // Zustände, die die Engine (noch) nicht erzeugt: Leeren ohne Wirkung.
+            for k in ["ClearImprinted", "ClearNamedCard", "ClearCoinFlips", "Log"] {
                 c.get(k);
             }
+            let flag = |c: &mut Ctx, k: &'static str| c.get(k).is_some();
+            let clear_chosen = [
+                flag(&mut c, "ClearChosenCard"),
+                flag(&mut c, "ClearChosenPlayer"),
+                flag(&mut c, "ClearChosenColor"),
+                flag(&mut c, "ClearChosenType"),
+            ];
             Effect::Cleanup {
                 what: c.defined(Defined::SelfCard)?,
                 clear_remembered,
+                clear_chosen,
+            }
+        }
+        "ChoosePlayer" => {
+            for k in ["AILogic", "ChoiceTitle"] {
+                c.get(k);
+            }
+            let flag = |c: &mut Ctx, k: &'static str| {
+                c.get(k).is_some_and(|v| v.eq_ignore_ascii_case("true"))
+            };
+            Effect::ChoosePlayer {
+                who: c.defined(Defined::You)?,
+                choices: ValidSpec::parse(c.get("Choices").unwrap_or("Player"))?,
+                random: flag(&mut c, "Random"),
+                remember: flag(&mut c, "RememberChosen"),
+            }
+        }
+        "Branch" => {
+            let sv = c
+                .get("BranchConditionSVar")
+                .ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "BranchConditionSVar",
+                })?;
+            let check = crate::expr::Expr::parse_value(face, sv)?;
+            let cmp = crate::expr::Compare::parse(
+                face,
+                c.get("BranchConditionSVarCompare").unwrap_or("GE1"),
+            )?;
+            let sub = |c: &mut Ctx,
+                       k: &'static str|
+             -> Result<Option<Arc<CompiledAbility>>, CompileError> {
+                let Some(name) = c.get(k) else {
+                    return Ok(None);
+                };
+                let sv = face
+                    .svar(name)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+                let ab = ScriptAbility::from_svar(sv)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+                    .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+                let compiled = compile_depth(face, &ab, depth + 1)?;
+                if compiled.chain().iter().any(|a| a.target.is_some()) {
+                    return Err(c.unsupported(k, "mit Zielen"));
+                }
+                Ok(Some(Arc::new(compiled)))
+            };
+            let then = sub(&mut c, "TrueSubAbility")?;
+            let otherwise = sub(&mut c, "FalseSubAbility")?;
+            Effect::Branch {
+                check,
+                cmp,
+                then,
+                otherwise,
             }
         }
         "Sacrifice" => {

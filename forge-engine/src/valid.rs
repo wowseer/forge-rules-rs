@@ -92,6 +92,10 @@ pub enum Prop {
     HasCounters,
     /// `IsMonstrous`/`monstrous` (CR 701.37b)
     Monstrous,
+    /// Spieler: der von der Quelle gewählte Spieler (`Player.Chosen`)
+    PlayerChosen,
+    /// `ChosenCtrl`: vom gewählten Spieler der Quelle kontrolliert
+    ChosenCtrl,
     /// `IsCommander` (CR 903.3)
     IsCommander,
     /// `ExiledWithSource`: von der Quelle ins Exil geschickt (Java `exiledWith`)
@@ -290,6 +294,8 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     match p {
         "IsCommander" => return Ok(Prop::IsCommander),
+        "ChosenCtrl" => return Ok(Prop::ChosenCtrl),
+        "Chosen" => return Ok(Prop::PlayerChosen),
         "IsNotCommander" | "nonCommander" => return Ok(Prop::Not(Box::new(Prop::IsCommander))),
         _ => {}
     }
@@ -477,9 +483,12 @@ impl ValidSpec {
                 b => return Err(ValidError::Unsupported(b.to_string())),
             };
             if let Alternative::Player { props, .. } = &a
-                && props
-                    .iter()
-                    .any(|p| !matches!(p, Prop::PlayerOpponent | Prop::EnchantedController))
+                && props.iter().any(|p| {
+                    !matches!(
+                        p,
+                        Prop::PlayerOpponent | Prop::EnchantedController | Prop::PlayerChosen
+                    )
+                })
             {
                 return Err(ValidError::Unsupported(alt.to_string()));
             }

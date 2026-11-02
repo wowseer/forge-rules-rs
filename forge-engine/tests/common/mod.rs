@@ -238,6 +238,8 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Crown Lite\nManaCost:W\nTypes:Sorcery\nA:SP$ BecomeMonarch | Defined$ You | SpellDescription$ x\nOracle:\n",
     "Name:Regal Lite\nManaCost:1 W\nTypes:Creature Human\nPT:2/2\nS:Mode$ Continuous | Affected$ Card.Self | AddPower$ 2 | Condition$ Monarch | Description$ x\nOracle:\n",
     "Name:Vehicle Lite\nManaCost:2\nTypes:Artifact Vehicle\nPT:3/3\nK:Crew:2\nOracle:\n",
+    "Name:Pick Foe Lite\nManaCost:B\nTypes:Sorcery\nA:SP$ ChoosePlayer | Defined$ You | Choices$ Player.Opponent | SubAbility$ DBLose | SpellDescription$ x\nSVar:DBLose:DB$ LoseLife | Defined$ ChosenPlayer | LifeAmount$ 2 | SubAbility$ DBDestroy\nSVar:DBDestroy:DB$ DestroyAll | ValidCards$ Creature.ChosenCtrl | SubAbility$ DBCleanup\nSVar:DBCleanup:DB$ Cleanup | ClearChosenPlayer$ True\nOracle:\n",
+    "Name:Branch Lite\nManaCost:G\nTypes:Sorcery\nA:SP$ Branch | BranchConditionSVar$ X | BranchConditionSVarCompare$ GE2 | TrueSubAbility$ DBDraw | FalseSubAbility$ DBGain | SpellDescription$ x\nSVar:DBDraw:DB$ Draw | NumCards$ 2\nSVar:DBGain:DB$ GainLife | LifeAmount$ 5\nSVar:X:Count$Valid Creature.YouCtrl\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",

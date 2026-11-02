@@ -100,6 +100,8 @@ impl GameState {
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
             Prop::IsCommander => c.commander.is_some(),
+            Prop::ChosenCtrl => self.card(source).chosen_player == Some(c.controller),
+            Prop::PlayerChosen => false,
             Prop::ExiledWithSource => c.zone == Some(Zone::Exile) && c.exiled_with == Some(source),
             Prop::Kicked(which) => match which {
                 None => c.kicked != 0,
@@ -283,6 +285,9 @@ impl GameState {
                 base_ok
                     && props.iter().all(|pr| match pr {
                         Prop::PlayerOpponent => p != you,
+                        Prop::PlayerChosen => {
+                            source.is_some_and(|s| self.card(s).chosen_player == Some(p))
+                        }
                         Prop::EnchantedController => source
                             .and_then(|s| self.card(s).attached_to)
                             .is_some_and(|a| {

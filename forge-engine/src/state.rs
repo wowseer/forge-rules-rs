@@ -161,6 +161,8 @@ pub struct CardObj {
     pub chosen_cards: Vec<CardId>,
     /// Gewählter Typ (`ChooseType`, Java `Card.chosenType`).
     pub chosen_type: Option<String>,
+    /// Gewählter Spieler (`ChoosePlayer`, Java `Card.chosenPlayer`).
+    pub chosen_player: Option<PlayerId>,
     /// Gewählte Farbe (`ChooseColor`, Java `Card.chosenColors`).
     pub chosen_color: Option<forge_types::Color>,
     /// Nur bei Effektobjekten (`Effect`): wann sie enden.
