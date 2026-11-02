@@ -185,6 +185,8 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Dealt Once Lite\nManaCost:1 R\nTypes:Enchantment\nT:Mode$ DamageDealtOnce | ValidSource$ Card.YouCtrl | TriggerZones$ Battlefield | Execute$ TrigGain | TriggerDescription$ x\nSVar:TrigGain:DB$ GainLife | LifeAmount$ X\nSVar:X:TriggerCount$DamageAmount\nOracle:\n",
     "Name:Shapeshifter Lite\nManaCost:1 U\nTypes:Creature Shapeshifter\nPT:1/1\nK:Changeling\nOracle:\n",
     "Name:Elf Lord Lite\nManaCost:1 G\nTypes:Creature Elf\nPT:2/2\nS:Mode$ Continuous | Affected$ Elf.Other+YouCtrl | AddPower$ 1 | Description$ x\nOracle:\n",
+    "Name:Kind Lord Lite\nManaCost:1 W\nTypes:Creature Human\nPT:1/1\nK:ETBReplacement:Other:ChooseCT\nSVar:ChooseCT:DB$ ChooseType | Defined$ You | Type$ Creature | SpellDescription$ x\nS:Mode$ Continuous | Affected$ Creature.ChosenType+YouCtrl | AddPower$ 1 | Description$ x\nOracle:\n",
+    "Name:Hue Land Lite\nManaCost:no cost\nTypes:Land\nK:ETBReplacement:Other:ChooseColor\nSVar:ChooseColor:DB$ ChooseColor | Defined$ You | SpellDescription$ x\nA:AB$ Mana | Cost$ T | Produced$ ChosenColor | SpellDescription$ x\nS:Mode$ Continuous | Affected$ Creature.ChosenColor+YouCtrl | AddPower$ 1 | Description$ x\nOracle:\n",
     "Name:Mana Leak\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | TgtPrompt$ Select target spell | ValidTgts$ Card | UnlessCost$ 3 | SpellDescription$ Counter target spell unless its controller pays {3}.\nOracle:\n",
     "Name:Essence Scatter Lite\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | ValidTgts$ Creature | TgtPrompt$ Select target creature spell | SpellDescription$ Counter target creature spell.\nOracle:\n",
     "Name:Blessing Lite\nManaCost:W\nTypes:Instant\nA:SP$ Effect | ValidTgts$ Creature | StaticAbilities$ STHexproof | RememberObjects$ Targeted | SpellDescription$ Target creature gains hexproof until end of turn.\nSVar:STHexproof:Mode$ Continuous | Affected$ Creature.IsRemembered | AddKeyword$ Hexproof | Description$ Hexproof.\nOracle:\n",
@@ -457,6 +459,7 @@ pub fn default_choice(d: &Decision) -> Choice {
             Choice::Cards(options[..*min as usize].to_vec())
         }
         Decision::ChooseColor { options, .. } => Choice::Color(options[0]),
+        Decision::ChooseType { .. } => Choice::Number(0),
         Decision::ChooseX { .. } => Choice::Number(0),
         Decision::ChooseTargets {
             candidates, min, ..

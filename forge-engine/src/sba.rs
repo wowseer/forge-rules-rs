@@ -16,7 +16,7 @@ impl GameState {
     /// Führt SBAs aus, bis keine mehr zutreffen. Liefert `true`, wenn
     /// mindestens eine ausgeführt wurde.
     pub fn check_state_based_actions(&mut self, ch: &mut Choices) -> Res<bool> {
-        let mut any = false;
+        let mut any = self.run_pending_etb(ch)?;
         // Kontrolleffekte „solange …“ enden sofort (CR 611.2b), vor den SBAs geprüft.
         self.expire_control_effects(false);
         loop {
@@ -29,6 +29,43 @@ impl GameState {
             }
             any = true;
         }
+    }
+
+    /// `ETBReplacement:Other` (z. B. „wähle beim Ankommen einen Kreaturtyp“).
+    /// Vereinfachung: läuft direkt nach dem Zonenwechsel vor den nächsten SBAs
+    /// statt als echter Ersatzeffekt während des Wechsels (CR 614.12).
+    fn run_pending_etb(&mut self, ch: &mut Choices) -> Res<bool> {
+        let mut any = false;
+        while !self.pending_etb.is_empty() {
+            let c = self.pending_etb.remove(0);
+            if self.card(c).zone != Some(Zone::Battlefield) {
+                continue;
+            }
+            let controller = self.card(c).controller;
+            for (ab, optional) in self.card(c).compiled().etb_other.clone() {
+                if optional
+                    && !matches!(
+                        ch.ask(crate::decision::Decision::Confirm {
+                            player: controller,
+                            prompt: ab.description.clone(),
+                        })?,
+                        Choice::Yes
+                    )
+                {
+                    continue;
+                }
+                let ctx = crate::effects::resolve::ResolveCtx {
+                    source: c,
+                    controller,
+                    x: self.card(c).cast_x,
+                    trig: None,
+                    paid: Vec::new(),
+                };
+                self.apply_chain(&ab, &[], &ctx, ch)?;
+                any = true;
+            }
+        }
+        Ok(any)
     }
 
     fn sba_pass(&mut self, ch: &mut Choices) -> Res<bool> {

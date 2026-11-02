@@ -32,6 +32,8 @@ pub struct ContinuousStatic {
     pub add_types: Vec<String>,
     /// Layer 5
     pub set_color: Option<ColorSet>,
+    /// `SetColor$ ChosenColor`
+    pub set_color_chosen: bool,
     /// Layer 6
     pub add_keywords: Vec<Keyword>,
     /// Layer 7b (bzw. 7a bei `CharacteristicDefining$ True`)
@@ -71,7 +73,7 @@ impl ContinuousStatic {
         !self.add_types.is_empty()
     }
     pub fn has_layer5(&self) -> bool {
-        self.set_color.is_some()
+        self.set_color.is_some() || self.set_color_chosen
     }
     pub fn has_layer6(&self) -> bool {
         !self.add_keywords.is_empty()
@@ -420,7 +422,9 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         }
         None => Vec::new(),
     };
+    let set_color_chosen = p.get("SetColor") == Some("ChosenColor");
     let set_color = match get("SetColor") {
+        Some("ChosenColor") => None,
         Some(c) => {
             Some(ColorSet::from_names(&c.replace('&', ",")).ok_or_else(|| err("SetColor", c))?)
         }
@@ -501,6 +505,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         effect_zones,
         add_types,
         set_color,
+        set_color_chosen,
         add_keywords,
         set_power,
         set_toughness,

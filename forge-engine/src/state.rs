@@ -139,6 +139,10 @@ pub struct CardObj {
     pub remembered_players: Vec<PlayerId>,
     /// Gewählte Karten (`ChooseCard`, Java `Card.chosenCards`).
     pub chosen_cards: Vec<CardId>,
+    /// Gewählter Typ (`ChooseType`, Java `Card.chosenType`).
+    pub chosen_type: Option<String>,
+    /// Gewählte Farbe (`ChooseColor`, Java `Card.chosenColors`).
+    pub chosen_color: Option<forge_types::Color>,
     /// Nur bei Effektobjekten (`Effect`): wann sie enden.
     pub effect: Option<EffectInfo>,
     /// Aura/Ausrüstung: an welches Objekt angelegt (CR 301.5, 303.4).
@@ -466,6 +470,9 @@ pub struct GameState {
     pub repeat_cleanup: bool,
     /// Ausgelöste, noch nicht auf den Stapel gelegte Trigger (CR 603.3).
     pub pending_triggers: Vec<crate::triggers::PendingTrigger>,
+    /// Objekte, deren `ETBReplacement:Other`-Fähigkeiten („wenn … ins Spiel kommt,
+    /// wähle …“) noch ausgeführt werden müssen (vor den nächsten SBAs).
+    pub pending_etb: Vec<CardId>,
     /// Während gleichzeitiger Zonenwechsel: Battlefield davor (CR 603.10a).
     pub lki_battlefield: Option<Vec<CardId>>,
     /// Verzögerte Trigger (CR 603.7), in Erzeugungsreihenfolge.
@@ -767,7 +774,20 @@ impl GameState {
         let mut l4: Vec<(u64, Vec<String>, bool)> = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer4()) {
             if applies(self, s, &ch) {
-                l4.push((s.ts, s.st.add_types.clone(), false));
+                // `AddType$ ChosenType`: der von der Quelle gewählte Typ
+                let chosen = self.card(s.source).chosen_type.clone();
+                let types =
+                    s.st.add_types
+                        .iter()
+                        .filter_map(|t| {
+                            if t == "ChosenType" {
+                                chosen.clone()
+                            } else {
+                                Some(t.clone())
+                            }
+                        })
+                        .collect();
+                l4.push((s.ts, types, false));
             }
         }
         l4.extend(
@@ -790,8 +810,16 @@ impl GameState {
         // Layer 5
         let mut l5: Vec<(u64, forge_types::ColorSet, bool)> = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer5()) {
+            // `SetColor$ ChosenColor`: die von der Quelle gewählte Farbe
+            let col = if s.st.set_color_chosen {
+                self.card(s.source)
+                    .chosen_color
+                    .map(|c| std::iter::once(c).collect())
+            } else {
+                s.st.set_color
+            };
             if applies(self, s, &ch)
-                && let Some(c) = s.st.set_color
+                && let Some(c) = col
             {
                 l5.push((s.ts, c, true));
             }
@@ -898,6 +926,62 @@ impl GameState {
         self.card(id).compiled().final_chapter.is_some() && self.chars(id).types.has_subtype("Saga")
     }
 
+    /// Wählbare Typen für `ChooseType` (sortiert). Ohne geladene Typliste: die
+    /// Kreaturtypen aller Karten im Spiel.
+    pub fn type_choice_options(&self, kind: crate::effects::TypeChoiceKind) -> Vec<String> {
+        use crate::effects::TypeChoiceKind as K;
+        use forge_types::SubtypeKind;
+        let basics = ["Plains", "Island", "Swamp", "Mountain", "Forest"];
+        let mut v: Vec<String> = match kind {
+            K::BasicLand => basics.iter().map(|s| s.to_string()).collect(),
+            K::Card => [
+                "Artifact",
+                "Battle",
+                "Creature",
+                "Enchantment",
+                "Instant",
+                "Kindred",
+                "Land",
+                "Planeswalker",
+                "Sorcery",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
+            K::Creature | K::Land => {
+                let want = if kind == K::Creature {
+                    SubtypeKind::Creature
+                } else {
+                    SubtypeKind::Land
+                };
+                match crate::valid::type_registry() {
+                    Some(r) => r
+                        .creature_types()
+                        .filter(|_| want == SubtypeKind::Creature)
+                        .map(str::to_string)
+                        .chain(
+                            (want == SubtypeKind::Land)
+                                .then(|| basics.iter().map(|s| s.to_string()))
+                                .into_iter()
+                                .flatten(),
+                        )
+                        .collect(),
+                    None => self
+                        .cards
+                        .iter()
+                        .filter(|c| {
+                            c.def.face(0).types.is_creature() == (want == SubtypeKind::Creature)
+                        })
+                        .flat_map(|c| c.def.face(0).types.subtypes.clone())
+                        .collect(),
+                }
+            }
+        };
+        v.sort();
+        v.dedup();
+        v
+    }
+
     pub fn is_creature(&self, id: CardId) -> bool {
         self.chars(id).types.is_creature()
     }
@@ -943,6 +1027,7 @@ impl GameState {
             winner: None,
             repeat_cleanup: false,
             pending_triggers: Vec::new(),
+            pending_etb: Vec::new(),
             lki_battlefield: None,
             delayed_triggers: Vec::new(),
             control_effects: Vec::new(),

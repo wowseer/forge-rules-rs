@@ -38,6 +38,8 @@ impl GameState {
             remembered: Vec::new(),
             remembered_players: Vec::new(),
             chosen_cards: Vec::new(),
+            chosen_type: None,
+            chosen_color: None,
             effect: None,
             attached_to: None,
             regen_shields: 0,
@@ -135,6 +137,8 @@ impl GameState {
             remembered: Vec::new(),
             remembered_players: Vec::new(),
             chosen_cards: Vec::new(),
+            chosen_type: None,
+            chosen_color: None,
             effect: None,
             attached_to: None,
             regen_shields: 0,
@@ -199,6 +203,9 @@ impl GameState {
             None => self.fire(crate::triggers::TriggerEvent::ChangesZoneAll {
                 moves: vec![(id, new_id, from, to)],
             }),
+        }
+        if to == Zone::Battlefield && !self.card(new_id).compiled().etb_other.is_empty() {
+            self.pending_etb.push(new_id);
         }
         // CR 122.6: Marken, mit denen ein Objekt ins Spiel kommt, gelten als
         // daraufgelegt (z. B. Saga-Kapitel I).

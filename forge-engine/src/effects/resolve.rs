@@ -319,6 +319,13 @@ impl GameState {
                                 self.player_mut(ctx.controller).mana_pool.add(*s, snow);
                             }
                         }
+                        ManaProduce::ChosenColor => {
+                            if let Some(col) = self.card(ctx.source).chosen_color {
+                                self.player_mut(ctx.controller)
+                                    .mana_pool
+                                    .add(Some(col), snow);
+                            }
+                        }
                         ManaProduce::OneOf(cols) => {
                             let col = if cols.len() == 1 {
                                 cols[0]
@@ -960,6 +967,43 @@ impl GameState {
                     }
                 }
             }
+            Effect::ChooseColor { who } => {
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let col = match ch.ask(Decision::ChooseColor {
+                        player: p,
+                        options: forge_types::Color::ALL.to_vec(),
+                    })? {
+                        Choice::Color(c) => c,
+                        _ => forge_types::Color::White,
+                    };
+                    self.card_mut(ctx.source).chosen_color = Some(col);
+                }
+            }
+            Effect::ChooseType {
+                who,
+                kind,
+                invalid,
+                valid,
+            } => {
+                let mut options = self.type_choice_options(*kind);
+                options.retain(|t| !invalid.contains(t));
+                if let Some(v) = valid {
+                    options.retain(|t| v.contains(t));
+                }
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    if options.is_empty() {
+                        break;
+                    }
+                    let i = match ch.ask(Decision::ChooseType {
+                        player: p,
+                        options: options.clone(),
+                    })? {
+                        Choice::Number(i) => (i as usize).min(options.len() - 1),
+                        _ => 0,
+                    };
+                    self.card_mut(ctx.source).chosen_type = Some(options[i].clone());
+                }
+            }
             Effect::Shuffle { who } => {
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     self.shuffle_library(p);
@@ -1205,8 +1249,16 @@ impl GameState {
                 remove_creature_types,
                 keywords,
                 colors,
+                colors_chosen,
                 permanent,
             } => {
+                let colors = match colors_chosen {
+                    Some(o) => self
+                        .card(ctx.source)
+                        .chosen_color
+                        .map(|c| (std::iter::once(c).collect(), *o)),
+                    None => *colors,
+                };
                 let sp = power.as_ref().map(|a| self.amount(a, ctx, targets));
                 let st = toughness.as_ref().map(|a| self.amount(a, ctx, targets));
                 let ts = self.resolve_defined(*what, targets, ctx);
@@ -1215,9 +1267,18 @@ impl GameState {
                     self.effects.push(ContinuousEffect {
                         affected: c,
                         keywords: keywords.clone(),
-                        add_types: types.clone(),
+                        add_types: types
+                            .iter()
+                            .filter_map(|t| {
+                                if t == "ChosenType" {
+                                    self.card(ctx.source).chosen_type.clone()
+                                } else {
+                                    Some(t.clone())
+                                }
+                            })
+                            .collect(),
                         remove_creature_types: *remove_creature_types,
-                        colors: *colors,
+                        colors,
                         set_power: sp,
                         set_toughness: st,
                         duration: if *permanent {

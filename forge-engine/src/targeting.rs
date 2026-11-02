@@ -65,6 +65,16 @@ impl GameState {
             Prop::OppOwn => c.owner != you,
             Prop::IsRemembered => self.card(source).remembered.contains(&id),
             Prop::InZone(z) => c.zone == Some(*z),
+            Prop::ChosenColor => self
+                .card(source)
+                .chosen_color
+                .is_some_and(|col| ch.colors.contains(col)),
+            Prop::ChosenType => self.card(source).chosen_type.as_ref().is_some_and(|t| {
+                forge_types::CoreType::from_name(t).map_or_else(
+                    || self.card_base_matches(id, ch, &CardBase::Word(t.clone())),
+                    |core| ch.types.has_core(core),
+                )
+            }),
             Prop::TopLibrary => {
                 c.zone == Some(Zone::Library) && self.player(c.owner).library.last() == Some(&id)
             }

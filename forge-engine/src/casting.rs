@@ -1140,6 +1140,10 @@ impl GameState {
                         produce: ManaProduce::OneOf(cols),
                         amount: 1,
                     } => Some((c, i, cols.iter().map(|c| Some(*c)).collect())),
+                    crate::effects::Effect::AddMana {
+                        produce: ManaProduce::ChosenColor,
+                        amount: 1,
+                    } => self.card(c).chosen_color.map(|col| (c, i, vec![Some(col)])),
                     _ => None,
                 }
             })

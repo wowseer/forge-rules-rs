@@ -35,6 +35,9 @@ pub struct CompiledFace {
     pub final_chapter: Option<u32>,
     /// `R:Event$ Untap` (enttappt nicht).
     pub untap_replacements: Vec<Arc<crate::replacements::UntapReplacement>>,
+    /// `K:ETBReplacement:Other:<SVar>[:Optional]`: beim Ankommen auszuführen
+    /// (Wahl von Typ/Farb usw.); `true` = optional.
+    pub etb_other: Vec<(Arc<CompiledAbility>, bool)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -121,6 +124,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         enchant: None,
         final_chapter: None,
         untap_replacements: Vec::new(),
+        etb_other: Vec::new(),
     };
     let mut equip: Vec<Arc<CompiledAbility>> = Vec::new();
     for k in &face.keywords {
@@ -203,6 +207,31 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
                     }
                 }
                 Err(e) => unsupported.push(format!("Keyword: Chapter ({e})")),
+            }
+            continue;
+        }
+        // Java CardFactoryUtil: ETBReplacement:Other → Ersatzeffekt „wie es ins Spiel kommt“
+        if let Some(rest) = k.strip_prefix("ETBReplacement:Other:") {
+            let mut it = rest.split(':');
+            let name = it.next().unwrap_or("");
+            let optional = match it.next() {
+                None => Some(false),
+                Some("Optional") => Some(true),
+                Some(_) => None,
+            };
+            let ab = optional.and_then(|_| face.svar(name)).and_then(|sv| {
+                ScriptAbility::from_svar(sv)
+                    .and_then(Result::ok)
+                    .map(|ab| compile(face, &ab))
+            });
+            match (ab, optional) {
+                (Some(Ok(a)), Some(opt)) if a.chain().iter().all(|x| x.target.is_none()) => {
+                    out.etb_other.push((Arc::new(a), opt));
+                }
+                (Some(Err(e)), _) => {
+                    unsupported.push(format!("Keyword: ETBReplacement ({e})"));
+                }
+                _ => unsupported.push(format!("Keyword: {k}")),
             }
             continue;
         }

@@ -96,6 +96,11 @@ pub enum Decision {
         player: PlayerId,
         options: Vec<Color>,
     },
+    /// Typ wählen (`ChooseType`); Antwort `Choice::Number(index)`.
+    ChooseType {
+        player: PlayerId,
+        options: Vec<String>,
+    },
     DeclareAttackers {
         player: PlayerId,
         candidates: Vec<CardId>,
@@ -243,6 +248,7 @@ impl Decision {
             | Decision::PayMana { player, .. }
             | Decision::PayLifeForPhyrexian { player, .. }
             | Decision::ChooseColor { player, .. }
+            | Decision::ChooseType { player, .. }
             | Decision::DeclareAttackers { player, .. }
             | Decision::DeclareBlockers { player, .. }
             | Decision::AssignCombatDamage { player, .. }
@@ -311,6 +317,13 @@ impl Decision {
                 }
             }
             (Decision::PayLifeForPhyrexian { .. }, Choice::Yes | Choice::No) => Ok(()),
+            (Decision::ChooseType { options, .. }, Choice::Number(i)) => {
+                if (*i as usize) < options.len() {
+                    Ok(())
+                } else {
+                    err("Typ nicht wählbar")
+                }
+            }
             (Decision::ChooseColor { options, .. }, Choice::Color(col)) => {
                 if options.contains(col) {
                     Ok(())

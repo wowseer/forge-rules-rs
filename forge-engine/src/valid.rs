@@ -68,6 +68,10 @@ pub enum Prop {
     InZone(crate::zone::Zone),
     /// `TopLibrary`: oberste Karte der Bibliothek ihres Besitzers
     TopLibrary,
+    /// `ChosenType`: hat den von der Quelle gewählten Typ
+    ChosenType,
+    /// `ChosenColor`: hat die von der Quelle gewählte Farbe
+    ChosenColor,
     /// Von der Quelle gewählt (`ChosenCard`; `strict`: genau dieses Objekt)
     ChosenCard {
         strict: bool,
@@ -171,6 +175,13 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     if p == "TopLibrary" {
         return Ok(Prop::TopLibrary);
+    }
+    match p {
+        "ChosenType" => return Ok(Prop::ChosenType),
+        "ChosenColor" => return Ok(Prop::ChosenColor),
+        "nonChosenColor" => return Ok(Prop::Not(Box::new(Prop::ChosenColor))),
+        "IsNotChosenType" | "nonChosenType" => return Ok(Prop::Not(Box::new(Prop::ChosenType))),
+        _ => {}
     }
     if let Some(z) = p.strip_prefix("inZone")
         && let Some(z) = crate::zone::Zone::parse(z)

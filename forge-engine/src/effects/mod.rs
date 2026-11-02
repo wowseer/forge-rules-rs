@@ -82,6 +82,8 @@ pub enum ManaProduce {
     Fixed(Vec<Option<Color>>),
     /// Eine Farbe nach Wahl aus der Liste (`Any` = WUBRG, `Combo R G`).
     OneOf(Vec<Color>),
+    /// Die von der Quelle gewählte Farbe (`Produced$ ChosenColor`).
+    ChosenColor,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -169,6 +171,17 @@ pub enum Effect {
         who: Defined,
         num: Amount,
     },
+    /// Farbe wählen (`ChooseColor`): die Quelle merkt sie (`ChosenColor`).
+    ChooseColor {
+        who: Defined,
+    },
+    /// Typ wählen (`ChooseType`): die Quelle merkt ihn (`ChosenType`).
+    ChooseType {
+        who: Defined,
+        kind: TypeChoiceKind,
+        invalid: Vec<String>,
+        valid: Option<Vec<String>>,
+    },
     /// Bibliothek mischen (`Shuffle`, CR 701.20).
     Shuffle {
         who: Defined,
@@ -244,6 +257,8 @@ pub enum Effect {
         remove_creature_types: bool,
         keywords: Vec<Keyword>,
         colors: Option<(forge_types::ColorSet, bool)>,
+        /// `Colors$ ChosenColor`: die von der Quelle gewählte Farbe (Überschreiben wie `colors`)
+        colors_chosen: Option<bool>,
         permanent: bool,
     },
     /// Schaden an alle passenden Kreaturen/Planeswalker und Spieler (`DamageAll`).
@@ -686,6 +701,9 @@ fn parse_produced(s: &str) -> Option<ManaProduce> {
     if s == "Any" {
         return Some(ManaProduce::OneOf(Color::ALL.to_vec()));
     }
+    if s == "ChosenColor" {
+        return Some(ManaProduce::ChosenColor);
+    }
     if let Some(rest) = s.strip_prefix("Combo ") {
         if rest.trim() == "Any" {
             return None; // Kombinationen mehrerer Farben: später
@@ -839,6 +857,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         enchant: None,
         final_chapter: None,
         untap_replacements: Vec::new(),
+        etb_other: Vec::new(),
     };
     let svar = |n: &str| {
         face.svar(n)
@@ -1333,6 +1352,32 @@ fn compile_depth(
             }
         }
         "Effect" => compile_effect_object(&mut c, face)?,
+        "ChooseColor" => Effect::ChooseColor {
+            who: c.defined(Defined::You)?,
+        },
+        "ChooseType" => {
+            let kind = match c.get("Type") {
+                Some("Creature") => TypeChoiceKind::Creature,
+                Some("Basic Land") | Some("Basic") => TypeChoiceKind::BasicLand,
+                Some("Land") => TypeChoiceKind::Land,
+                Some("Card") => TypeChoiceKind::Card,
+                Some(v) => return Err(c.unsupported("Type", v)),
+                None => return Err(c.unsupported("Type", "fehlt")),
+            };
+            let list = |v: Option<&str>| -> Vec<String> {
+                v.map(|v| v.split(',').map(|t| t.trim().to_string()).collect())
+                    .unwrap_or_default()
+            };
+            let invalid = list(c.get("InvalidTypes"));
+            let valid = c.get("ValidTypes").map(|v| list(Some(v)));
+            c.get("Note");
+            Effect::ChooseType {
+                who: c.defined(Defined::You)?,
+                kind,
+                invalid,
+                valid,
+            }
+        }
         "Shuffle" => Effect::Shuffle {
             who: c.defined(Defined::You)?,
         },
@@ -1503,10 +1548,11 @@ fn compile_depth(
                         .collect()
                 })
                 .unwrap_or_default();
-            if types
-                .iter()
-                .any(|t| t.contains(' ') || t.starts_with("All") || t.starts_with("Chosen"))
-            {
+            if types.iter().any(|t| {
+                t.contains(' ')
+                    || t.starts_with("All")
+                    || (t.starts_with("Chosen") && t != "ChosenType")
+            }) {
                 return Err(c.unsupported("Types", c.ab.params.get("Types").unwrap_or("")));
             }
             let remove_creature_types = c
@@ -1522,7 +1568,10 @@ fn compile_depth(
             let overwrite = c
                 .get("OverwriteColors")
                 .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let colors_chosen =
+                (c.ab.params.get("Colors") == Some("ChosenColor")).then_some(overwrite);
             let colors = match c.get("Colors") {
+                Some("ChosenColor") => None,
                 Some(v) => Some((
                     forge_types::ColorSet::from_names(v)
                         .ok_or_else(|| c.unsupported("Colors", v))?,
@@ -1543,6 +1592,7 @@ fn compile_depth(
                 remove_creature_types,
                 keywords,
                 colors,
+                colors_chosen,
                 permanent,
             }
         }
@@ -1709,6 +1759,15 @@ fn compile_depth(
         activation_limit,
         game_activation_limit,
     })
+}
+
+/// Welche Typen `ChooseType` anbietet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TypeChoiceKind {
+    Creature,
+    BasicLand,
+    Land,
+    Card,
 }
 
 /// Parameter, die zum `DelayedTrigger`-Effekt selbst gehören (nicht zum Trigger).

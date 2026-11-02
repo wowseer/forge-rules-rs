@@ -253,3 +253,5 @@ Replacement Effect;Untap;teilweise;turn_structure::doesnt_untap_during_your_unta
 Static Ability;AlternativeCost;teilweise;spells::alternative_cost_instead_of_mana_cost;ValidSA$ Spell.Self mit Kosten statt Manakosten (CR 118.9), Bedingungen, Zusatzkosten gelten weiter; andere ValidSA (Equip, Spell allgemein), Announce X fehlen
 Trigger;DamageDealtOnce;teilweise;triggers::attacks_alone_second_spell_damage_dealt_once_changeling;einmal je Quelle bei gleichzeitigem Schaden, ValidSource, ValidTarget, CombatDamage, TriggerCount$DamageAmount; AtLeastOneInstance fehlt
 Keyword;Changeling;ja;triggers::attacks_alone_second_spell_damage_dealt_once_changeling;CR 702.73a: jeder Kreaturtyp (laut Typliste), in allen Zonen
+Effect (ApiType);ChooseType;teilweise;effects_objects::choose_creature_type_as_it_enters;Type Creature/Basic/Land/Card, InvalidTypes, ValidTypes; Filter ChosenType/IsNotChosenType, AddType$/Types$ ChosenType; TypesFromDefined fehlt
+Effect (ApiType);ChooseColor;teilweise;effects_objects::choose_color_as_it_enters_for_mana_and_filter;eine Farbe; Filter ChosenColor, Produced$ ChosenColor, SetColor$/Colors$ ChosenColor; OrColors, mehrere Farben fehlen
