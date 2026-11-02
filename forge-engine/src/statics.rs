@@ -44,7 +44,26 @@ pub struct ContinuousStatic {
     pub characteristic_defining: bool,
     /// Bedingungen (`IsPresent$`, `CheckSVar$`, `Condition$` …)
     pub conditions: Vec<Condition>,
+    /// `MayPlay$ True`: betroffene Karten dürfen gespielt werden (CR 601.2a, 305.1).
+    pub may_play: Option<MayPlay>,
     pub description: String,
+}
+
+/// Spielerlaubnis aus `MayPlay$ True` (Java `StaticAbilityContinuous`, `MayPlay…`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MayPlay {
+    /// `MayPlayWithoutManaCost$`: ohne Manakosten (X = 0, CR 107.3)
+    pub without_mana_cost: bool,
+    /// `MayPlayWithFlash$`
+    pub with_flash: bool,
+    /// `MayPlayLimit$ N`: je Zug höchstens N Karten über diese Erlaubnis
+    pub limit: Option<u32>,
+    /// `MayPlayPlayer$ CardOwner`: der Besitzer der Karte statt des Controllers der Quelle
+    pub card_owner: bool,
+    /// `MayPlayIgnoreType$`/`MayPlayIgnoreColor$`: Mana wie beliebigen Typs bzw.
+    /// beliebiger Farbe ausgeben (CR 609.4b)
+    pub ignore_type: bool,
+    pub ignore_color: bool,
 }
 
 impl ContinuousStatic {
@@ -372,6 +391,41 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         .is_some_and(|v| v.eq_ignore_ascii_case("true"));
     let (conditions, cond_keys) = parse_conditions(face, p, CondStyle::Requirement)?;
     used.extend(cond_keys);
+    let flag = |k: &str| p.get(k).is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let may_play = if flag("MayPlay") {
+        used.extend([
+            "MayPlay",
+            "MayPlayWithoutManaCost",
+            "MayPlayWithFlash",
+            "MayPlayLimit",
+            "MayPlayPlayer",
+            "MayPlayIgnoreType",
+            "MayPlayIgnoreColor",
+            // nur Informationsfluss (wer die Karte sehen darf)
+            "MayLookAt",
+        ]);
+        let without_mana_cost = flag("MayPlayWithoutManaCost");
+        if without_mana_cost && affected_zones.contains(&Zone::Hand) {
+            return Err(err("AffectedZone", "Hand mit MayPlayWithoutManaCost"));
+        }
+        Some(MayPlay {
+            without_mana_cost,
+            with_flash: flag("MayPlayWithFlash"),
+            limit: match p.get("MayPlayLimit") {
+                None => None,
+                Some(v) => Some(v.trim().parse().map_err(|_| err("MayPlayLimit", v))?),
+            },
+            card_owner: match p.get("MayPlayPlayer") {
+                None => false,
+                Some("CardOwner") => true,
+                Some(v) => return Err(err("MayPlayPlayer", v)),
+            },
+            ignore_type: flag("MayPlayIgnoreType"),
+            ignore_color: flag("MayPlayIgnoreColor"),
+        })
+    } else {
+        None
+    };
 
     for (k, v) in p.iter() {
         if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
@@ -393,6 +447,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         add_toughness,
         characteristic_defining,
         conditions,
+        may_play,
         description: p.get("Description").unwrap_or("").to_string(),
     }))
 }

@@ -119,7 +119,7 @@ Offen (32): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Casca
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
-| Continuous | 🟡 teilweise | `layers::affected_set_determined_after_type_change` | Affected/AffectedDefined Self, Zonen (inkl. All), AddType, SetColor, AddKeyword, Set/AddPower/Toughness inkl. Count$-Ausdrücke, CDAs (7a), Bedingungen (IsPresent, CheckSVar, Condition) | staticability/StaticAbility.java |
+| Continuous | 🟡 teilweise | `layers::affected_set_determined_after_type_change, spells::may_play_exiled_card_this_turn_as_land_drop, spells::may_play_without_mana_cost_with_limit` | Affected/AffectedDefined Self, Zonen (inkl. All), AddType, SetColor, AddKeyword, Set/AddPower/Toughness inkl. Count$-Ausdrücke, CDAs (7a), Bedingungen (IsPresent, CheckSVar, Condition) | staticability/StaticAbility.java |
 | CantAttack | 🟡 teilweise | `combat_restrictions::cant_attack` | ValidCard, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlock | ✅ ja | `combat_restrictions::cant_block` |  | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlockBy | 🟡 teilweise | `combat_restrictions::cant_be_blocked_by_small_creatures_via_effect` | ValidAttacker, ValidBlocker, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |

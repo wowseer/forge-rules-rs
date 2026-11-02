@@ -44,6 +44,7 @@ impl GameState {
             on_adventure: false,
             loyalty_used_turn: None,
             activations: Vec::new(),
+            may_play_uses: Vec::new(),
             prevent_next: 0,
         });
         self.zone_list_mut(zone, owner).push(id);
@@ -140,6 +141,7 @@ impl GameState {
             on_adventure: false,
             loyalty_used_turn: None,
             activations: Vec::new(),
+            may_play_uses: Vec::new(),
             prevent_next: 0,
         });
         {

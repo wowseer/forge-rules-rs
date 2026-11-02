@@ -1129,6 +1129,7 @@ impl GameState {
                 dest1_bottom,
                 dest2,
                 dest2_bottom,
+                remember,
                 optional,
             } => {
                 let n = self.amount(dig, ctx, targets).max(0) as usize;
@@ -1175,7 +1176,10 @@ impl GameState {
                     };
                     for c in &chosen {
                         let ctrl = (*dest1 == Zone::Battlefield).then_some(ctx.controller);
-                        self.move_card_as(*c, *dest1, !dest1_bottom, ctrl);
+                        let new = self.move_card_as(*c, *dest1, !dest1_bottom, ctrl);
+                        if *remember {
+                            self.card_mut(ctx.source).remembered.push(new);
+                        }
                     }
                     for c in top.into_iter().filter(|c| !chosen.contains(c)) {
                         self.move_card(c, *dest2, !dest2_bottom);

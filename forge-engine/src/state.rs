@@ -153,6 +153,8 @@ pub struct CardObj {
     pub loyalty_used_turn: Option<u32>,
     /// Aktivierungen (Fähigkeitsindex, Zug) für `ActivationLimit$`/`GameActivationLimit$`.
     pub activations: Vec<(usize, u32)>,
+    /// Nutzungen von `MayPlay`-Erlaubnissen dieser Quelle (Static-Index, Zug).
+    pub may_play_uses: Vec<(usize, u32)>,
 }
 
 /// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).

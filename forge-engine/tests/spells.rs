@@ -351,3 +351,37 @@ fn untap_symbol_cost() {
     d.pass_all();
     assert_eq!(d.g().player(P1).life, 22);
 }
+
+#[test]
+fn may_play_exiled_card_this_turn_as_land_drop() {
+    // Java StaticAbilityContinuous MayPlay$: Effektobjekt erlaubt die exilierte Karte
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Mountain", P1, Zone::Battlefield);
+    let imp = put(&db, &mut g, "Impulse Exile Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(imp, &[]);
+    d.pass_all();
+    let ex = find(d.g(), "Island", Zone::Exile).expect("Insel exiliert");
+    assert!(d.g().legal_actions(P1).contains(&Action::PlayLand(ex)));
+    d.act(Action::PlayLand(ex));
+    assert_eq!(count(d.g(), "Island", Zone::Battlefield), 1);
+    assert_eq!(d.g().player(P1).lands_played_this_turn, 1);
+}
+
+#[test]
+fn may_play_without_mana_cost_with_limit() {
+    // MayPlayWithoutManaCost$ + MayPlayLimit$ 1 (je Zug)
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Free Grave Lite", P1, Zone::Battlefield);
+    let b1 = put(&db, &mut g, "Lightning Bolt", P1, Zone::Graveyard);
+    let b2 = put(&db, &mut g, "Lightning Bolt", P1, Zone::Graveyard);
+    let mut d = Driver::new(g);
+    assert!(d.g().legal_actions(P1).contains(&Action::Cast(b1)));
+    d.cast(b1, &[T2]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 17, "ohne Mana gewirkt");
+    assert!(
+        !d.g().legal_actions(P1).contains(&Action::Cast(b2)),
+        "Limit 1"
+    );
+}

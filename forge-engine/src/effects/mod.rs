@@ -224,6 +224,8 @@ pub enum Effect {
         dest2: crate::zone::Zone,
         dest2_bottom: bool,
         optional: bool,
+        /// `RememberChanged$`: Quelle merkt sich die nach `dest1` bewegten Karten
+        remember: bool,
     },
     /// Regenerationsschild (`Regenerate`, CR 701.15).
     Regenerate {
@@ -666,7 +668,7 @@ impl<'a> Ctx<'a> {
                 "DelayTriggerRememberedLKI" => Defined::DelayTriggerRememberedLki,
                 "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
                 // Gemerkte Karten und Spieler (Java `getDefinedObjects("Remembered")`).
-                "Remembered" | "Player.IsRemembered" => Defined::Remembered,
+                "Remembered" | "Player.IsRemembered" | "RememberedCard" => Defined::Remembered,
                 "ChosenCard" => Defined::ChosenCard,
                 "RememberedLKI" => Defined::RememberedLki,
                 other => return Err(self.unsupported(key, other)),
@@ -878,7 +880,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
             )?));
     }
     let duration = match c.get("Duration") {
-        None => EffectDuration::EndOfTurn,
+        None | Some("EndOfTurn") => EffectDuration::EndOfTurn,
         Some("Permanent") => EffectDuration::Permanent,
         Some("UntilYourNextTurn") => EffectDuration::UntilYourNextTurn,
         Some("UntilTheEndOfYourNextTurn") => EffectDuration::UntilTheEndOfYourNextTurn,
@@ -1469,6 +1471,7 @@ fn compile_depth(
                 dest2,
                 dest2_bottom,
                 optional,
+                remember: c.get("RememberChanged").is_some(),
             }
         }
         "Regenerate" => Effect::Regenerate {

@@ -18,6 +18,18 @@ use crate::zone::Zone;
 use forge_types::{Color, ManaCost};
 use std::sync::Arc;
 
+/// Eine nutzbare Spielerlaubnis (`MayPlay$`) für eine Karte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MayPlayGrant {
+    /// Quelle der statischen Fähigkeit (oft ein Effektobjekt)
+    pub host: CardId,
+    pub static_index: usize,
+    pub without_mana_cost: bool,
+    pub with_flash: bool,
+    pub ignore_type: bool,
+    pub ignore_color: bool,
+}
+
 impl GameState {
     /// Darf `p` jetzt etwas mit Hexerei-Geschwindigkeit tun (CR 307.1)?
     pub fn sorcery_timing(&self, p: PlayerId) -> bool {
@@ -194,13 +206,95 @@ impl GameState {
         Ok(Arc::new(built))
     }
 
+    /// Spielerlaubnisse (`MayPlay$`) für `p`: (Karte, Erlaubnis) in fester Reihenfolge.
+    /// Karten auf der Hand sind ohnehin spielbar und werden ausgelassen.
+    pub fn may_play_grants(&self, p: PlayerId) -> Vec<(CardId, MayPlayGrant)> {
+        use crate::statics::CompiledStatic;
+        let mut out = Vec::new();
+        let all = self.players_from(self.active);
+        for host in self.live_cards() {
+            let h = self.card(host);
+            let Some(hz) = h.zone else { continue };
+            for (si, cs) in h.compiled().statics.iter().enumerate() {
+                let CompiledStatic::Continuous(st) = cs.as_ref() else {
+                    continue;
+                };
+                let Some(mp) = &st.may_play else { continue };
+                if !st.effect_zones.contains(&hz) {
+                    continue;
+                }
+                if let Some(n) = mp.limit {
+                    let used = h
+                        .may_play_uses
+                        .iter()
+                        .filter(|(i, t)| *i == si && *t == self.turn)
+                        .count() as u32;
+                    if used >= n {
+                        continue;
+                    }
+                }
+                let ctx = crate::expr::EvalCtx {
+                    source: host,
+                    controller: h.controller,
+                    x: 0,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                if !self.check_conditions(&st.conditions, &ctx) {
+                    continue;
+                }
+                let zones: Vec<Zone> = st
+                    .affected_zones
+                    .iter()
+                    .copied()
+                    .filter(|z| *z != Zone::Hand && *z != Zone::Battlefield && *z != Zone::Stack)
+                    .collect();
+                for c in self.cards_in_zones(&zones, &all) {
+                    let grantee = if mp.card_owner {
+                        self.card(c).owner
+                    } else {
+                        h.controller
+                    };
+                    if grantee != p
+                        || (st.affects_self_only && c != host)
+                        || !st
+                            .affected
+                            .as_ref()
+                            .is_none_or(|a| self.card_matches(c, a, host, h.controller))
+                    {
+                        continue;
+                    }
+                    out.push((
+                        c,
+                        MayPlayGrant {
+                            host,
+                            static_index: si,
+                            without_mana_cost: mp.without_mana_cost,
+                            with_flash: mp.with_flash,
+                            ignore_type: mp.ignore_type,
+                            ignore_color: mp.ignore_color,
+                        },
+                    ));
+                }
+            }
+        }
+        out
+    }
+
     /// Kann `p` die Karte `c` (mit ihrer aktuellen Seite) jetzt wirken?
     /// Zeitpunkt, Ziele und grob die Bezahlbarkeit.
     fn castable_now(&self, p: PlayerId, c: CardId) -> bool {
+        self.castable_with(p, c, None)
+    }
+
+    /// Wie [`GameState::castable_now`], mit einer `MayPlay`-Erlaubnis (Flash, ohne Manakosten).
+    fn castable_with(&self, p: PlayerId, c: CardId, grant: Option<&MayPlayGrant>) -> bool {
         let card = self.card(c);
         let ch = self.chars(c);
-        let instant_speed =
-            ch.types.has_core(forge_types::CoreType::Instant) || ch.has(&Keyword::Flash);
+        let instant_speed = ch.types.has_core(forge_types::CoreType::Instant)
+            || ch.has(&Keyword::Flash)
+            || grant.is_some_and(|g| g.with_flash);
         if !(instant_speed || self.sorcery_timing(p)) {
             return false;
         }
@@ -216,6 +310,9 @@ impl GameState {
             {
                 return false;
             }
+        }
+        if grant.is_some_and(|g| g.without_mana_cost) {
+            return true;
         }
         if ch.mana_cost.as_ref().is_some_and(|m| m.no_cost) {
             return false; // CR 118.6: ohne Manakosten nicht normal wirkbar
@@ -275,6 +372,24 @@ impl GameState {
                 } else if g.castable_now(p, c) {
                     acts.push(Action::CastAlt(c, face));
                 }
+            }
+        }
+        // Spielerlaubnisse (`MayPlay$`): Karten außerhalb der Hand
+        for (c, grant) in self.may_play_grants(p) {
+            let card = self.card(c);
+            if !card.def.is_supported() {
+                continue;
+            }
+            let act = if self.chars(c).types.is_land() {
+                (land_ok && !grant.without_mana_cost).then_some(Action::PlayLand(c))
+            } else {
+                self.castable_with(p, c, Some(&grant))
+                    .then_some(Action::Cast(c))
+            };
+            if let Some(a) = act
+                && !acts.contains(&a)
+            {
+                acts.push(a);
             }
         }
         // CR 715.4: Karten „auf Abenteuer“ dürfen aus dem Exil als Kreatur gewirkt werden.
@@ -339,6 +454,9 @@ impl GameState {
         match a {
             Action::Pass => Ok(()),
             Action::PlayLand(c) => {
+                if self.card(c).zone != Some(Zone::Hand) {
+                    self.use_may_play(p, c, false);
+                }
                 let new = self.move_card_as(c, Zone::Battlefield, true, Some(p));
                 self.player_mut(p).lands_played_this_turn += 1;
                 self.push_event(Event::LandPlayed {
@@ -347,7 +465,14 @@ impl GameState {
                 });
                 Ok(())
             }
-            Action::Cast(c) => self.cast_spell(p, c, ch),
+            Action::Cast(c) => {
+                let grant = match self.card(c).zone {
+                    Some(Zone::Hand) | None => None,
+                    _ if self.card(c).on_adventure => None,
+                    _ => self.use_may_play(p, c, true),
+                };
+                self.cast_spell_free(p, c, grant, ch)
+            }
             Action::CastAlt(c, face) => {
                 // Die Seite bleibt beim Wechsel auf den Stapel erhalten.
                 self.card_mut(c).face = face;
@@ -406,9 +531,58 @@ impl GameState {
     }
 
     fn cast_spell(&mut self, p: PlayerId, card: CardId, ch: &mut Choices) -> Res<()> {
+        self.cast_spell_free(p, card, None, ch)
+    }
+
+    /// Nutzt die erste passende `MayPlay`-Erlaubnis (bevorzugt „ohne Manakosten“, wenn
+    /// `prefer_free`); zählt `MayPlayLimit$`.
+    fn use_may_play(&mut self, p: PlayerId, c: CardId, prefer_free: bool) -> Option<MayPlayGrant> {
+        let mut grants: Vec<MayPlayGrant> = self
+            .may_play_grants(p)
+            .into_iter()
+            .filter(|(x, _)| *x == c)
+            .map(|(_, g)| g)
+            .collect();
+        if prefer_free {
+            grants.sort_by_key(|g| !g.without_mana_cost);
+        }
+        let g = grants.first().copied()?;
+        let turn = self.turn;
+        self.card_mut(g.host)
+            .may_play_uses
+            .push((g.static_index, turn));
+        Some(g)
+    }
+
+    fn cast_spell_free(
+        &mut self,
+        p: PlayerId,
+        card: CardId,
+        grant: Option<MayPlayGrant>,
+        ch: &mut Choices,
+    ) -> Res<()> {
         // CR 601.2a: Auf den Stapel legen.
         let spell_ab = self.card(card).compiled().spell.clone();
-        let mana_cost = self.chars(card).mana_cost.clone().unwrap_or_default();
+        // CR 118.9 / 107.3: ohne Manakosten gewirkt → keine Manakosten, X = 0.
+        let mut mana_cost = if grant.is_some_and(|g| g.without_mana_cost) {
+            ManaCost::default()
+        } else {
+            self.chars(card).mana_cost.clone().unwrap_or_default()
+        };
+        // CR 609.4b: Mana wie beliebigen Typs/beliebiger Farbe ausgeben → farbige
+        // (bzw. alle nicht-generischen) Symbole wie generisches Mana behandeln.
+        if let Some(g) = grant
+            && (g.ignore_type || g.ignore_color)
+        {
+            mana_cost.shards.retain(|s| {
+                let convertible =
+                    !s.x && !s.phyrexian && (g.ignore_type || !s.colors.is_colorless());
+                if convertible {
+                    mana_cost.generic += 1;
+                }
+                !convertible
+            });
+        }
         let on_stack = self.move_card(card, Zone::Stack, true);
         self.card_mut(on_stack).controller = p;
         // X merken: für Werte, die sich beim Ankommen auf X beziehen (etbCounter)

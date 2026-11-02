@@ -60,6 +60,9 @@ impl GameState {
             Prop::OppOwn => c.owner != you,
             Prop::IsRemembered => self.card(source).remembered.contains(&id),
             Prop::InZone(z) => c.zone == Some(*z),
+            Prop::TopLibrary => {
+                c.zone == Some(Zone::Library) && self.player(c.owner).library.last() == Some(&id)
+            }
             Prop::ChosenCard { strict } => self
                 .card(source)
                 .chosen_cards
