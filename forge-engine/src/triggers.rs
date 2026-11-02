@@ -1459,6 +1459,14 @@ impl GameState {
     }
 
     /// Meldet ein Ereignis; passende Trigger werden vorgemerkt.
+    /// Wie [`GameState::fire`], aber nur für die Trigger von `only` (z. B. ETB eines
+    /// Objekts, das beim Ankommen zur Kopie wurde).
+    pub fn fire_only_for(&mut self, ev: TriggerEvent, only: CardId) {
+        self.fire_only = Some(only);
+        self.fire(ev);
+        self.fire_only = None;
+    }
+
     pub fn fire(&mut self, ev: TriggerEvent) {
         // Die Prüfung verändert keine Eigenschaften → `chars()` cachen.
         let _cache = crate::state::CharsCache::enter();
@@ -1474,6 +1482,7 @@ impl GameState {
                     .any(|t| t.active_zones.contains(z))
             })
             .map(|(c, z)| (c.id, z))
+            .filter(|(id, _)| self.fire_only.is_none_or(|o| o == *id))
             .collect();
         let left_battlefield = match &ev {
             TriggerEvent::ChangesZone {
@@ -1549,7 +1558,11 @@ impl GameState {
             }
         }
         // CR 603.7c: verzögerte Trigger lösen nur einmal aus.
-        let mut i = 0;
+        let mut i = if self.fire_only.is_some() {
+            self.delayed_triggers.len()
+        } else {
+            0
+        };
         while i < self.delayed_triggers.len() {
             let d = &self.delayed_triggers[i];
             let active = self.turn >= d.from_turn && d.until_turn.is_none_or(|u| self.turn <= u);

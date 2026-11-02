@@ -48,6 +48,7 @@ impl GameState {
             activations: Vec::new(),
             may_play_uses: Vec::new(),
             prevent_next: 0,
+            copy: None,
         });
         self.zone_list_mut(zone, owner).push(id);
         id
@@ -94,7 +95,16 @@ impl GameState {
         let from = self.card(id).zone;
         let (to, mods) = self.replace_move(id, from, to);
         self.remove_from_zone(id);
-        let old = self.card(id).clone();
+        // CR 707: Kopie-Werte enden mit dem Zonenwechsel (eigene Werte zurück).
+        let old = {
+            let mut o = self.card(id).clone();
+            if let Some(cp) = o.copy.take() {
+                o.def = cp.orig_def;
+                o.face = cp.orig_face;
+                o.base_pt = cp.orig_base_pt;
+            }
+            o
+        };
         let new_id = CardId(self.cards.len() as u32);
         let ts = self.timestamp();
         // Standard: Besitzer (CR 108.4, 110.2); auf dem Battlefield ggf. abweichend.
@@ -147,6 +157,7 @@ impl GameState {
             activations: Vec::new(),
             may_play_uses: Vec::new(),
             prevent_next: 0,
+            copy: None,
         });
         {
             let o = self.card_mut(id);

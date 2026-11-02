@@ -172,6 +172,25 @@ pub enum Effect {
         who: Defined,
         num: Amount,
     },
+    /// Zur Kopie werden (`Clone`, CR 707): `cloner` wird Kopie der gewählten Karte.
+    Clone {
+        source: CloneSource,
+        cloner: Defined,
+        /// `Optional$`: „du darfst“
+        optional: bool,
+        mods: crate::state::CopyMods,
+    },
+    /// Token-Kopien erzeugen (`CopyPermanent`, CR 707.2, 111.10).
+    CopyPermanent {
+        source: CloneSource,
+        num: Amount,
+        controller: Defined,
+        tapped: bool,
+        mods: crate::state::CopyMods,
+        remember: bool,
+        /// `AtEOT$`: verzögerter Trigger „zu Beginn des nächsten Endsegments …“
+        at_eot: Option<Arc<crate::triggers::CompiledTrigger>>,
+    },
     /// Farbe wählen (`ChooseColor`): die Quelle merkt sie (`ChosenColor`).
     ChooseColor {
         who: Defined,
@@ -1350,6 +1369,50 @@ fn compile_depth(
             }
         }
         "Effect" => compile_effect_object(&mut c, face)?,
+        "Clone" => {
+            if let Some(v) = c.get("Duration") {
+                return Err(c.unsupported("Duration", v));
+            }
+            let source = clone_source(&mut c)?;
+            let cloner = if c.ab.params.has("CloneTarget") {
+                c.defined_key("CloneTarget", Defined::SelfCard)?
+            } else if c.ab.params.has("Choices") && c.ab.params.has("ValidTgts") {
+                Defined::Targeted
+            } else {
+                Defined::SelfCard
+            };
+            let optional = c.get("Optional").is_some();
+            c.get("ChoiceTitle");
+            Effect::Clone {
+                source,
+                cloner,
+                optional,
+                mods: copy_mods(&mut c)?,
+            }
+        }
+        "CopyPermanent" => {
+            let source = clone_source(&mut c)?;
+            let at_eot = match c.get("AtEOT") {
+                None => None,
+                Some(v) => Some(at_eot_trigger(face, v).ok_or_else(|| c.unsupported("AtEOT", v))?),
+            };
+            let controller = if c.ab.params.has("Controller") {
+                c.defined_key("Controller", Defined::You)?
+            } else {
+                Defined::You
+            };
+            Effect::CopyPermanent {
+                source,
+                num: c.amount("NumCopies", Some(1))?,
+                controller,
+                tapped: c
+                    .get("TokenTapped")
+                    .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+                mods: copy_mods(&mut c)?,
+                remember: c.get("RememberTokens").is_some(),
+                at_eot,
+            }
+        }
         "ChooseColor" => Effect::ChooseColor {
             who: c.defined(Defined::You)?,
         },
@@ -1757,6 +1820,102 @@ fn compile_depth(
         activation_limit,
         game_activation_limit,
     })
+}
+
+/// Was kopiert wird (`Choices$` mit Auswahl oder `Defined$`/Ziel).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CloneSource {
+    Choices {
+        zones: Vec<crate::zone::Zone>,
+        spec: ValidSpec,
+        /// `ChoiceOptional$`
+        optional: bool,
+    },
+    Defined(Defined),
+}
+
+fn clone_source(c: &mut Ctx) -> Result<CloneSource, CompileError> {
+    if let Some(v) = c.get("Choices") {
+        let spec = ValidSpec::parse(v)?;
+        let zones = match c.get("ChoiceZone") {
+            Some(z) => parse_zones(c, "ChoiceZone", z)?,
+            None => vec![crate::zone::Zone::Battlefield],
+        };
+        let optional = c.get("ChoiceOptional").is_some();
+        return Ok(CloneSource::Choices {
+            zones,
+            spec,
+            optional,
+        });
+    }
+    Ok(CloneSource::Defined(c.defined(Defined::Targeted)?))
+}
+
+/// Änderungen einer Kopie (`AddTypes$`, `AddKeywords$`, `SetPower$` …).
+fn copy_mods(c: &mut Ctx) -> Result<crate::state::CopyMods, CompileError> {
+    let words = |v: &str| -> Vec<String> {
+        v.split('&')
+            .map(|w| w.trim().to_string())
+            .filter(|w| !w.is_empty())
+            .collect()
+    };
+    let mut m = crate::state::CopyMods::default();
+    if let Some(v) = c.get("AddTypes") {
+        m.add_types = words(v);
+    }
+    if let Some(v) = c.get("SetCreatureTypes") {
+        m.set_creature_types = Some(words(v));
+    }
+    if let Some(v) = c.get("AddKeywords") {
+        let kws = crate::keyword::Keyword::parse_list(v);
+        if kws.iter().any(|k| !k.is_supported()) {
+            return Err(c.unsupported("AddKeywords", v));
+        }
+        m.add_keywords = kws;
+    }
+    for (k, slot) in [("SetPower", 0), ("SetToughness", 1)] {
+        if let Some(v) = c.get(k) {
+            let n: i32 = v.trim().parse().map_err(|_| c.unsupported(k, v))?;
+            if slot == 0 {
+                m.set_power = Some(n);
+            } else {
+                m.set_toughness = Some(n);
+            }
+        }
+    }
+    m.non_legendary = c
+        .get("NonLegendary")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    if let Some(v) = c.get("SetColor") {
+        m.set_color = Some(
+            forge_types::ColorSet::from_names(&v.replace('&', ","))
+                .ok_or_else(|| c.unsupported("SetColor", v))?,
+        );
+    }
+    Ok(m)
+}
+
+/// `AtEOT$ Sacrifice|Exile|Destroy|Hand`: verzögerter Trigger zu Beginn des nächsten
+/// Endsegments für die gemerkten Objekte (Java `registerDelayedTrigger`).
+fn at_eot_trigger(face: &CardFace, kind: &str) -> Option<Arc<crate::triggers::CompiledTrigger>> {
+    let exec = match kind {
+        "Sacrifice" => "DB$ Sacrifice | Defined$ DelayTriggerRemembered",
+        "Exile" => {
+            "DB$ ChangeZone | Defined$ DelayTriggerRemembered | Origin$ Battlefield | Destination$ Exile"
+        }
+        "Hand" => {
+            "DB$ ChangeZone | Defined$ DelayTriggerRemembered | Origin$ Battlefield | Destination$ Hand"
+        }
+        "Destroy" => "DB$ Destroy | Defined$ DelayTriggerRemembered",
+        _ => return None,
+    };
+    let mut f = face.clone();
+    f.svars.push(("AtEOTExec".into(), exec.into()));
+    let st = ScriptTrigger::parse(forge_script::ParamMap::parse(&format!(
+        "Mode$ Phase | Phase$ End of Turn | Execute$ AtEOTExec | TriggerDescription$ At the beginning of the next end step, {kind}."
+    )))
+    .ok()?;
+    crate::triggers::compile_trigger(&f, &st).ok().map(Arc::new)
 }
 
 /// Welche Typen `ChooseType` anbietet.

@@ -211,7 +211,10 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             continue;
         }
         // Java CardFactoryUtil: ETBReplacement:Other → Ersatzeffekt „wie es ins Spiel kommt“
-        if let Some(rest) = k.strip_prefix("ETBReplacement:Other:") {
+        if let Some(rest) = k
+            .strip_prefix("ETBReplacement:Other:")
+            .or_else(|| k.strip_prefix("ETBReplacement:Copy:"))
+        {
             let mut it = rest.split(':');
             let name = it.next().unwrap_or("");
             let optional = match it.next() {

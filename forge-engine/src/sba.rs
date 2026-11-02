@@ -61,8 +61,21 @@ impl GameState {
                     trig: None,
                     paid: Vec::new(),
                 };
+                let was_copy = self.card(c).copy.is_some();
                 self.apply_chain(&ab, &[], &ctx, ch)?;
                 any = true;
+                // Als Kopie angekommen (CR 707, 614.1c): eigene ETB-Trigger der Kopie
+                if !was_copy && self.card(c).copy.is_some() {
+                    self.fire_only_for(
+                        crate::triggers::TriggerEvent::ChangesZone {
+                            old: c,
+                            new: c,
+                            from: None,
+                            to: Zone::Battlefield,
+                        },
+                        c,
+                    );
+                }
             }
         }
         Ok(any)

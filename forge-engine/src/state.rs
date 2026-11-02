@@ -159,6 +159,48 @@ pub struct CardObj {
     pub activations: Vec<(usize, u32)>,
     /// Nutzungen von `MayPlay`-Erlaubnissen dieser Quelle (Static-Index, Zug).
     pub may_play_uses: Vec<(usize, u32)>,
+    /// Kopie eines anderen Objekts (CR 707): `def`/`face`/`base_pt` sind dann die
+    /// kopierten Werte; hier die eigenen Werte und die Änderungen der Kopie.
+    pub copy: Option<Box<CopyInfo>>,
+}
+
+/// Änderungen einer Kopie an den kopierbaren Werten (CR 707.9), Layer 1.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CopyMods {
+    pub add_types: Vec<String>,
+    /// `SetCreatureTypes$`: Kreaturtypen ersetzen
+    pub set_creature_types: Option<Vec<String>>,
+    pub add_keywords: Vec<crate::keyword::Keyword>,
+    pub set_power: Option<i32>,
+    pub set_toughness: Option<i32>,
+    pub non_legendary: bool,
+    pub set_color: Option<forge_types::ColorSet>,
+}
+
+impl CopyMods {
+    /// CR 707.9b: Änderungen einer Kopie einer Kopie gelten zusätzlich.
+    pub fn then(&self, later: &CopyMods) -> CopyMods {
+        let mut m = self.clone();
+        m.add_types.extend(later.add_types.iter().cloned());
+        if later.set_creature_types.is_some() {
+            m.set_creature_types = later.set_creature_types.clone();
+        }
+        m.add_keywords.extend(later.add_keywords.iter().cloned());
+        m.set_power = later.set_power.or(m.set_power);
+        m.set_toughness = later.set_toughness.or(m.set_toughness);
+        m.non_legendary |= later.non_legendary;
+        m.set_color = later.set_color.or(m.set_color);
+        m
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CopyInfo {
+    /// Eigene Definition/Seite/Basiswerte (beim Zonenwechsel wiederhergestellt)
+    pub orig_def: Arc<CardDefinition>,
+    pub orig_face: usize,
+    pub orig_base_pt: Option<(i32, i32)>,
+    pub mods: CopyMods,
 }
 
 /// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).
@@ -473,6 +515,8 @@ pub struct GameState {
     /// Objekte, deren `ETBReplacement:Other`-Fähigkeiten („wenn … ins Spiel kommt,
     /// wähle …“) noch ausgeführt werden müssen (vor den nächsten SBAs).
     pub pending_etb: Vec<CardId>,
+    /// Während `fire_only`: nur Trigger dieses Objekts prüfen.
+    pub fire_only: Option<CardId>,
     /// Während gleichzeitiger Zonenwechsel: Battlefield davor (CR 603.10a).
     pub lki_battlefield: Option<Vec<CardId>>,
     /// Verzögerte Trigger (CR 603.7), in Erzeugungsreihenfolge.
@@ -683,6 +727,38 @@ impl GameState {
                 .or_else(|| face.toughness.as_ref().map(|t| t.base())),
             keywords: compiled.keywords.clone(),
         };
+        // Layer 1 (CR 613.1a): Änderungen einer Kopie an den kopierbaren Werten
+        if let Some(cp) = &c.copy {
+            let m = &cp.mods;
+            if let Some(cts) = &m.set_creature_types {
+                if let Some(reg) = crate::valid::type_registry() {
+                    ch.types
+                        .subtypes
+                        .retain(|t| reg.kind_of(t) != Some(forge_types::SubtypeKind::Creature));
+                }
+                for t in cts {
+                    ch.types.add(t);
+                }
+            }
+            for t in &m.add_types {
+                ch.types.add(t);
+            }
+            if m.non_legendary {
+                ch.types
+                    .supertypes
+                    .remove(&forge_types::Supertype::Legendary);
+            }
+            if let Some(col) = m.set_color {
+                ch.colors = col;
+            }
+            if m.set_power.is_some() {
+                ch.power = m.set_power;
+            }
+            if m.set_toughness.is_some() {
+                ch.toughness = m.set_toughness;
+            }
+            ch.keywords.extend(m.add_keywords.iter().cloned());
+        }
 
         // Wirkende statische Fähigkeiten: Quelle in einer EffectZone, Objekt in einer AffectedZone.
         struct Src<'a> {
@@ -982,6 +1058,36 @@ impl GameState {
         v
     }
 
+    /// Kopierbare Werte von `of` (CR 707.2/707.3): Definition, Seite, Basis-P/T und
+    /// ggf. die Änderungen einer Kopie, auf der `of` selbst beruht.
+    pub fn copiable_values(
+        &self,
+        of: CardId,
+    ) -> (Arc<CardDefinition>, usize, Option<(i32, i32)>, CopyMods) {
+        let o = self.card(of);
+        let mods = o.copy.as_ref().map(|c| c.mods.clone()).unwrap_or_default();
+        (o.def.clone(), o.face, o.base_pt, mods)
+    }
+
+    /// `c` wird zur Kopie von `of` (mit zusätzlichen Änderungen `mods`).
+    pub fn become_copy(&mut self, c: CardId, of: CardId, mods: &CopyMods) {
+        let (def, face, base_pt, prev) = self.copiable_values(of);
+        let o = self.card_mut(c);
+        let (orig_def, orig_face, orig_base_pt) = match o.copy.take() {
+            Some(cp) => (cp.orig_def, cp.orig_face, cp.orig_base_pt),
+            None => (o.def.clone(), o.face, o.base_pt),
+        };
+        o.def = def;
+        o.face = face;
+        o.base_pt = base_pt;
+        o.copy = Some(Box::new(CopyInfo {
+            orig_def,
+            orig_face,
+            orig_base_pt,
+            mods: prev.then(mods),
+        }));
+    }
+
     pub fn is_creature(&self, id: CardId) -> bool {
         self.chars(id).types.is_creature()
     }
@@ -1028,6 +1134,7 @@ impl GameState {
             repeat_cleanup: false,
             pending_triggers: Vec::new(),
             pending_etb: Vec::new(),
+            fire_only: None,
             lki_battlefield: None,
             delayed_triggers: Vec::new(),
             control_effects: Vec::new(),

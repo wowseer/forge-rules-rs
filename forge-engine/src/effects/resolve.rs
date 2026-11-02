@@ -852,7 +852,17 @@ impl GameState {
                 // CR 101.4: erst wählen alle (APNAP-Reihenfolge der Defined-Liste),
                 // dann wird gleichzeitig geopfert.
                 let mut chosen: Vec<CardId> = Vec::new();
+                // Java SacrificeEffect: `Defined$` mit Karten → genau diese opfern
+                // (nur eigene bleibende Karten, CR 701.21a).
+                let defined_cards: Vec<CardId> =
+                    self.cards_of(&self.resolve_defined(*who, targets, ctx));
                 match valid {
+                    None if !defined_cards.is_empty() && !*optional => {
+                        chosen.extend(defined_cards.into_iter().filter(|c| {
+                            let o = self.card(*c);
+                            o.zone == Some(Zone::Battlefield) && o.controller == ctx.controller
+                        }));
+                    }
                     None => {
                         // „Opfere ~“: nur wenn die Quelle noch unter deiner Kontrolle im Spiel ist.
                         let src = self.card(ctx.source);
@@ -966,6 +976,101 @@ impl GameState {
                     for c in grave {
                         self.move_card(c, Zone::Graveyard, true);
                     }
+                }
+            }
+            Effect::Clone {
+                source,
+                cloner,
+                optional,
+                mods,
+            } => {
+                let Some(of) = self
+                    .pick_clone_source(source, targets, ctx, ch)?
+                    .first()
+                    .copied()
+                else {
+                    return Ok(());
+                };
+                if *optional
+                    && !matches!(
+                        ch.ask(Decision::Confirm {
+                            player: ctx.controller,
+                            prompt: "Kopie werden?".into(),
+                        })?,
+                        Choice::Yes
+                    )
+                {
+                    return Ok(());
+                }
+                for c in self.cards_of(&self.resolve_defined(*cloner, targets, ctx)) {
+                    if self.card(c).zone == Some(Zone::Battlefield) && c != of {
+                        self.become_copy(c, of, mods);
+                    }
+                }
+            }
+            Effect::CopyPermanent {
+                source,
+                num,
+                controller,
+                tapped,
+                mods,
+                remember,
+                at_eot,
+            } => {
+                let originals = self.pick_clone_source(source, targets, ctx, ch)?;
+                let n = self.amount(num, ctx, targets).max(0);
+                let owners = Self::players_of(&self.resolve_defined(*controller, targets, ctx));
+                let mut made: Vec<CardId> = Vec::new();
+                for p in owners {
+                    for &of in &originals {
+                        for _ in 0..n {
+                            let (def, face, base_pt, prev) = self.copiable_values(of);
+                            let id = self.create_card(def.clone(), p, Zone::Battlefield, true);
+                            {
+                                let o = self.card_mut(id);
+                                o.face = face;
+                                o.base_pt = base_pt;
+                                o.tapped = *tapped;
+                                o.copy = Some(Box::new(crate::state::CopyInfo {
+                                    orig_def: def,
+                                    orig_face: face,
+                                    orig_base_pt: base_pt,
+                                    mods: prev.then(mods),
+                                }));
+                            }
+                            made.push(id);
+                            self.push_event(crate::state::Event::ZoneChange {
+                                old: id,
+                                new: id,
+                                from: None,
+                                to: Zone::Battlefield,
+                            });
+                            self.fire(crate::triggers::TriggerEvent::ChangesZone {
+                                old: id,
+                                new: id,
+                                from: None,
+                                to: Zone::Battlefield,
+                            });
+                        }
+                    }
+                }
+                if *remember {
+                    self.card_mut(ctx.source)
+                        .remembered
+                        .extend(made.iter().copied());
+                }
+                if let Some(t) = at_eot
+                    && !made.is_empty()
+                {
+                    let turn = self.turn;
+                    self.delayed_triggers.push(crate::triggers::DelayedTrigger {
+                        trigger: t.clone(),
+                        source: ctx.source,
+                        controller: ctx.controller,
+                        remembered: made.into_iter().map(Target::Card).collect(),
+                        from_turn: turn,
+                        until_turn: None,
+                    });
                 }
             }
             Effect::ChooseColor { who } => {
@@ -1436,6 +1541,46 @@ impl GameState {
             }
         }
         Ok(())
+    }
+
+    /// Was kopiert wird: Auswahl aus `Choices$` (eine Karte) oder `Defined$`/Ziele.
+    fn pick_clone_source(
+        &mut self,
+        source: &super::CloneSource,
+        targets: &[Target],
+        ctx: &ResolveCtx,
+        ch: &mut Choices,
+    ) -> Res<Vec<CardId>> {
+        Ok(match source {
+            super::CloneSource::Defined(d) => {
+                self.cards_of(&self.resolve_defined(*d, targets, ctx))
+            }
+            super::CloneSource::Choices {
+                zones,
+                spec,
+                optional,
+            } => {
+                let all = self.players_from(self.active);
+                let options: Vec<CardId> = self
+                    .cards_in_zones(zones, &all)
+                    .into_iter()
+                    .filter(|c| self.card_matches(*c, spec, ctx.source, ctx.controller))
+                    .collect();
+                if options.is_empty() {
+                    return Ok(Vec::new());
+                }
+                match ch.ask(Decision::ChooseCards {
+                    player: ctx.controller,
+                    reason: crate::decision::CardChoiceReason::Choose,
+                    options,
+                    min: u32::from(!*optional),
+                    max: 1,
+                })? {
+                    Choice::Cards(c) => c,
+                    _ => Vec::new(),
+                }
+            }
+        })
     }
 
     /// Bewegt eine Karte gemäß `place` (Tapped, Kontrolle, Bibliotheksposition).
