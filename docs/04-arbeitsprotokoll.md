@@ -5,6 +5,52 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-02 – Sitzung 6: Mehrseitige Karten, Sagas, Kosten, Zugstatistik
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Adventure, modale DFC, Transformieren (`SetState Transform`, `Transformed$`) | ✅ |
+| Sagas (CR 714): Kapitel als `CounterAdded`-Trigger, Lore-Marken, SBA 704.5s | ✅ |
+| Trigger `CounterAdded`, `SpellCast TargetsValid$` (Heroic), `ImmediateTrigger` (CR 603.12) | ✅ |
+| Ausdrücke: `TriggerCount$…`, `Sacrificed$/Discarded$/Exiled$/Tapped$…`, Zugstatistik (`LifeYouGainedThisTurn`, `ThisTurnCast_`, `ThisTurnEntered_`, Morbid, `AttackersDeclared` …) | ✅ |
+| Kostenteile `Exile<1/CARDNAME>`, `ExileFromGrave<n/Typ>`, `tapXType`, `Return`, `;` in Kostenfiltern | ✅ |
+| `ActivationLimit$`, `ChooseCard`, `PeekAndReveal`, `RememberChanged$`, `RememberDiscarded$`, Filter `inZone…`/`ChosenCard`, Ersatzeffekt `Untap` | ✅ |
+| Fehlerbehebung: Zusatzkosten von Zaubern wurden nicht bezahlt | ✅ |
+| Tests | 237 (19 neue), 1.000 Zufallspartien je Schritt ohne Absturz (~200 s) |
+| Unterstützte Karten im Zielpool | 35,4 % → **39,2 %** (Pauper 56 %, Modern 42 %) |
+
+### Entscheidungen
+
+- Zusatzkosten von Zaubern: Nicht-Mana-Teile werden nach dem Mana bezahlt (Java `Cost.sort`);
+  Aktivierte Fähigkeiten zahlen weiterhin Nicht-Mana zuerst.
+- Bezahlte Kostenobjekte liegen als LKI-IDs in `StackItem::paid` bzw. `ResolveCtx::paid`/`EvalCtx::paid`.
+- Zugstatistik in `GameState::this_turn` (Zonenwechsel mit altem Objekt, gewirkte Zauber,
+  Angreifer); Filter prüfen das Objekt vor dem Wechsel (Java `cardsAddedThisTurn` = LKI).
+- `CounterAdded` feuert je einzelner Marke mit laufender Gesamtzahl (wie Java); Marken beim
+  Ankommen feuern nach dem Zonenwechsel (CR 122.6).
+- `tapXType` ohne die Quelle, wenn `{T}` Teil derselben Kosten ist (Java `canTapSource`) –
+  im Lasttest als Absturz aufgefallen.
+- Neue Entscheidung `Decision::Confirm` für allgemeine Ja/Nein-Fragen von Effekten.
+- Ausdrucksfehler melden jetzt den eigentlichen `Count$`-Ausdruck; neue Analysebeispiele
+  `unlock` (würden frei / betroffen) und `card` (Status einzelner Karten).
+
+### Bekannte Lücken
+
+- Filter mit Variablen (`cmcLEX`, `cmcEQX`, ~120 Karten) brauchen einen Auswertungskontext in
+  allen ~45 `card_matches`-Aufrufen – größerer Umbau, zurückgestellt.
+- `ActivationLimit$` bei Mana-Fähigkeiten, `Mana Amount$ X`, `Read ahead`, Battles als Angriffsziel.
+- Lasttest-Laufzeit stieg mit mehr unterstützten Karten leicht; ohne parallele Builds ~200 s.
+
+### Nächste Schritte
+
+1. `MayPlay$` (Static, 178 frei), `AlternativeCost` (87), `CopyPermanent` (137), Convoke (71).
+2. Filter mit X-Variablen (`cmc…X`) über einen gebundenen Auswertungskontext.
+3. `ChooseType` (65), `ChooseSource`, `AnimateAll`, `RollDice`.
+
+---
+
 ## 2026-11-02 – Sitzung 5: Schaden ersetzen, Kontrolle, RepeatEach, Performance
 
 ### Ergebnis
