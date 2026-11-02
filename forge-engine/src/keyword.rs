@@ -39,6 +39,15 @@ pub enum Keyword {
     Affinity(String),
     /// CR 702.33: `Kicker:<Kosten>[:<zweite Kosten>]` (Originaltext der Kosten)
     Kicker(Vec<String>),
+    /// `HIDDEN CARDNAME can't block.` (meist bis Zugende verliehen)
+    CantBlock,
+    /// `HIDDEN CARDNAME can't attack.`
+    CantAttack,
+    /// `HIDDEN CARDNAME can't attack or block.`
+    CantAttackOrBlock,
+    /// `HIDDEN This card doesn't untap during your next untap step.` – wird beim
+    /// Verleihen als einmaliges Flag am Objekt umgesetzt (`CardObj::skip_next_untap`).
+    NoUntapNext,
     /// Nicht (oder noch nicht) typisiertes Keyword, Originaltext.
     Other(String),
 }
@@ -63,6 +72,12 @@ impl Keyword {
             "Shroud" => Keyword::Shroud,
             "Devoid" => Keyword::Devoid,
             "Changeling" => Keyword::Changeling,
+            "HIDDEN CARDNAME can't block." | "CARDNAME can't block." => Keyword::CantBlock,
+            "HIDDEN CARDNAME can't attack." | "CARDNAME can't attack." => Keyword::CantAttack,
+            "HIDDEN CARDNAME can't attack or block." | "CARDNAME can't attack or block." => {
+                Keyword::CantAttackOrBlock
+            }
+            "HIDDEN This card doesn't untap during your next untap step." => Keyword::NoUntapNext,
             "Convoke" => Keyword::Convoke,
             "Improvise" => Keyword::Improvise,
             "Delve" => Keyword::Delve,

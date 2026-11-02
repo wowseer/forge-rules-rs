@@ -199,6 +199,17 @@ impl GameState {
     }
 
     fn restricted(&self, kind: crate::statics::RestrictionKind, card: CardId) -> bool {
+        use crate::statics::RestrictionKind as K;
+        let kw = match kind {
+            K::CantBlock => Some(Keyword::CantBlock),
+            K::CantAttack => Some(Keyword::CantAttack),
+            _ => None,
+        };
+        if let Some(k) = kw
+            && (self.has_keyword(card, &k) || self.has_keyword(card, &Keyword::CantAttackOrBlock))
+        {
+            return true;
+        }
         self.restrictions(kind)
             .iter()
             .any(|(src, ctrl, r)| self.card_matches(card, &r.valid, *src, *ctrl))

@@ -1251,6 +1251,16 @@ fn compile_depth(
             if let Some(k) = keywords.iter().find(|k| !k.is_supported()) {
                 return Err(c.unsupported("KW", &format!("{k:?}")));
             }
+            // `Duration$ Permanent` nur für einmalige Flags („enttappt nächstes Mal nicht“)
+            match c.get("Duration") {
+                None => {}
+                Some("Permanent")
+                    if !keywords.is_empty()
+                        && keywords.iter().all(|k| *k == Keyword::NoUntapNext)
+                        && power == Amount::Fixed(0)
+                        && toughness == Amount::Fixed(0) => {}
+                Some(v) => return Err(c.unsupported("Duration", v)),
+            }
             Effect::Pump {
                 what,
                 power,

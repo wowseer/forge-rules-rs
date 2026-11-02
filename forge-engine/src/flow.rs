@@ -141,9 +141,11 @@ impl GameState {
                 // CR 302.6: Kontrolle seit Zugbeginn
                 for c in self.battlefield_of(ap).collect::<Vec<_>>() {
                     // CR 502.3 (außer „enttappt nicht“, CR 614)
-                    let keep_tapped = self.card(c).tapped && self.untap_prevented(c, ap);
+                    let keep_tapped = self.card(c).tapped
+                        && (self.card(c).skip_next_untap || self.untap_prevented(c, ap));
                     let o = self.card_mut(c);
                     o.controlled_since_turn_start = true;
+                    o.skip_next_untap = false;
                     if !keep_tapped {
                         o.tapped = false;
                     }

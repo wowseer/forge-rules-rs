@@ -309,7 +309,16 @@ impl GameState {
                 let p = self.amount(power, ctx, targets);
                 let t = self.amount(toughness, ctx, targets);
                 let ts = self.resolve_defined(*what, targets, ctx);
+                let no_untap = keywords.contains(&crate::keyword::Keyword::NoUntapNext);
+                let keywords: Vec<crate::keyword::Keyword> = keywords
+                    .iter()
+                    .filter(|k| **k != crate::keyword::Keyword::NoUntapNext)
+                    .cloned()
+                    .collect();
                 for c in self.cards_of(&ts) {
+                    if no_untap {
+                        self.card_mut(c).skip_next_untap = true;
+                    }
                     let ch = self.chars(c);
                     let dp = if double.0 { ch.power.unwrap_or(0) } else { 0 };
                     let dt = if double.1 {
