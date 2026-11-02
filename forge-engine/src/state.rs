@@ -29,6 +29,21 @@ pub struct GameRules {
     /// (Commander-Multiplayer: CR 103.8c – alle ziehen außer… siehe Format.)
     pub first_player_skips_draw: bool,
     pub poison_to_lose: u32,
+    /// Commander (CR 903): Commander-Steuer, Befehlszone, 21 Commander-Schaden.
+    pub commander: bool,
+}
+
+impl GameRules {
+    /// Regeln für Commander (CR 903.7: 40 Leben). Im Mehrspielerspiel zieht auch
+    /// der Startspieler im ersten Zug (CR 103.8c) – dafür `first_player_skips_draw`
+    /// auf `false` setzen.
+    pub fn commander() -> GameRules {
+        GameRules {
+            starting_life: 40,
+            commander: true,
+            ..GameRules::default()
+        }
+    }
 }
 
 impl Default for GameRules {
@@ -39,6 +54,7 @@ impl Default for GameRules {
             max_hand_size: 7,
             first_player_skips_draw: true,
             poison_to_lose: 10,
+            commander: false,
         }
     }
 }
@@ -51,6 +67,8 @@ pub enum LossReason {
     DrewFromEmptyLibrary,
     /// CR 704.5c
     Poison,
+    /// CR 704.6c: 21 Kampfschaden von einem Commander
+    CommanderDamage,
     Conceded,
 }
 
@@ -79,6 +97,8 @@ pub struct Player {
     /// In diesem Zug erhaltenes bzw. verlorenes Leben (`Count$LifeYou…ThisTurn`).
     pub life_gained_this_turn: i32,
     pub life_lost_this_turn: i32,
+    /// Erlittener Kampfschaden je Commander (Kennung → Summe), CR 903.10a.
+    pub commander_damage: BTreeMap<u32, u32>,
 }
 
 impl Player {
@@ -161,6 +181,12 @@ pub struct CardObj {
     pub may_play_uses: Vec<(usize, u32)>,
     /// CR 701.37b: ist monströs (durch Monstrosity).
     pub monstrous: bool,
+    /// Commander-Kennung (CR 903.3); bleibt über Zonenwechsel erhalten.
+    pub commander: Option<u32>,
+    /// So oft wurde dieser Commander aus der Befehlszone gewirkt (Steuer, CR 903.8).
+    pub commander_casts: u32,
+    /// Besitzer hat die Rückkehr in die Befehlszone für dieses Objekt abgelehnt.
+    pub commander_stay: bool,
     /// Von welchem Objekt ins Exil geschickt (Java `exiledWith`).
     pub exiled_with: Option<CardId>,
     /// `UntilHostLeavesPlay`: kehrt in diese Zone zurück, wenn die Quelle das
@@ -1225,6 +1251,7 @@ impl GameState {
                 cards_drawn_this_turn: 0,
                 life_gained_this_turn: 0,
                 life_lost_this_turn: 0,
+                commander_damage: BTreeMap::new(),
                 land_plays_per_turn: 1,
                 drew_from_empty_library: false,
                 lost: None,

@@ -774,6 +774,18 @@ impl GameState {
                 acts.push(a);
             }
         }
+        // CR 903.8: eigene Commander aus der Befehlszone
+        for &c in &self.command {
+            let card = self.card(c);
+            if card.commander.is_some()
+                && card.owner == p
+                && card.def.is_supported()
+                && !self.chars(c).types.is_land()
+                && self.castable_now(p, c)
+            {
+                acts.push(Action::Cast(c));
+            }
+        }
         // CR 715.4: Karten „auf Abenteuer“ dürfen aus dem Exil als Kreatur gewirkt werden.
         for &c in &self.exile {
             let card = self.card(c);
@@ -860,6 +872,7 @@ impl GameState {
             Action::Cast(c) => {
                 let grant = match self.card(c).zone {
                     Some(Zone::Hand) | None => None,
+                    Some(Zone::Command) if self.card(c).commander.is_some() => None,
                     _ if self.card(c).on_adventure => None,
                     _ => self.use_may_play(p, c, true),
                 };
@@ -1080,6 +1093,11 @@ impl GameState {
             x,
             paid,
         });
+        if self.card(on_stack).cast_from == Some(Zone::Command)
+            && self.card(on_stack).commander.is_some()
+        {
+            self.card_mut(on_stack).commander_casts += 1;
+        }
         self.this_turn.cast.push(on_stack);
         self.push_event(Event::Cast {
             player: p,
@@ -1633,6 +1651,15 @@ impl GameState {
                     .battlefield_of(caster)
                     .filter(|&c| self.card_matches(c, &v, spell, caster))
                     .count() as i32;
+            }
+        }
+        // CR 903.8: Commander-Steuer {2} je früherem Wirken aus der Befehlszone
+        {
+            let o = self.card(spell);
+            let from_command = o.zone == Some(Zone::Command)
+                || (o.zone == Some(Zone::Stack) && o.cast_from == Some(Zone::Command));
+            if from_command && o.commander.is_some() {
+                raise += 2 * o.commander_casts as i32;
             }
         }
         let mut cost = base.clone();

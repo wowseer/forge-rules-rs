@@ -103,3 +103,69 @@ fn random_games_with_real_cards() {
         "nur {finished}/{games} Partien beendet"
     );
 }
+
+/// Commander-Partien mit vier Spielern (Multiplayer, Befehlszone, Steuer,
+/// Commander-Schaden, Ausscheiden einzelner Spieler).
+#[test]
+fn random_commander_multiplayer_games() {
+    let res = forge_script::corpus::default_res_dir();
+    if !res.exists() {
+        return;
+    }
+    let db = CardDb::load(&res).unwrap();
+    let mut spells: Vec<Arc<forge_engine::CardDefinition>> = db
+        .iter()
+        .filter(|d| d.is_supported() && !d.face(0).types.is_land())
+        .filter(|d| {
+            d.face(0)
+                .mana_cost
+                .as_ref()
+                .is_some_and(|m| m.mana_value() <= 5 && !m.no_cost)
+        })
+        .cloned()
+        .collect();
+    spells.sort_by(|a, b| a.name().cmp(b.name()));
+    spells.dedup_by(|a, b| a.name() == b.name());
+    let creatures: Vec<_> = spells
+        .iter()
+        .filter(|d| d.face(0).types.is_creature())
+        .cloned()
+        .collect();
+    let lands: Vec<_> = ["Plains", "Island", "Swamp", "Mountain", "Forest"]
+        .iter()
+        .map(|n| db.get(n).unwrap().clone())
+        .collect();
+    let games = std::env::var("SOAK_GAMES")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(if cfg!(debug_assertions) { 2 } else { 10 });
+    for seed in 0..games {
+        let mut rng = forge_engine::rng::Rng::new(seed * 104_729 + 3);
+        let mut deck = || {
+            let mut d: Vec<_> = (0..36)
+                .map(|_| spells[rng.below(spells.len() as u64) as usize].clone())
+                .collect();
+            for i in 0..24 {
+                d.push(lands[i % 5].clone());
+            }
+            d
+        };
+        let decks: Vec<_> = (0..4).map(|i| (format!("P{i}"), deck())).collect();
+        let mut rules = GameRules::commander();
+        rules.first_player_skips_draw = false;
+        let mut g = GameState::new(rules, decks, seed, None);
+        g.token_defs = db.token_map();
+        for p in 0..4u8 {
+            let c = creatures[rng.below(creatures.len() as u64) as usize].clone();
+            g.add_commander(c, forge_engine::PlayerId(p));
+        }
+        let mut e = Engine::new(g);
+        let mut ais: Vec<SimpleAi> = (0..4).map(|i| SimpleAi::new(seed * 10 + i)).collect();
+        let mut ctrls: Vec<&mut dyn forge_engine::Controller> = ais
+            .iter_mut()
+            .map(|a| a as &mut dyn forge_engine::Controller)
+            .collect();
+        let _ = run_game_limited(&mut e, &mut ctrls, 80_000, 400);
+        invariants(e.state());
+    }
+}

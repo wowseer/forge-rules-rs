@@ -21,6 +21,8 @@ impl GameState {
         any |= self.expire_control_effects(false);
         // Statische Kontrolle (Layer 2); eine Änderung beendet den Schritt wie eine SBA.
         any |= self.apply_static_control();
+        // CR 903.9: Commander dürfen in die Befehlszone zurück
+        any |= self.commander_zone_returns(ch)?;
         loop {
             if self.winner.is_some() {
                 return Ok(any);
@@ -83,6 +85,49 @@ impl GameState {
         Ok(any)
     }
 
+    /// CR 903.9a/b: Ein Commander im Friedhof, Exil, auf der Hand oder in der
+    /// Bibliothek darf vom Besitzer in die Befehlszone gelegt werden. (Für Hand und
+    /// Bibliothek ist das eigentlich ein Ersatzeffekt; hier wie 903.9a als Wahl
+    /// beim nächsten Prüfen – eine Ablehnung gilt für dieses Objekt.)
+    fn commander_zone_returns(&mut self, ch: &mut Choices) -> Res<bool> {
+        if !self.rules.commander {
+            return Ok(false);
+        }
+        let cands: Vec<CardId> = self
+            .exile
+            .iter()
+            .copied()
+            .chain(self.players.iter().flat_map(|p| {
+                p.graveyard
+                    .iter()
+                    .chain(p.hand.iter())
+                    .chain(p.library.iter())
+                    .copied()
+            }))
+            .filter(|c| {
+                let o = self.card(*c);
+                o.commander.is_some() && !o.commander_stay
+            })
+            .collect();
+        let mut moved = false;
+        for c in cands {
+            let owner = self.card(c).owner;
+            if matches!(
+                ch.ask(crate::decision::Decision::Confirm {
+                    player: owner,
+                    prompt: "Commander in die Befehlszone legen?".into(),
+                })?,
+                crate::decision::Choice::Yes
+            ) {
+                self.move_card(c, Zone::Command, true);
+                moved = true;
+            } else {
+                self.card_mut(c).commander_stay = true;
+            }
+        }
+        Ok(moved)
+    }
+
     fn sba_pass(&mut self, ch: &mut Choices) -> Res<bool> {
         // Sammelphase ist rein lesend → Eigenschaften cachen (vor dem Ausführen freigeben).
         let cache = crate::state::CharsCache::enter();
@@ -100,6 +145,9 @@ impl GameState {
                 losers.push((p.id, LossReason::DrewFromEmptyLibrary));
             } else if p.poison >= self.rules.poison_to_lose {
                 losers.push((p.id, LossReason::Poison));
+            } else if self.rules.commander && p.commander_damage.values().any(|d| *d >= 21) {
+                // CR 704.6c
+                losers.push((p.id, LossReason::CommanderDamage));
             }
         }
 

@@ -55,6 +55,9 @@ impl GameState {
             skip_next_untap: false,
             exiled_with: None,
             exiled_until: None,
+            commander: None,
+            commander_casts: 0,
+            commander_stay: false,
             prevent_next: 0,
             copy: None,
         });
@@ -181,6 +184,9 @@ impl GameState {
             } else {
                 None
             },
+            commander: old.commander,
+            commander_casts: old.commander_casts,
+            commander_stay: false,
             exiled_with: if to == Zone::Exile {
                 self.effect_source
             } else {
@@ -266,6 +272,23 @@ impl GameState {
             self.host_left_play(id);
         }
         new_id
+    }
+
+    /// Legt einen Commander von `p` in die Befehlszone (CR 903.6).
+    pub fn add_commander(
+        &mut self,
+        def: std::sync::Arc<crate::definition::CardDefinition>,
+        p: PlayerId,
+    ) -> CardId {
+        let ident = self
+            .cards
+            .iter()
+            .filter_map(|c| c.commander)
+            .max()
+            .map_or(0, |m| m + 1);
+        let id = self.create_card(def, p, Zone::Command, false);
+        self.card_mut(id).commander = Some(ident);
+        id
     }
 
     /// CR 610.3: Die Quelle `host` hat das Battlefield verlassen – „bis … das
@@ -396,6 +419,17 @@ impl GameState {
             Target::Player(p) => {
                 if !self.player(p).is_in_game() {
                     return;
+                }
+                // CR 903.10a: Kampfschaden von Commandern wird je Commander gezählt
+                if combat
+                    && self.rules.commander
+                    && let Some(ident) = self.card(source).commander
+                {
+                    *self
+                        .player_mut(p)
+                        .commander_damage
+                        .entry(ident)
+                        .or_insert(0) += amount;
                 }
                 self.lose_life(p, amount as i32);
             }

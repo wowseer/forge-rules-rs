@@ -99,6 +99,7 @@ impl GameState {
             }
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
+            Prop::IsCommander => c.commander.is_some(),
             Prop::ExiledWithSource => c.zone == Some(Zone::Exile) && c.exiled_with == Some(source),
             Prop::Kicked(which) => match which {
                 None => c.kicked != 0,

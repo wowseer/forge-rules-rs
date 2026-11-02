@@ -24,9 +24,9 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mana Rule | 14 | 8 | 3 | 1 |
 | Zone | 12 | 5 | 2 | 8 |
 | Mulligan | 2 | 1 | 0 | 4 |
-| Game Variant | 3 | 0 | 1 | 24 |
+| Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **77** | **118** | **81** |
+| **Summe** | **789** | **77** | **119** | **81** |
 
 ## Keyword
 
@@ -331,7 +331,7 @@ Offen (3): Mana restrictions, Mana conversion, Sunburst
 | Graveyard | 🟡 teilweise | `mass_discard_counter::target_player_chooses_discard` | Reihenfolge im Friedhof ohne eigenen Test | zone/ZoneType.java (Graveyard) |
 | Battlefield | ✅ ja | `spells::creature_spell_resolves_onto_battlefield_with_summoning_sickness` |  | zone/ZoneType.java (Battlefield) |
 | Exile | ✅ ja | `replacements::rest_in_peace_redirects_to_exile_and_no_dies_trigger` |  | zone/ZoneType.java (Exile) |
-| Command | 🟡 teilweise | `effects_objects::effect_trigger_fires_from_command_zone` | Effektobjekte | zone/ZoneType.java (Command) |
+| Command | 🟡 teilweise | `effects_objects::effect_trigger_fires_from_command_zone, commander::cast_from_command_zone_with_tax_and_return` | Effektobjekte, Embleme, Commander | zone/ZoneType.java (Command) |
 | Stack | ✅ ja | `turn_structure::stack_resolves_last_in_first_out` |  | zone/ZoneType.java (Stack) |
 | Ante | ⚪ n/a |  | Ante ausgeschlossen | zone/ZoneType.java (Ante) |
 | SchemeDeck | ⚪ n/a |  | Archenemy | zone/ZoneType.java (SchemeDeck) |
@@ -376,6 +376,7 @@ Offen (1): Free first mulligan
 | Puzzle | ⚪ n/a |  | nur als Testfälle, nicht als Spielmodus | GameType.java (Puzzle) |
 | DeckManager | ⚪ n/a |  | keine Spielregeln | GameType.java (DeckManager) |
 | Vanguard | ⚪ n/a |  | ausgeschlossen | GameType.java (Vanguard) |
+| Commander | 🟡 teilweise | `commander::cast_from_command_zone_with_tax_and_return, commander::tax_makes_commander_uncastable_without_enough_mana, commander::declining_return_keeps_commander_in_graveyard, commander::twenty_one_commander_damage_loses, soak::random_commander_multiplayer_games` | CR 903: 40 Leben, Befehlszone, Wirken mit Steuer, Rückkehr in die Befehlszone (auch Hand/Bibliothek als Wahl statt Ersatzeffekt), 21 Commander-Schaden, Filter IsCommander, 4-Spieler-Lasttest | GameType.java (Commander) |
 | Oathbreaker | ⚪ n/a |  | ausgeschlossen | GameType.java (Oathbreaker) |
 | TinyLeaders | ⚪ n/a |  | kein Zielformat | GameType.java (TinyLeaders) |
 | Brawl | ⚪ n/a |  | ausgeschlossen | GameType.java (Brawl) |
@@ -386,7 +387,7 @@ Offen (1): Free first mulligan
 | MomirBasic | ⚪ n/a |  | ausgeschlossen | GameType.java (MomirBasic) |
 | MoJhoSto | ⚪ n/a |  | ausgeschlossen | GameType.java (MoJhoSto) |
 
-Offen (2): Draft, Commander
+Offen (1): Draft
 
 ## Game Rule Option
 

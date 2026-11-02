@@ -92,6 +92,8 @@ pub enum Prop {
     HasCounters,
     /// `IsMonstrous`/`monstrous` (CR 701.37b)
     Monstrous,
+    /// `IsCommander` (CR 903.3)
+    IsCommander,
     /// `ExiledWithSource`: von der Quelle ins Exil geschickt (Java `exiledWith`)
     ExiledWithSource,
     /// `kicked` / `kicked 1` / `kicked 2` (CR 702.33d)
@@ -285,6 +287,11 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
         if let Some(c) = Color::from_name(col) {
             return Ok(Prop::Color(c));
         }
+    }
+    match p {
+        "IsCommander" => return Ok(Prop::IsCommander),
+        "IsNotCommander" | "nonCommander" => return Ok(Prop::Not(Box::new(Prop::IsCommander))),
+        _ => {}
     }
     if p == "ExiledWithSource" {
         return Ok(Prop::ExiledWithSource);
