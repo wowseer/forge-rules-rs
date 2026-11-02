@@ -105,8 +105,8 @@ Replacement Effect;RollPlanarDice;n/a;;Planechase
 Replacement Effect;SetInMotion;n/a;;Archenemy
 Trigger;ChangesZone;teilweise;triggers::dies_trigger_looks_back_in_time;Grundform inkl. Rückblick (603.10a) und gleichzeitiger Tode; Bedingungen (IsPresent, CheckSVar …) fehlen
 Trigger;Phase;teilweise;triggers::upkeep_trigger_with_sub_ability;Phase$ als Liste einzelner Schritte; Bedingungen fehlen
-Trigger;Attacks;teilweise;triggers::attack_trigger_with_triggered_player;Bedingungen (Alone, Attacked …) fehlen
-Trigger;SpellCast;teilweise;triggers::spell_cast_trigger_resolves_before_spell, triggers::spell_cast_targets_valid_heroic;ValidCard/ValidActivatingPlayer, TargetsValid; ActivatorThisTurnCast fehlt
+Trigger;Attacks;teilweise;triggers::attack_trigger_with_triggered_player, triggers::attacks_alone_second_spell_damage_dealt_once_changeling;ValidCard, Alone; Attacked-Bedingungen fehlen
+Trigger;SpellCast;teilweise;triggers::spell_cast_trigger_resolves_before_spell, triggers::spell_cast_targets_valid_heroic, triggers::attacks_alone_second_spell_damage_dealt_once_changeling;ValidCard/ValidActivatingPlayer, TargetsValid, ActivatorThisTurnCast; ValidSA fehlt
 Trigger;DamageDone;teilweise;triggers::combat_damage_trigger;ValidSource/ValidTarget/CombatDamage
 Effect (ApiType);ChangeZone;teilweise;change_zone::search_library_tapped_then_shuffle;Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1; RememberChanged u. a. fehlen
 Effect (ApiType);ChangeZoneAll;teilweise;change_zone::change_zone_all_bounces_everything;ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger)
@@ -251,3 +251,5 @@ Effect (ApiType);ChooseCard;teilweise;effects_objects::choose_card_then_destroy_
 Effect (ApiType);PeekAndReveal;teilweise;change_zone::peek_and_reveal_remembers_only_matching_revealed_cards;PeekAmount, RevealValid, NoReveal, RevealOptional (Decision::Confirm), RememberRevealed, RememberPeeked; ImprintRevealed, SourceZone≠Library fehlen
 Replacement Effect;Untap;teilweise;turn_structure::doesnt_untap_during_your_untap_step;„enttappt nicht während deines Enttappsegments“ (ValidStepTurnToController$ You, Layer$ CantHappen, Bedingungen, auch aus Effektobjekten); ReplaceWith-Varianten und Enttappen durch Effekte fehlen
 Static Ability;AlternativeCost;teilweise;spells::alternative_cost_instead_of_mana_cost;ValidSA$ Spell.Self mit Kosten statt Manakosten (CR 118.9), Bedingungen, Zusatzkosten gelten weiter; andere ValidSA (Equip, Spell allgemein), Announce X fehlen
+Trigger;DamageDealtOnce;teilweise;triggers::attacks_alone_second_spell_damage_dealt_once_changeling;einmal je Quelle bei gleichzeitigem Schaden, ValidSource, ValidTarget, CombatDamage, TriggerCount$DamageAmount; AtLeastOneInstance fehlt
+Keyword;Changeling;ja;triggers::attacks_alone_second_spell_damage_dealt_once_changeling;CR 702.73a: jeder Kreaturtyp (laut Typliste), in allen Zonen

@@ -19,6 +19,11 @@ impl GameState {
             CardBase::Word(w) => {
                 ch.types.has_subtype(w)
                     || forge_types::Supertype::from_name(w).is_some_and(|s| ch.types.has_super(s))
+                    // CR 702.73a: Changeling hat jeden Kreaturtyp
+                    || (ch.has(&Keyword::Changeling)
+                        && crate::valid::type_registry().is_none_or(|r| {
+                            r.kind_of(w) == Some(forge_types::SubtypeKind::Creature)
+                        }))
             }
         }
     }

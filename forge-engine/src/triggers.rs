@@ -42,14 +42,19 @@ pub enum TriggerKind {
         steps: Vec<Step>,
         valid_player: Option<ValidSpec>,
     },
-    /// `Mode$ Attacks` – eine Kreatur greift an.
-    Attacks { valid_card: ValidSpec },
+    /// `Mode$ Attacks` – eine Kreatur greift an (`Alone$`: als einziger Angreifer).
+    Attacks {
+        valid_card: ValidSpec,
+        alone: Option<bool>,
+    },
     /// `Mode$ SpellCast` – ein Zauber wurde gewirkt.
     SpellCast {
         valid_card: Option<ValidSpec>,
         valid_activator: Option<ValidSpec>,
         /// `TargetsValid$`: der Zauber zielt auf etwas Passendes (Heroic u. ä.)
         targets_valid: Option<ValidSpec>,
+        /// `ActivatorThisTurnCast$`: Anzahl passender Zauber des Wirkenden in diesem Zug
+        activator_this_turn: Option<crate::expr::Compare>,
     },
     /// `Mode$ AttackersDeclared` – Angreifer wurden deklariert (CR 508.1m).
     AttackersDeclared {
@@ -90,6 +95,12 @@ pub enum TriggerKind {
         valid_source: Option<ValidSpec>,
         combat: Option<bool>,
         amount: Option<crate::expr::Compare>,
+    },
+    /// `Mode$ DamageDealtOnce` – eine Quelle fügte gleichzeitig Schaden zu.
+    DamageDealtOnce {
+        valid_source: Option<ValidSpec>,
+        valid_target: Option<ValidSpec>,
+        combat: Option<bool>,
     },
     /// `Mode$ Blocks` – eine Kreatur blockt (CR 509.4).
     Blocks {
@@ -291,6 +302,12 @@ pub enum TriggerEvent {
     ChangesZoneAll {
         moves: Vec<crate::state::ZoneMove>,
     },
+    /// Gleichzeitiger Schaden einer Quelle (Empfänger mit Mengen).
+    DamageDealtOnce {
+        source: CardId,
+        targets: Vec<(Target, u32)>,
+        combat: bool,
+    },
     /// Gleichzeitiger Schaden an einen Empfänger (Quellen mit Mengen).
     DamageDoneOnce {
         target: Target,
@@ -439,12 +456,20 @@ pub fn compile_trigger(
                 api: "Trigger Attacks".into(),
                 key: "ValidCard",
             })?;
-            TriggerKind::Attacks { valid_card }
+            used.push("Alone");
+            let alone = p.get("Alone").map(|v| v.eq_ignore_ascii_case("true"));
+            TriggerKind::Attacks { valid_card, alone }
         }
         "SpellCast" => TriggerKind::SpellCast {
             valid_card: valid("ValidCard", &mut used)?,
             valid_activator: valid("ValidActivatingPlayer", &mut used)?,
             targets_valid: valid("TargetsValid", &mut used)?,
+            activator_this_turn: {
+                used.push("ActivatorThisTurnCast");
+                p.get("ActivatorThisTurnCast")
+                    .map(|v| crate::expr::Compare::parse(face, v))
+                    .transpose()?
+            },
         },
         "AttackersDeclared" | "AttackersDeclaredOneTarget" => {
             used.push("ValidAttackersAmount");
@@ -525,6 +550,16 @@ pub fn compile_trigger(
                 valid_source: valid("ValidSource", &mut used)?,
                 combat,
                 amount,
+            }
+        }
+        "DamageDealtOnce" => {
+            used.push("CombatDamage");
+            TriggerKind::DamageDealtOnce {
+                valid_source: valid("ValidSource", &mut used)?,
+                valid_target: valid("ValidTarget", &mut used)?,
+                combat: p
+                    .get("CombatDamage")
+                    .map(|v| v.eq_ignore_ascii_case("true")),
             }
         }
         "Blocks" => TriggerKind::Blocks {
@@ -748,30 +783,63 @@ impl GameState {
                 })
             }
             (
-                TriggerKind::Attacks { valid_card },
+                TriggerKind::Attacks { valid_card, alone },
                 TriggerEvent::Attacks {
                     attacker,
                     defender,
                     target,
                 },
-            ) => self
-                .card_matches(*attacker, valid_card, source, controller)
-                .then(|| TriggerInfo {
-                    card: Some(*attacker),
-                    card_lki: Some(*attacker),
-                    player: Some(*defender),
-                    target: Some(*target),
-                    attacking_player: Some(self.card(*attacker).controller),
-                    ..Default::default()
-                }),
+            ) => (self.card_matches(*attacker, valid_card, source, controller)
+                && alone.is_none_or(|a| {
+                    (self.combat.as_ref().map_or(0, |c| c.attackers.len()) == 1) == a
+                }))
+            .then(|| TriggerInfo {
+                card: Some(*attacker),
+                card_lki: Some(*attacker),
+                player: Some(*defender),
+                target: Some(*target),
+                attacking_player: Some(self.card(*attacker).controller),
+                ..Default::default()
+            }),
             (
                 TriggerKind::SpellCast {
                     valid_card,
                     valid_activator,
                     targets_valid,
+                    activator_this_turn,
                 },
                 TriggerEvent::SpellCast { card, player },
             ) => {
+                // Java: ThisTurnCast mit ValidCard, gezählt für den Wirkenden (inkl. diesem).
+                if let Some(cmp) = activator_this_turn {
+                    let n = self
+                        .this_turn
+                        .cast
+                        .iter()
+                        .filter(|c| {
+                            self.card(**c).controller == *player
+                                && valid_card
+                                    .as_ref()
+                                    .is_none_or(|v| self.card_matches(**c, v, source, controller))
+                        })
+                        .count() as i32;
+                    if !cmp.holds(
+                        n,
+                        self.eval(
+                            &cmp.rhs,
+                            &crate::expr::EvalCtx {
+                                source,
+                                controller,
+                                x: 0,
+                                targets: &[],
+                                trig: None,
+                                paid: &[],
+                            },
+                        ),
+                    ) {
+                        return None;
+                    }
+                }
                 // Java TriggerSpellAbilityCastOrCopy: irgendein Ziel der Kette passt.
                 if let Some(v) = targets_valid {
                     let item = self.stack.iter().rev().find(
@@ -1005,6 +1073,45 @@ impl GameState {
                 }
                 Some(TriggerInfo {
                     cards,
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::DamageDealtOnce {
+                    valid_source,
+                    valid_target,
+                    combat,
+                },
+                TriggerEvent::DamageDealtOnce {
+                    source: dsrc,
+                    targets,
+                    combat: is_combat,
+                },
+            ) => {
+                if combat.is_some_and(|c| c != *is_combat)
+                    || !self.opt_card(valid_source, *dsrc, source, controller)
+                {
+                    return None;
+                }
+                let total: u32 = targets
+                    .iter()
+                    .filter(|(t, _)| {
+                        valid_target.as_ref().is_none_or(|v| match t {
+                            Target::Player(p) => self.player_matches(*p, v, controller),
+                            Target::Card(c) => self.card_matches(*c, v, source, controller),
+                        })
+                    })
+                    .map(|(_, n)| *n)
+                    .sum();
+                if total == 0 {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*dsrc),
+                    card_lki: Some(*dsrc),
+                    source: Some(*dsrc),
+                    player: Some(self.card(*dsrc).controller),
+                    amount: Some(total as i32),
                     ..Default::default()
                 })
             }

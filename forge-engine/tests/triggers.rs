@@ -451,3 +451,35 @@ fn spell_cast_targets_valid_heroic() {
     assert_eq!(d.g().card(h).counter("P1P1"), 1);
     assert_eq!(d.g().chars(h).power, Some(5));
 }
+
+#[test]
+fn attacks_alone_second_spell_damage_dealt_once_changeling() {
+    // Java TriggerAttacks Alone$, TriggerSpellAbilityCastOrCopy ActivatorThisTurnCast$,
+    // TriggerDamageDealtOnce, CR 702.73 Changeling
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 2);
+    put(&db, &mut g, "Second Spell Lite", P1, Zone::Battlefield);
+    put(&db, &mut g, "Dealt Once Lite", P1, Zone::Battlefield);
+    let shifter = put(&db, &mut g, "Shapeshifter Lite", P1, Zone::Battlefield);
+    put(&db, &mut g, "Elf Lord Lite", P1, Zone::Battlefield);
+    assert_eq!(g.chars(shifter).power, Some(2), "Changeling ist ein Elf");
+    let wolf = put(&db, &mut g, "Lone Wolf Lite", P1, Zone::Battlefield);
+    let b1 = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let b2 = put(&db, &mut g, "Shock", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(b1, &[T2]);
+    d.pass_all();
+    d.pass_all(); // DamageDealtOnce: +3 Leben
+    assert_eq!(d.g().player(P1).life, 23);
+    d.cast(b2, &[T2]);
+    d.pass_all(); // zweiter Zauber: +3
+    d.pass_all();
+    d.pass_all(); // Schaden 2: +2
+    assert_eq!(d.g().player(P1).life, 28);
+    d.run_until(|g, dec| {
+        g.step == Step::DeclareAttackers && matches!(dec, Decision::DeclareAttackers { .. })
+    });
+    d.submit(Choice::Attackers(vec![(wolf, T2)]));
+    d.pass_all();
+    assert_eq!(d.g().chars(wolf).power, Some(4), "allein angegriffen");
+}

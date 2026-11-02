@@ -339,11 +339,18 @@ impl GameState {
         });
         match self.damage_batch.as_mut() {
             Some(b) => b.push((source, target, amount, combat)),
-            None => self.fire(crate::triggers::TriggerEvent::DamageDoneOnce {
-                target,
-                sources: vec![(source, amount)],
-                combat,
-            }),
+            None => {
+                self.fire(crate::triggers::TriggerEvent::DamageDoneOnce {
+                    target,
+                    sources: vec![(source, amount)],
+                    combat,
+                });
+                self.fire(crate::triggers::TriggerEvent::DamageDealtOnce {
+                    source,
+                    targets: vec![(target, amount)],
+                    combat,
+                });
+            }
         }
         self.fire(crate::triggers::TriggerEvent::DamageDone {
             source,
@@ -465,6 +472,20 @@ impl GameState {
                 target: t,
                 sources,
                 combat,
+            });
+        }
+        let mut sources: Vec<CardId> = Vec::new();
+        for (s, _, _, _) in &batch {
+            if !sources.contains(s) {
+                sources.push(*s);
+            }
+        }
+        for s in sources {
+            let entries: Vec<_> = batch.iter().filter(|e| e.0 == s).collect();
+            self.fire(crate::triggers::TriggerEvent::DamageDealtOnce {
+                source: s,
+                targets: entries.iter().map(|e| (e.1, e.2)).collect(),
+                combat: entries.iter().any(|e| e.3),
             });
         }
     }

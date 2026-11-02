@@ -27,6 +27,8 @@ pub enum Keyword {
     Shroud,
     /// CR 702.114: farblos (Farb-CDA, wirkt in allen Zonen; in `chars()` umgesetzt)
     Devoid,
+    /// CR 702.73: jeder Kreaturtyp (CDA, alle Zonen; in der Filterprüfung umgesetzt)
+    Changeling,
     /// Nicht (oder noch nicht) typisiertes Keyword, Originaltext.
     Other(String),
 }
@@ -50,6 +52,7 @@ impl Keyword {
             "Hexproof" => Keyword::Hexproof,
             "Shroud" => Keyword::Shroud,
             "Devoid" => Keyword::Devoid,
+            "Changeling" => Keyword::Changeling,
             other => Keyword::Other(other.to_string()),
         }
     }
