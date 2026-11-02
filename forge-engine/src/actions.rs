@@ -48,6 +48,7 @@ impl GameState {
             activations: Vec::new(),
             may_play_uses: Vec::new(),
             monstrous: false,
+            exile_from_stack: false,
             prevent_next: 0,
             copy: None,
         });
@@ -94,6 +95,13 @@ impl GameState {
         controller: Option<PlayerId>,
     ) -> CardId {
         let from = self.card(id).zone;
+        let to =
+            if from == Some(Zone::Stack) && to == Zone::Graveyard && self.card(id).exile_from_stack
+            {
+                Zone::Exile
+            } else {
+                to
+            };
         let (to, mods) = self.replace_move(id, from, to);
         self.remove_from_zone(id);
         // CR 707: Kopie-Werte enden mit dem Zonenwechsel (eigene Werte zurück).
@@ -158,6 +166,7 @@ impl GameState {
             activations: Vec::new(),
             may_play_uses: Vec::new(),
             monstrous: false,
+            exile_from_stack: false,
             prevent_next: 0,
             copy: None,
         });

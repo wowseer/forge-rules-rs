@@ -424,6 +424,83 @@ impl GameState {
             <= self.potential_mana(p)
     }
 
+    /// Kann `p` die Karte `c` durch einen `Play`-Effekt spielen? Zeitpunkt egal
+    /// (CR 608.2g); Länder nur ohne `ValidSA$` und mit freiem Landspiel (CR 305.2).
+    pub(crate) fn playable_by_effect(
+        &self,
+        p: PlayerId,
+        c: CardId,
+        valid_sa: Option<&crate::valid::ValidSpec>,
+        source: CardId,
+    ) -> bool {
+        let ch = self.chars(c);
+        if ch.types.is_land() {
+            let pl = self.player(p);
+            return valid_sa.is_none() && pl.lands_played_this_turn < pl.land_plays_per_turn;
+        }
+        if valid_sa.is_some_and(|v| !self.card_matches(c, v, source, p)) {
+            return false;
+        }
+        let card = self.card(c);
+        card.compiled().spell.as_ref().is_none_or(|spell| {
+            self.has_targets_for(spell, c, p)
+                && spell
+                    .cost
+                    .as_ref()
+                    .is_none_or(|cost| self.can_pay_nonmana(cost, c, p))
+        })
+    }
+
+    /// Spielt `c` durch einen Effekt: Land ins Spiel bzw. Zauber wirken (ohne
+    /// Manakosten oder normal bezahlt). Bricht der Spieler die Bezahlung ab,
+    /// bleibt alles unverändert (CR 728). Liefert das neue Objekt.
+    pub(crate) fn play_by_effect(
+        &mut self,
+        p: PlayerId,
+        c: CardId,
+        without_mana_cost: bool,
+        exile_instead_of_graveyard: bool,
+        ch: &mut Choices,
+    ) -> Res<Option<CardId>> {
+        if self.chars(c).types.is_land() {
+            let new = self.move_card_as(c, Zone::Battlefield, true, Some(p));
+            self.player_mut(p).lands_played_this_turn += 1;
+            self.push_event(Event::LandPlayed {
+                player: p,
+                card: new,
+            });
+            return Ok(Some(new));
+        }
+        let grant = MayPlayGrant {
+            host: c,
+            static_index: usize::MAX,
+            without_mana_cost,
+            with_flash: true,
+            ignore_type: false,
+            ignore_color: false,
+        };
+        let snapshot = self.clone();
+        let before = self.stack.len();
+        match self.cast_spell_free(p, c, Some(grant), None, ch) {
+            Ok(()) => {}
+            Err(Interrupt::Cancelled) => {
+                *self = snapshot;
+                return Ok(None);
+            }
+            Err(e) => return Err(e),
+        }
+        let new = self.stack[before..].iter().find_map(|i| match i.kind {
+            StackKind::Spell { card } => Some(card),
+            _ => None,
+        });
+        if let Some(new) = new
+            && exile_instead_of_graveyard
+        {
+            self.card_mut(new).exile_from_stack = true;
+        }
+        Ok(new)
+    }
+
     /// Obergrenze dessen, was Convoke/Improvise/Delve von `c` beitragen können.
     fn keyword_helper_potential(&self, p: PlayerId, c: CardId) -> u32 {
         let ch = self.chars(c);

@@ -411,6 +411,83 @@ impl GameState {
                     }
                 }
             }
+            Effect::Play {
+                defined,
+                valid,
+                zones,
+                valid_sa,
+                amount,
+                optional,
+                without_mana_cost,
+                controller,
+                exile_instead_of_graveyard,
+                remember_played,
+            } => {
+                let Some(p) = Self::players_of(&self.resolve_defined(*controller, targets, ctx))
+                    .into_iter()
+                    .next()
+                else {
+                    return Ok(());
+                };
+                let mut pool: Vec<CardId> = match defined {
+                    Some(d) => Self::cards_of_any(&self.resolve_defined(*d, targets, ctx)),
+                    None => {
+                        let all = self.players_from(self.active);
+                        self.cards_in_zones(zones, &all)
+                            .into_iter()
+                            .filter(|c| {
+                                valid.as_ref().is_none_or(|v| {
+                                    self.card_matches(*c, v, ctx.source, ctx.controller)
+                                })
+                            })
+                            .collect()
+                    }
+                };
+                pool.retain(|c| self.card(*c).zone.is_some());
+                let mut n = match amount {
+                    Some(a) => self.amount(a, ctx, targets).max(0) as u32,
+                    None => pool.len() as u32,
+                };
+                while n > 0 {
+                    let options: Vec<CardId> = pool
+                        .iter()
+                        .copied()
+                        .filter(|&c| self.playable_by_effect(p, c, valid_sa.as_ref(), ctx.source))
+                        .collect();
+                    if options.is_empty() {
+                        break;
+                    }
+                    let chosen = if !*optional && options.len() == 1 {
+                        Some(options[0])
+                    } else {
+                        match ch.ask(Decision::ChooseCards {
+                            player: p,
+                            reason: crate::decision::CardChoiceReason::Play,
+                            options: options.clone(),
+                            min: u32::from(!*optional),
+                            max: 1,
+                        })? {
+                            Choice::Cards(v) => v.into_iter().find(|c| options.contains(c)),
+                            _ => None,
+                        }
+                    };
+                    let Some(card) = chosen.or_else(|| (!*optional).then(|| options[0])) else {
+                        break;
+                    };
+                    pool.retain(|c| *c != card);
+                    n -= 1;
+                    if let Some(new) = self.play_by_effect(
+                        p,
+                        card,
+                        *without_mana_cost,
+                        *exile_instead_of_graveyard,
+                        ch,
+                    )? && *remember_played
+                    {
+                        self.card_mut(ctx.source).remembered.push(new);
+                    }
+                }
+            }
             Effect::RemoveCounter {
                 what,
                 kind,

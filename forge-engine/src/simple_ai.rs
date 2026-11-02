@@ -182,7 +182,10 @@ impl Controller for SimpleAi {
                 options,
                 max,
                 reason:
-                    CardChoiceReason::Convoke | CardChoiceReason::Improvise | CardChoiceReason::Delve,
+                    CardChoiceReason::Convoke
+                    | CardChoiceReason::Improvise
+                    | CardChoiceReason::Delve
+                    | CardChoiceReason::Play,
                 ..
             } => Choice::Cards(options[..(*max as usize).min(options.len())].to_vec()),
             Decision::ChooseCards {

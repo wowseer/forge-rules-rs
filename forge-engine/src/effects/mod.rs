@@ -131,6 +131,23 @@ pub enum Effect {
         amount: Amount,
         mode: CounterMode,
     },
+    /// Karten während der Auflösung spielen/wirken (Java `PlayEffect`, CR 608.2g).
+    Play {
+        /// Bekannte Karten (`Defined$`/Ziel); sonst `valid` in `zones`.
+        defined: Option<Defined>,
+        valid: Option<ValidSpec>,
+        zones: Vec<crate::zone::Zone>,
+        /// `ValidSA$`: nur Zaubersprüche dieser Art (`None` = auch Länder)
+        valid_sa: Option<ValidSpec>,
+        /// `None` = alle (`Amount$ All`)
+        amount: Option<Amount>,
+        optional: bool,
+        without_mana_cost: bool,
+        controller: Defined,
+        /// `ReplaceGraveyard$ Exile`
+        exile_instead_of_graveyard: bool,
+        remember_played: bool,
+    },
     /// Marken entfernen (Java `CountersRemoveEffect`, CR 122.8).
     RemoveCounter {
         what: Defined,
@@ -729,7 +746,9 @@ impl<'a> Ctx<'a> {
         key: &'static str,
         default: Defined,
     ) -> Result<Defined, CompileError> {
-        let has_tgt = self.ab.params.has("ValidTgts");
+        // Nur `Defined$` meint ohne Angabe die Ziele; andere Schlüssel haben
+        // ihren eigenen Standard (Java: `TokenOwner$` = You, `Object$` = Self …).
+        let has_tgt = key == "Defined" && self.ab.params.has("ValidTgts");
         match self.get(key) {
             None if has_tgt => Ok(Defined::Targeted),
             // Java (AbilityUtils.getDefinedCards): ohne Defined$ ist „Self“ gemeint.
@@ -1190,6 +1209,67 @@ fn compile_depth(
         "Tap" => Effect::Tap {
             what: c.defined(Defined::Targeted)?,
         },
+        "Play" => {
+            for k in ["ValidSATitle", "ShowCardToActivator"] {
+                c.get(k);
+            }
+            let valid = c.get("Valid").map(ValidSpec::parse).transpose()?;
+            let zones = match c.get("ValidZone") {
+                Some(z) => parse_zones(&c, "ValidZone", z)?,
+                None => vec![crate::zone::Zone::Hand],
+            };
+            let defined = if valid.is_none() {
+                Some(c.defined(Defined::Targeted)?)
+            } else {
+                None
+            };
+            // `Spell` = jeder Zauberspruch; als Kartenfilter `Card` ohne Länder.
+            let valid_sa = match c.get("ValidSA") {
+                None => None,
+                Some(v) => {
+                    let spec: Vec<String> = v
+                        .split(',')
+                        .map(|a| {
+                            let a = a.trim();
+                            match a.split_once('.') {
+                                Some(("Spell", rest)) => format!("Card.{rest}"),
+                                _ if a == "Spell" => "Card".to_string(),
+                                _ => a.to_string(),
+                            }
+                        })
+                        .collect();
+                    Some(ValidSpec::parse(&spec.join(","))?)
+                }
+            };
+            let amount = match c.get("Amount") {
+                Some("All") => None,
+                Some(v) => Some(c.amount_value("Amount", v)?),
+                None => Some(Amount::Fixed(1)),
+            };
+            let flag = |c: &mut Ctx, k: &'static str| {
+                c.get(k).is_some_and(|v| v.eq_ignore_ascii_case("true"))
+            };
+            let optional = flag(&mut c, "Optional");
+            let without_mana_cost = flag(&mut c, "WithoutManaCost");
+            let remember_played = flag(&mut c, "RememberPlayed");
+            let exile_instead_of_graveyard = match c.get("ReplaceGraveyard") {
+                None => false,
+                Some("Exile") => true,
+                Some(v) => return Err(c.unsupported("ReplaceGraveyard", v)),
+            };
+            Effect::Play {
+                defined,
+                valid,
+                zones,
+                valid_sa,
+                amount,
+                optional,
+                without_mana_cost,
+                controller: c.defined_key("Controller", Defined::You)?,
+                exile_instead_of_graveyard,
+                remember_played,
+            }
+        }
         "RemoveCounter" => {
             let kind = match c.get("CounterType").ok_or(CompileError::MissingParam {
                 api: api.into(),

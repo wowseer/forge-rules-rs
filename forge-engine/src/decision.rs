@@ -192,6 +192,8 @@ pub enum CardChoiceReason {
     Improvise,
     /// CR 702.66: Karten aus dem Friedhof für Delve exilieren
     Delve,
+    /// `Play`: eine Karte zum Spielen/Wirken wählen
+    Play,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
