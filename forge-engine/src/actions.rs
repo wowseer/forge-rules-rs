@@ -42,6 +42,7 @@ impl GameState {
             regen_shields: 0,
             on_adventure: false,
             loyalty_used_turn: None,
+            activations: Vec::new(),
             prevent_next: 0,
         });
         self.zone_list_mut(zone, owner).push(id);
@@ -136,6 +137,7 @@ impl GameState {
             regen_shields: 0,
             on_adventure: false,
             loyalty_used_turn: None,
+            activations: Vec::new(),
             prevent_next: 0,
         });
         {
@@ -193,6 +195,13 @@ impl GameState {
             None => self.fire(crate::triggers::TriggerEvent::ChangesZoneAll {
                 moves: vec![(id, new_id, from, to)],
             }),
+        }
+        // CR 122.6: Marken, mit denen ein Objekt ins Spiel kommt, gelten als
+        // daraufgelegt (z. B. Saga-Kapitel I).
+        if to == Zone::Battlefield {
+            for (k, v) in &mods.counters {
+                self.fire_counters_added(new_id, k, 0, *v);
+            }
         }
         new_id
     }
@@ -536,11 +545,24 @@ impl GameState {
         if n == 0 {
             return;
         }
+        let before = self.card(c).counter(kind);
         *self
             .card_mut(c)
             .counters
             .entry(kind.to_string())
             .or_insert(0) += n;
+        self.fire_counters_added(c, kind, before, n);
+    }
+
+    /// Trigger `CounterAdded` je einzelner Marke (Java `Card.addCounter`).
+    pub(crate) fn fire_counters_added(&mut self, c: CardId, kind: &str, before: u32, n: u32) {
+        for i in 1..=n {
+            self.fire(crate::triggers::TriggerEvent::CounterAdded {
+                card: c,
+                kind: kind.to_string(),
+                total: before + i,
+            });
+        }
     }
 
     /// Kann `p` eine Karte ziehen? (nur informativ für KI/GUI)

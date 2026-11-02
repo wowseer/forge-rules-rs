@@ -53,6 +53,24 @@ impl GameState {
             CostPart::AddCounter { .. } => src.zone == Some(Zone::Battlefield),
             CostPart::DiscardSelf => src.zone == Some(Zone::Hand) && src.owner == p,
             CostPart::ExileSelfFromGraveyard => src.zone == Some(Zone::Graveyard) && src.owner == p,
+            CostPart::ExileSelf | CostPart::ReturnSelf => src.zone == Some(Zone::Battlefield),
+            CostPart::ExileFromGraveyard { amount, valid } => {
+                self.player(p)
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.card_matches(**c, valid, source, p))
+                    .count() as u32
+                    >= *amount
+            }
+            CostPart::TapType { amount, valid } => {
+                self.tap_type_options(cost, valid, source, p).len() as u32 >= *amount
+            }
+            CostPart::Return { amount, valid } => {
+                self.battlefield_of(p)
+                    .filter(|c| self.card_matches(*c, valid, source, p))
+                    .count() as u32
+                    >= *amount
+            }
             CostPart::RemoveCounter { amount, kind } => {
                 src.zone == Some(Zone::Battlefield) && src.counter(kind) >= *amount
             }
@@ -217,6 +235,16 @@ impl GameState {
         mv.saturating_sub(payable_with_life) <= self.potential_mana(p)
     }
 
+    /// `ActivationLimit$`/`GameActivationLimit$` noch nicht erreicht?
+    fn below_activation_limit(&self, c: CardId, i: usize, ab: &CompiledAbility) -> bool {
+        let acts = &self.card(c).activations;
+        let turn = self.turn;
+        let this_turn = acts.iter().filter(|(j, t)| *j == i && *t == turn).count() as u32;
+        let ever = acts.iter().filter(|(j, _)| *j == i).count() as u32;
+        ab.activation_limit.is_none_or(|n| this_turn < n)
+            && ab.game_activation_limit.is_none_or(|n| ever < n)
+    }
+
     /// Alle legalen Prioritätsaktionen von `p` (CR 117.1).
     pub fn legal_actions(&self, p: PlayerId) -> Vec<Action> {
         let _cache = crate::state::CharsCache::enter();
@@ -273,7 +301,8 @@ impl GameState {
                             .as_ref()
                             .is_none_or(|m| m.mana_value() <= self.potential_mana(p))
                 });
-                let timing_ok = !ab.sorcery_speed || self.sorcery_timing(p);
+                let timing_ok = (!ab.sorcery_speed || self.sorcery_timing(p))
+                    && self.below_activation_limit(c, i, ab);
                 if cost_ok && timing_ok && self.has_targets_for(ab, c, p) {
                     acts.push(Action::Activate(c, i));
                 }
@@ -296,7 +325,7 @@ impl GameState {
                     self.sorcery_timing(p) && self.card(c).loyalty_used_turn != Some(self.turn)
                 } else {
                     ab.is_mana_ability() || !ab.sorcery_speed || self.sorcery_timing(p)
-                };
+                } && self.below_activation_limit(c, i, ab);
                 if cost_ok && timing_ok && self.has_targets_for(ab, c, p) {
                     acts.push(Action::Activate(c, i));
                 }
@@ -330,6 +359,8 @@ impl GameState {
             }
             Action::Activate(c, i) => {
                 let ab = self.card(c).compiled().activated[i].clone();
+                let turn = self.turn;
+                self.card_mut(c).activations.push((i, turn));
                 if ab.is_mana_ability() {
                     self.activate_mana_ability(p, c, &ab, ch)
                 } else {
@@ -634,13 +665,101 @@ impl GameState {
                         note(PaidKind::Discarded, c);
                     }
                 }
-                CostPart::ExileSelfFromGraveyard => {
+                CostPart::ExileSelfFromGraveyard | CostPart::ExileSelf => {
                     self.move_card(source, Zone::Exile, true);
                     note(PaidKind::Exiled, source);
+                }
+                CostPart::ReturnSelf => {
+                    self.move_card(source, Zone::Hand, true);
+                    note(PaidKind::Returned, source);
+                }
+                CostPart::ExileFromGraveyard { amount, valid } => {
+                    let options: Vec<CardId> = self
+                        .player(p)
+                        .graveyard
+                        .iter()
+                        .copied()
+                        .filter(|c| self.card_matches(*c, valid, source, p))
+                        .collect();
+                    for c in self.choose_cost_cards(
+                        p,
+                        CardChoiceReason::ExileCost,
+                        options,
+                        *amount,
+                        ch,
+                    )? {
+                        self.move_card(c, Zone::Exile, true);
+                        note(PaidKind::Exiled, c);
+                    }
+                }
+                CostPart::TapType { amount, valid } => {
+                    let options = self.tap_type_options(cost, valid, source, p);
+                    for c in
+                        self.choose_cost_cards(p, CardChoiceReason::TapCost, options, *amount, ch)?
+                    {
+                        self.tap(c);
+                        note(PaidKind::Tapped, c);
+                    }
+                }
+                CostPart::Return { amount, valid } => {
+                    let options: Vec<CardId> = self
+                        .battlefield_of(p)
+                        .filter(|c| self.card_matches(*c, valid, source, p))
+                        .collect();
+                    for c in self.choose_cost_cards(
+                        p,
+                        CardChoiceReason::ReturnCost,
+                        options,
+                        *amount,
+                        ch,
+                    )? {
+                        self.move_card(c, Zone::Hand, true);
+                        note(PaidKind::Returned, c);
+                    }
                 }
             }
         }
         Ok(())
+    }
+
+    /// Wählbare Permanents für `tapXType`: ungetappt, eigener Filter; mit `{T}` in
+    /// denselben Kosten nie die Quelle selbst (Java `CostTapType.canTapSource`).
+    fn tap_type_options(
+        &self,
+        cost: &Cost,
+        valid: &crate::valid::ValidSpec,
+        source: CardId,
+        p: PlayerId,
+    ) -> Vec<CardId> {
+        let taps_source = cost.parts.contains(&CostPart::Tap);
+        self.battlefield_of(p)
+            .filter(|c| {
+                !(taps_source && *c == source)
+                    && !self.card(*c).tapped
+                    && self.card_matches(*c, valid, source, p)
+            })
+            .collect()
+    }
+
+    /// Genau `amount` Karten für einen Kostenteil wählen lassen.
+    fn choose_cost_cards(
+        &mut self,
+        p: PlayerId,
+        reason: CardChoiceReason,
+        options: Vec<CardId>,
+        amount: u32,
+        ch: &mut Choices,
+    ) -> Res<Vec<CardId>> {
+        match ch.ask(Decision::ChooseCards {
+            player: p,
+            reason,
+            options,
+            min: amount,
+            max: amount,
+        })? {
+            Choice::Cards(c) => Ok(c),
+            _ => Err(Interrupt::Cancelled),
+        }
     }
 
     /// CR 601.2g–h: Mana-Fähigkeiten aktivieren und Manakosten bezahlen.

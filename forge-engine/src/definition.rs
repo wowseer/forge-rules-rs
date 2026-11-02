@@ -31,6 +31,8 @@ pub struct CompiledFace {
     pub etb_counters: Vec<(String, crate::expr::Expr)>,
     /// `K:Enchant:<Filter>`: woran die Aura angelegt sein darf (CR 303.4).
     pub enchant: Option<crate::valid::ValidSpec>,
+    /// `K:Chapter:<N>:…`: höchste Kapitelnummer einer Saga (CR 714.2d).
+    pub final_chapter: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,6 +40,31 @@ pub struct CardDefinition {
     pub script: CardScript,
     pub faces: Vec<Option<CompiledFace>>,
     pub unsupported: Vec<String>,
+}
+
+/// `Chapter:<N>:<SVar1>,…,<SVarN>` → (N, Trigger je Kapitel).
+fn chapter_triggers(
+    face: &CardFace,
+    rest: &str,
+) -> Result<(u32, Vec<crate::triggers::CompiledTrigger>), String> {
+    let (n, abs) = rest.split_once(':').ok_or("Format")?;
+    let n: u32 = n.trim().parse().map_err(|_| "Kapitelzahl")?;
+    let abs: Vec<&str> = abs.split(',').map(str::trim).collect();
+    if abs.len() != n as usize {
+        return Err("Kapitelzahl ≠ Fähigkeiten".into());
+    }
+    let mut out = Vec::new();
+    for (i, name) in abs.iter().enumerate() {
+        let ch = i + 1;
+        let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(&format!(
+            "Mode$ CounterAdded | ValidCard$ Card.Self | TriggerZones$ Battlefield | CounterType$ LORE | CounterAmount$ EQ{ch} | Execute$ {name} | TriggerDescription$ Chapter {ch}"
+        )))
+        .map_err(|e| format!("{e:?}"))?;
+        let mut t = crate::triggers::compile_trigger(face, &st).map_err(|e| e.to_string())?;
+        t.chapter = true;
+        out.push(t);
+    }
+    Ok((n, out))
 }
 
 fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
@@ -72,6 +99,8 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             planeswalker: false,
             activation_zone: crate::zone::Zone::Battlefield,
             cycling: false,
+            activation_limit: None,
+            game_activation_limit: None,
         })
     })
     .collect()
@@ -88,6 +117,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         damage_replacements: Vec::new(),
         etb_counters: Vec::new(),
         enchant: None,
+        final_chapter: None,
     };
     let mut equip: Vec<Arc<CompiledAbility>> = Vec::new();
     for k in &face.keywords {
@@ -157,6 +187,22 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             }
             continue;
         }
+        // CR 714: Saga-Kapitel (Java CardFactoryUtil: CounterAdded-Trigger je Kapitel,
+        // Lore-Marke beim Ankommen)
+        if let Some(rest) = k.strip_prefix("Chapter:") {
+            match chapter_triggers(face, rest) {
+                Ok((n, ts)) => {
+                    out.triggers.extend(ts.into_iter().map(Arc::new));
+                    out.final_chapter = Some(out.final_chapter.unwrap_or(0).max(n));
+                    if !out.etb_counters.iter().any(|(t, _)| t == "LORE") {
+                        out.etb_counters
+                            .push(("LORE".into(), crate::expr::Expr::Const(1)));
+                    }
+                }
+                Err(e) => unsupported.push(format!("Keyword: Chapter ({e})")),
+            }
+            continue;
+        }
         if k.starts_with("etbCounter:") {
             match crate::replacements::parse_etb_counter(face, k) {
                 Ok(c) => out.etb_counters.push(c),
@@ -213,6 +259,8 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             planeswalker: false,
             activation_zone: crate::zone::Zone::Battlefield,
             cycling: false,
+            activation_limit: None,
+            game_activation_limit: None,
         }));
     } else if face.types.has_subtype("Aura") {
         unsupported.push("Aura ohne Enchant-Keyword".into());
@@ -509,6 +557,8 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
         planeswalker: false,
         activation_zone: crate::zone::Zone::Battlefield,
         cycling: false,
+        activation_limit: None,
+        game_activation_limit: None,
     })
 }
 

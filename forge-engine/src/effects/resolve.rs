@@ -480,6 +480,7 @@ impl GameState {
                 mode,
                 num,
                 valid,
+                remember,
             } => {
                 let n = self.amount(num, ctx, targets).max(0) as usize;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
@@ -525,7 +526,10 @@ impl GameState {
                         }
                     };
                     for c in chosen {
-                        self.discard(c);
+                        let new = self.discard(c);
+                        if *remember {
+                            self.card_mut(ctx.source).remembered.push(new);
+                        }
                     }
                 }
             }
@@ -768,6 +772,27 @@ impl GameState {
                     from_turn,
                     until_turn,
                 });
+            }
+            Effect::ImmediateTrigger {
+                trigger,
+                remember,
+                amount,
+            } => {
+                let remembered = match remember {
+                    Some(d) => self.resolve_defined(*d, targets, ctx),
+                    None => Vec::new(),
+                };
+                let n = self.amount(amount, ctx, targets).max(0);
+                for _ in 0..n {
+                    let mut info = ctx.trig.clone().unwrap_or_default();
+                    info.delay_remembered = remembered.clone();
+                    self.pending_triggers.push(crate::triggers::PendingTrigger {
+                        trigger: trigger.clone(),
+                        source: ctx.source,
+                        controller: ctx.controller,
+                        info,
+                    });
+                }
             }
             Effect::Transform { what, optional } => {
                 for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
@@ -1116,7 +1141,10 @@ impl GameState {
                     .filter(|c| self.card(*c).zone.is_some_and(|z| origin.contains(&z)))
                     .collect();
                 for c in cards {
-                    self.put_into_zone(c, *destination, place, ctx.controller);
+                    let new = self.put_into_zone(c, *destination, place, ctx.controller);
+                    if place.remember {
+                        self.card_mut(ctx.source).remembered.push(new);
+                    }
                 }
             }
             Effect::ChangeZoneSearch {
@@ -1169,7 +1197,10 @@ impl GameState {
                     }
                 };
                 for c in chosen {
-                    self.put_into_zone(c, *destination, place, p);
+                    let new = self.put_into_zone(c, *destination, place, p);
+                    if place.remember {
+                        self.card_mut(ctx.source).remembered.push(new);
+                    }
                 }
                 if *shuffle && *origin == Zone::Library {
                     self.shuffle_library(p);
@@ -1199,7 +1230,10 @@ impl GameState {
                 // gleichzeitig: Rückblick für Trigger (CR 603.10a)
                 self.lki_battlefield = Some(self.battlefield.clone());
                 for c in cards {
-                    self.put_into_zone(c, *destination, place, ctx.controller);
+                    let new = self.put_into_zone(c, *destination, place, ctx.controller);
+                    if place.remember {
+                        self.card_mut(ctx.source).remembered.push(new);
+                    }
                 }
                 self.lki_battlefield = None;
                 if *shuffle {

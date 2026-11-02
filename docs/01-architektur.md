@@ -53,6 +53,10 @@ ignoriert werden. Alle anderen müssen ausgewertet werden.
   erhalten, also als „last known information“. Effekte, die an der alten ID
   hängen (z. B. Pump bis Zugende), gelten dadurch automatisch nicht mehr.
 - Kartendefinitionen werden per `Arc<CardDefinition>` geteilt, damit sind Kopien billig.
+- `this_turn: TurnHistory` hält die Zugstatistik (Zonenwechsel, gewirkte Zauber,
+  Angreifer), `Player` zusätzlich Lebensgewinn/-verlust des Zuges; beides wird in
+  `start_turn` geleert und von `Count$ThisTurn…`, Morbid u. a. gelesen.
+- `StackItem::paid` merkt die als Kosten bezahlten Objekte (LKI) für `Sacrificed$…`.
 
 ### 4. Die Engine ruft niemanden auf
 Java fragt Spieler über `PlayerController` (113 Methoden, blockierend). Hier liefert
@@ -129,6 +133,9 @@ Auflösen gefragt (`Decision::OptionalTrigger`). Effekte erreichen den Kontext
 **Verzögerte Trigger** (`DelayedTrigger`, CR 603.7) liegen in
 `GameState::delayed_triggers`, sind an keine Zone gebunden, werden in `fire` nach
 den normalen Triggern geprüft und nach dem ersten Auslösen entfernt.
+**Reflexive Trigger** (`ImmediateTrigger`, CR 603.12) werden beim Auflösen direkt
+als `PendingTrigger` eingereiht. **Sagas** (CR 714): Kapitel sind `CounterAdded`-
+Trigger mit `chapter = true`; die SBA 714.4 prüft wartende Trigger und Stapel.
 **Gleichzeitiger Schaden** (Kampf, `DealDamage`, `DamageAll`) wird über
 `begin_damage_batch`/`end_damage_batch` gebündelt; `DamageDoneOnce` löst danach
 einmal je Empfänger aus. Ausdrücke sehen über `EvalCtx` die Ziele der

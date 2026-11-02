@@ -165,3 +165,19 @@ fn dies_trigger_returns_new_object_to_hand() {
     d.pass_all();
     assert_eq!(count(d.g(), "Undying Lite", Zone::Hand), 1);
 }
+
+#[test]
+fn remember_changed_flicker_returns_new_object() {
+    // Java ChangeZoneEffect: RememberChanged$ merkt das bewegte (neue) Objekt
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Plains", P1, Zone::Battlefield);
+    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    g.card_mut(bear).damage = 1;
+    let fl = put(&db, &mut g, "Blink Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(fl, &[Target::Card(bear)]);
+    d.pass_all();
+    let back = find(d.g(), "Grizzly Bears", Zone::Battlefield).expect("zurück");
+    assert_ne!(back, bear, "neues Objekt (CR 400.7)");
+    assert_eq!(d.g().card(back).damage, 0);
+}

@@ -156,7 +156,17 @@ impl GameState {
                     self.draw(ap);
                 }
             }
-            Step::Main1 | Step::Main2 | Step::End => {}
+            Step::Main1 => {
+                // CR 714.3b: Lore-Marke auf jede eigene Saga (rundenbasiert).
+                let sagas: Vec<crate::ids::CardId> = self
+                    .battlefield_of(ap)
+                    .filter(|c| self.is_saga(*c))
+                    .collect();
+                for c in sagas {
+                    self.add_counters(c, "LORE", 1);
+                }
+            }
+            Step::Main2 | Step::End => {}
             Step::BeginCombat => {
                 self.combat = Some(Combat::default());
             }

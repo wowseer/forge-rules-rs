@@ -117,7 +117,7 @@ Replacement Effect;Moved;teilweise;replacements::rest_in_peace_redirects_to_exil
 Effect (ApiType);PumpAll;teilweise;mass_discard_counter::pump_all_own_creatures_until_end_of_turn;ValidCards, NumAtt/NumDef, KW bis Zugende; PumpZone, Duration fehlen
 Effect (ApiType);DestroyAll;teilweise;mass_discard_counter::wrath_destroys_all_simultaneously_with_dies_triggers;gleichzeitig mit Rückblick; Regeneration fehlt
 Effect (ApiType);DamageAll;teilweise;mass_discard_counter::damage_all_creatures_and_players;ValidCards/ValidPlayers; DamageSource fehlt
-Effect (ApiType);Discard;teilweise;mass_discard_counter::duress_caster_chooses_noncreature_nonland;TgtChoose, Hand, Random, RevealYouChoose, DiscardValid; RememberDiscarded fehlt
+Effect (ApiType);Discard;teilweise;mass_discard_counter::duress_caster_chooses_noncreature_nonland, triggers::immediate_trigger_only_if_done_and_amount_times;TgtChoose, Hand, Random, RevealYouChoose, DiscardValid, RememberDiscarded
 Effect (ApiType);Counter;teilweise;mass_discard_counter::mana_leak_pay_or_countered;Zauber neutralisieren, allgemeines UnlessCost; Fähigkeiten neutralisieren, Destination fehlen
 Effect (ApiType);Effect;teilweise;effects_objects::effect_grants_hexproof_to_remembered_until_end_of_turn;Effektobjekt in Command Zone mit Statics/Triggern/Ersatzeffekten, RememberObjects (Targeted/Self/Triggered…), Duration (Zugende, Permanent, UntilYourNextTurn, UntilTheEndOfYourNextTurn); RememberObjects Remembered, EffectOwner, weitere Dauern fehlen
 Static Ability;CantBlockBy;teilweise;combat_restrictions::cant_be_blocked_by_small_creatures_via_effect;ValidAttacker, ValidBlocker, Bedingungen; ValidDefender fehlt
@@ -240,5 +240,10 @@ Trigger;Discarded;teilweise;keywords_misc::cycled_and_discarded_triggers;ValidCa
 Trigger;AttackerBlockedByCreature;teilweise;triggers::attacker_blocked_by_creature_names_the_blocker;ValidCard, ValidBlocker, TriggeredBlocker
 Effect (ApiType);Fight;teilweise;mass_discard_counter::fight_uses_parent_target_and_put_counter_all;Kämpfer aus Zielen/Defined wie Java, CR 701.14b; Optional fehlt
 Effect (ApiType);PutCounterAll;teilweise;mass_discard_counter::fight_uses_parent_target_and_put_counter_all;ValidCards, CounterType, CounterNum; Ersatzeffekte für Marken fehlen
-Cost;Exile;teilweise;keywords_misc::exile_from_graveyard_cost_activates_from_graveyard;nur ExileFromGrave<1/CARDNAME>
+Cost;Exile;teilweise;keywords_misc::exile_from_graveyard_cost_activates_from_graveyard, sacrifice_unless::exile_tap_and_return_cost_parts;ExileFromGrave<1/CARDNAME>, ExileFromGrave<n/Typ>, Exile<1/CARDNAME>; Exile<n/Typ> vom Battlefield, ExileFromHand, ExileAnyGrave fehlen
 Effect (ApiType);SetState;teilweise;multiface::transform_keeps_object_damage_and_counters;Mode$ Transform (CR 701.28/712.18: gleiches Objekt, neuer Zeitstempel), Optional, ChangeZone Transformed$; TurnFaceUp, Flip, Meld, Trigger Transformed fehlen
+State-Based Action;CR 704.5s;ja;sagas::saga_chapters_trigger_and_saga_is_sacrificed_after_last;Saga mit Lore-Marken ≥ letztem Kapitel wird geopfert, solange keine Kapitelfähigkeit wartet oder auf dem Stapel liegt (CR 714.4)
+Trigger;CounterAdded;teilweise;sagas::adding_several_lore_counters_triggers_each_chapter;je einzelner Marke (Java TriggerCounterAdded), ValidCard, CounterType, CounterAmount; auch Marken beim Ankommen (CR 122.6); ValidPlayer, ValidSource fehlen
+Cost;tapXType;ja;sacrifice_unless::exile_tap_and_return_cost_parts;n ungetappte eigene Permanents nach Typ (ohne Einsatzsperre, CR 302.6); bezahlte Objekte als Tapped$
+Cost;Return;ja;sacrifice_unless::exile_tap_and_return_cost_parts;Return<1/CARDNAME> und Return<n/Typ> (eigene bleibende Karten auf die Hand); Typfilter mit ; als Oder
+Effect (ApiType);ImmediateTrigger;teilweise;triggers::immediate_trigger_only_if_done_and_amount_times;reflexiver Trigger (CR 603.12) mit Execute, Bedingungen, RememberObjects (DelayTriggerRemembered), TriggerAmount; RememberEach, RememberSVarAmount fehlen

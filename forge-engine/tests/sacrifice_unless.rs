@@ -317,3 +317,52 @@ fn spell_additional_sacrifice_cost_is_required_and_remembered() {
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 17);
 }
+
+#[test]
+fn exile_tap_and_return_cost_parts() {
+    // Java CostExile, CostTapType, CostReturn (CR 118, 302.6 gilt nicht für tapXType)
+    let (db, mut g) = game_at(Step::Main1, 10);
+    let spirit = put(&db, &mut g, "Exile Self Lite", P1, Zone::Battlefield);
+    let crew = put(&db, &mut g, "Tap Crew Lite", P1, Zone::Battlefield);
+    let eater = put(&db, &mut g, "Grave Eater Lite", P1, Zone::Battlefield);
+    let bounce = put(&db, &mut g, "Land Bounce Lite", P1, Zone::Battlefield);
+    let bears = put_n(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield, 2);
+    g.card_mut(bears[0]).controlled_since_turn_start = false; // „krank“ – egal
+    put(&db, &mut g, "Hill Giant", P1, Zone::Graveyard);
+    let forest = put(&db, &mut g, "Forest", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    let hand = d.g().player(P1).hand.len();
+
+    d.act(Action::Activate(spirit, 0));
+    d.pass_all();
+    assert_eq!(count(d.g(), "Exile Self Lite", Zone::Exile), 1);
+    assert_eq!(d.g().player(P1).hand.len(), hand + 1);
+
+    d.act(Action::Activate(crew, 0));
+    d.submit(Choice::Cards(bears.clone()));
+    d.pass_all();
+    assert!(bears.iter().all(|b| d.g().card(*b).tapped));
+    assert_eq!(d.g().player(P1).life, 22, "X = Anzahl getappter");
+
+    d.act(Action::Activate(eater, 0));
+    d.submit(Choice::Targets(vec![Target::Player(P2)]));
+    let giant = find(d.g(), "Hill Giant", Zone::Graveyard).unwrap();
+    d.submit(Choice::Cards(vec![giant]));
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 17, "Stärke der exilierten Karte");
+
+    d.act(Action::Activate(bounce, 0));
+    d.submit(Choice::Cards(vec![forest]));
+    d.pass_all();
+    assert_eq!(count(d.g(), "Forest", Zone::Hand), 1);
+}
+
+#[test]
+fn tap_type_cost_excludes_source_when_tap_symbol_is_paid() {
+    // Java CostTapType.canTapSource: mit {T} zählt die Quelle nicht mit
+    let (db, mut g) = game_at(Step::Main1, 10);
+    let t = put(&db, &mut g, "Tapper Lite", P1, Zone::Battlefield);
+    assert!(!g.legal_actions(P1).contains(&Action::Activate(t, 0)));
+    put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    assert!(g.legal_actions(P1).contains(&Action::Activate(t, 0)));
+}

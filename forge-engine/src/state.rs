@@ -149,6 +149,8 @@ pub struct CardObj {
     pub prevent_next: u32,
     /// Zug, in dem zuletzt eine Loyalitätsfähigkeit aktiviert wurde (CR 606.3).
     pub loyalty_used_turn: Option<u32>,
+    /// Aktivierungen (Fähigkeitsindex, Zug) für `ActivationLimit$`/`GameActivationLimit$`.
+    pub activations: Vec<(usize, u32)>,
 }
 
 /// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).
@@ -259,6 +261,8 @@ pub enum StackKind {
         description: String,
         /// Beim Auflösen erneut zu prüfende Bedingungen (CR 603.4).
         conditions: Vec<crate::expr::Condition>,
+        /// Kapitelfähigkeit einer Saga (CR 714.4).
+        chapter: bool,
     },
 }
 
@@ -283,6 +287,8 @@ pub enum PaidKind {
     Sacrificed,
     Discarded,
     Exiled,
+    Tapped,
+    Returned,
 }
 
 /// Ein als Kosten bezahltes Objekt (LKI: das Objekt vor dem Zonenwechsel).
@@ -881,6 +887,11 @@ impl GameState {
                 StackKind::Spell { card } => Some(card),
                 _ => None,
             }))
+    }
+
+    /// CR 714.1: Saga mit Kapitelfähigkeiten (Java `isSaga() && hasChapter()`).
+    pub fn is_saga(&self, id: CardId) -> bool {
+        self.card(id).compiled().final_chapter.is_some() && self.chars(id).types.has_subtype("Saga")
     }
 
     pub fn is_creature(&self, id: CardId) -> bool {

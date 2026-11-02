@@ -396,3 +396,38 @@ fn trigger_count_damage_and_life_amount() {
     assert_eq!(d.g().player(P1).life, 20);
     assert_eq!(d.g().player(P2).life, 14, "2 × 3 Leben");
 }
+
+#[test]
+fn immediate_trigger_only_if_done_and_amount_times() {
+    // CR 603.12: reflexiver Trigger; Java ImmediateTriggerEffect mit TriggerAmount$
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 2);
+    let r = put(&db, &mut g, "Reflex Lite", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    // ohne Handkarte: nichts abgeworfen → kein Trigger
+    d.act(Action::Activate(r, 0));
+    d.finish_casting(&[]);
+    d.pass_all();
+    assert!(d.g().stack.is_empty() && d.g().pending_triggers.is_empty());
+    let bolt = put_hand(&mut d, &db, "Lightning Bolt");
+    d.act(Action::Activate(r, 0));
+    d.finish_casting(&[]);
+    d.pass_all();
+    if let Decision::ChooseCards { .. } = d.decision() {
+        d.submit(Choice::Cards(vec![bolt]));
+    }
+    for _ in 0..2 {
+        d.run_until(|_, dec| matches!(dec, Decision::ChooseTargets { .. }));
+        d.submit(Choice::Targets(vec![T2]));
+    }
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 18);
+}
+
+fn put_hand(d: &mut Driver, db: &forge_engine::CardDb, name: &str) -> forge_engine::CardId {
+    let mut g = d.g().clone();
+    let c = put(db, &mut g, name, P1, Zone::Hand);
+    *d = Driver::new(g);
+    c
+}

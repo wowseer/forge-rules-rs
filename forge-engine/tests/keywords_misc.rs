@@ -122,3 +122,29 @@ fn exile_from_graveyard_cost_activates_from_graveyard() {
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 18);
 }
+
+#[test]
+fn activation_limit_per_turn_and_per_game() {
+    // Java SpellAbilityRestriction: ActivationLimit$ (je Zug), GameActivationLimit$
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 4);
+    let elf = put(&db, &mut g, "Once Pump Lite", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    for i in [0, 1] {
+        assert!(d.g().legal_actions(P1).contains(&Action::Activate(elf, i)));
+        d.act(Action::Activate(elf, i));
+        d.finish_casting(&[]);
+        d.pass_all();
+        assert!(!d.g().legal_actions(P1).contains(&Action::Activate(elf, i)));
+    }
+    assert_eq!(d.g().chars(elf).power, Some(2));
+    // Im nächsten eigenen Zug: Pump wieder erlaubt, Leben nicht mehr
+    d.run_until(|g, dec| {
+        g.turn == 4
+            && g.step == Step::Main1
+            && matches!(dec, forge_engine::decision::Decision::Priority { .. })
+    });
+    let acts = d.g().legal_actions(P1);
+    assert!(acts.contains(&Action::Activate(elf, 0)));
+    assert!(!acts.contains(&Action::Activate(elf, 1)));
+}

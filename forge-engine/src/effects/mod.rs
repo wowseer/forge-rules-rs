@@ -216,6 +216,8 @@ pub enum Effect {
         mode: DiscardMode,
         num: Amount,
         valid: Option<ValidSpec>,
+        /// `RememberDiscarded$`: Quelle merkt sich die abgeworfenen Karten (im Friedhof).
+        remember: bool,
     },
     /// Zauber neutralisieren (`Counter`, CR 701.5). „Es sei denn, … zahlt“
     /// regelt das allgemeine [`UnlessSpec`] der Fähigkeit.
@@ -229,6 +231,13 @@ pub enum Effect {
         trigger: Arc<crate::triggers::CompiledTrigger>,
         remember: Option<Defined>,
         scope: DelayScope,
+    },
+    /// Reflexiver Trigger „Wenn du das tust, …“ (`ImmediateTrigger`, CR 603.12):
+    /// löst sofort aus, `amount`-mal.
+    ImmediateTrigger {
+        trigger: Arc<crate::triggers::CompiledTrigger>,
+        remember: Option<Defined>,
+        amount: Amount,
     },
     /// Für jeden Spieler die Unterfähigkeit ausführen (`RepeatEach | RepeatPlayers$`);
     /// der jeweilige Spieler ist dabei „gemerkt“ (`Remembered`).
@@ -412,6 +421,8 @@ pub struct ZonePlacement {
     pub library_bottom: bool,
     /// `Transformed$ True`: doppelseitige Karte kommt transformiert ins Spiel.
     pub transformed: bool,
+    /// `RememberChanged$ True`: die Quelle merkt sich die bewegten Objekte (neue Objekte).
+    pub remember: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -435,6 +446,10 @@ pub struct CompiledAbility {
     pub activation_zone: crate::zone::Zone,
     /// Cycling-Fähigkeit (für den Trigger `Cycled`).
     pub cycling: bool,
+    /// `ActivationLimit$ N`: höchstens N Aktivierungen je Zug (je Objekt).
+    pub activation_limit: Option<u32>,
+    /// `GameActivationLimit$ N`: höchstens N Aktivierungen je Partie.
+    pub game_activation_limit: Option<u32>,
 }
 
 impl CompiledAbility {
@@ -689,6 +704,9 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         transformed: c
             .get("Transformed")
             .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+        remember: c
+            .get("RememberChanged")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
     };
     // reine Text-/Hinweisparameter
     for k in [
@@ -776,6 +794,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         damage_replacements: Vec::new(),
         etb_counters: Vec::new(),
         enchant: None,
+        final_chapter: None,
     };
     let svar = |n: &str| {
         face.svar(n)
@@ -1067,11 +1086,13 @@ fn compile_depth(
             let num = c.amount("NumCards", Some(1))?;
             let valid = c.get("DiscardValid").map(ValidSpec::parse).transpose()?;
             let who = c.defined(Defined::You)?;
+            let remember = c.get("RememberDiscarded").is_some();
             Effect::Discard {
                 who,
                 mode,
                 num,
                 valid,
+                remember,
             }
         }
         "Counter" => {
@@ -1087,6 +1108,7 @@ fn compile_depth(
             Effect::Counter { triggered_sa }
         }
         "DelayedTrigger" => compile_delayed(&mut c, face)?,
+        "ImmediateTrigger" => compile_immediate(&mut c, face)?,
         "RepeatEach" => {
             let over = if c.ab.params.has("RepeatPlayers") {
                 RepeatOver::Players(c.defined_key("RepeatPlayers", Defined::EachPlayer)?)
@@ -1503,6 +1525,21 @@ fn compile_depth(
         .is_some_and(|v| v.eq_ignore_ascii_case("true"));
     c.get("Ultimate");
     let cycling = c.get("IsCycling").is_some();
+    let mut limit = |key: &'static str| -> Result<Option<u32>, CompileError> {
+        match c.get(key) {
+            None => Ok(None),
+            // Mana-Fähigkeiten werden auch beim Bezahlen aktiviert – dort zählt
+            // die Engine (noch) nicht mit.
+            Some(v) if api == "Mana" => Err(c.unsupported(key, v)),
+            Some(v) => v
+                .trim()
+                .parse()
+                .map(Some)
+                .map_err(|_| c.unsupported(key, v)),
+        }
+    };
+    let activation_limit = limit("ActivationLimit")?;
+    let game_activation_limit = limit("GameActivationLimit")?;
     let activation_zone = match c.get("ActivationZone") {
         None | Some("Battlefield") => crate::zone::Zone::Battlefield,
         Some("Hand") => crate::zone::Zone::Hand,
@@ -1545,6 +1582,8 @@ fn compile_depth(
         planeswalker,
         activation_zone,
         cycling,
+        activation_limit,
+        game_activation_limit,
     })
 }
 
@@ -1574,6 +1613,42 @@ const DELAYED_EFFECT_KEYS: &[&str] = &[
 
 /// `DelayedTrigger` (Java `DelayedTriggerEffect`): die übrigen Parameter
 /// bilden einen Trigger, der wie ein `T:`-Trigger kompiliert wird.
+fn compile_immediate(c: &mut Ctx, face: &CardFace) -> Result<Effect, CompileError> {
+    let mut params = forge_script::ParamMap::default();
+    params.insert("Mode", "Immediate");
+    for (k, v) in c.ab.params.iter() {
+        let effect_level = DELAYED_EFFECT_KEYS
+            .iter()
+            .chain(["TriggerAmount"].iter())
+            .any(|e| e.eq_ignore_ascii_case(k))
+            || k.starts_with("Condition");
+        if !effect_level {
+            params.insert(k, v);
+        }
+    }
+    if !params.has("TriggerDescription")
+        && let Some(d) = c.ab.params.get("SpellDescription")
+    {
+        params.insert("TriggerDescription", d);
+    }
+    let st = ScriptTrigger::parse(params).map_err(|_| CompileError::MissingParam {
+        api: "ImmediateTrigger".into(),
+        key: "Mode",
+    })?;
+    let trigger = Arc::new(crate::triggers::compile_trigger(face, &st)?);
+    let remember = match c.ab.params.get("RememberObjects") {
+        Some(_) => Some(c.defined_key("RememberObjects", Defined::SelfCard)?),
+        None => None,
+    };
+    let amount = c.amount("TriggerAmount", Some(1))?;
+    c.rest_checked_elsewhere = true;
+    Ok(Effect::ImmediateTrigger {
+        trigger,
+        remember,
+        amount,
+    })
+}
+
 fn compile_delayed(c: &mut Ctx, face: &CardFace) -> Result<Effect, CompileError> {
     let mut params = forge_script::ParamMap::default();
     for (k, v) in c.ab.params.iter() {

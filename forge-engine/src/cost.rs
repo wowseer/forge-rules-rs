@@ -27,6 +27,16 @@ pub enum CostPart {
     DiscardSelf,
     /// `ExileFromGrave<1/CARDNAME>`: diese Karte aus dem Friedhof exilieren
     ExileSelfFromGraveyard,
+    /// `Exile<1/CARDNAME>`: diese bleibende Karte ins Exil
+    ExileSelf,
+    /// `ExileFromGrave<n/Typ>`: n Karten aus dem eigenen Friedhof exilieren
+    ExileFromGraveyard { amount: u32, valid: ValidSpec },
+    /// `tapXType<n/Typ>`: n ungetappte eigene Permanents tappen (CR 302.6 gilt nicht)
+    TapType { amount: u32, valid: ValidSpec },
+    /// `Return<1/CARDNAME>`: diese bleibende Karte auf die Hand
+    ReturnSelf,
+    /// `Return<n/Typ>`: n eigene bleibende Karten auf die Hand
+    Return { amount: u32, valid: ValidSpec },
     /// `AddCounter<n/TYP>`: Marken auf die Quelle legen (z. B. Loyalität +n, CR 606.4)
     AddCounter { amount: u32, kind: String },
     /// `SubCounter<n/TYP>`: Marken von der Quelle entfernen (CR 118.3, 606.4)
@@ -61,6 +71,13 @@ impl fmt::Display for Cost {
                 CostPart::Discard { amount, valid } => format!("Discard<{amount}/{valid:?}>"),
                 CostPart::DiscardSelf => "Discard<1/CARDNAME>".into(),
                 CostPart::ExileSelfFromGraveyard => "ExileFromGrave<1/CARDNAME>".into(),
+                CostPart::ExileSelf => "Exile<1/CARDNAME>".into(),
+                CostPart::ExileFromGraveyard { amount, valid } => {
+                    format!("ExileFromGrave<{amount}/{valid:?}>")
+                }
+                CostPart::TapType { amount, valid } => format!("tapXType<{amount}/{valid:?}>"),
+                CostPart::ReturnSelf => "Return<1/CARDNAME>".into(),
+                CostPart::Return { amount, valid } => format!("Return<{amount}/{valid:?}>"),
                 CostPart::AddCounter { amount, kind } => format!("AddCounter<{amount}/{kind}>"),
                 CostPart::RemoveCounter { amount, kind } => format!("SubCounter<{amount}/{kind}>"),
             });
@@ -120,6 +137,11 @@ fn split_param(tok: &str) -> Option<(&str, Vec<&str>)> {
     Some((&tok[..open], inner.split('/').collect()))
 }
 
+/// Typfilter in Kosten: `;` trennt Alternativen (Java `CostPartWithList`), wie `,`.
+fn cost_valid(v: &str) -> Result<ValidSpec, ValidError> {
+    ValidSpec::parse(&v.replace(';', ","))
+}
+
 fn amount(s: &str, tok: &str) -> Result<u32, CostError> {
     s.trim()
         .parse()
@@ -144,7 +166,27 @@ impl Cost {
                             }
                             ("Sac", [n, v, ..]) => CostPart::Sacrifice {
                                 amount: amount(n, &tok)?,
-                                valid: ValidSpec::parse(v)?,
+                                valid: cost_valid(v)?,
+                            },
+                            ("Exile", [n, "CARDNAME", ..]) if n.trim() == "1" => {
+                                CostPart::ExileSelf
+                            }
+                            ("ExileFromGrave", [n, v, ..]) if *v != "CARDNAME" => {
+                                CostPart::ExileFromGraveyard {
+                                    amount: amount(n, &tok)?,
+                                    valid: cost_valid(v)?,
+                                }
+                            }
+                            ("tapXType", [n, v, ..]) => CostPart::TapType {
+                                amount: amount(n, &tok)?,
+                                valid: cost_valid(v)?,
+                            },
+                            ("Return", [n, "CARDNAME", ..]) if n.trim() == "1" => {
+                                CostPart::ReturnSelf
+                            }
+                            ("Return", [n, v, ..]) => CostPart::Return {
+                                amount: amount(n, &tok)?,
+                                valid: cost_valid(v)?,
                             },
                             ("PayLife", [n]) => CostPart::PayLife(amount(n, &tok)?),
                             ("AddCounter", [n, k]) => CostPart::AddCounter {
@@ -164,7 +206,7 @@ impl Cost {
                             ("Discard", [n, v, ..]) if *v != "Hand" && *v != "Random" => {
                                 CostPart::Discard {
                                     amount: amount(n, &tok)?,
-                                    valid: ValidSpec::parse(v)?,
+                                    valid: cost_valid(v)?,
                                 }
                             }
                             _ => return Err(CostError::Unsupported(tok.clone())),

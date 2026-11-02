@@ -111,6 +111,16 @@ pub enum TriggerKind {
         /// `Number$`: die n-te gezogene Karte dieses Spielers in diesem Zug.
         number: Option<u32>,
     },
+    /// Reflexiver Trigger (`ImmediateTrigger`, CR 603.12); kein Ereignis.
+    Immediate,
+    /// `Mode$ CounterAdded` – eine Marke wurde auf eine Karte gelegt (je Marke
+    /// einzeln, Java `TriggerCounterAdded`).
+    CounterAdded {
+        valid_card: Option<ValidSpec>,
+        counter_type: Option<String>,
+        /// `CounterAmount$`: Markenzahl nach dieser Marke (Sagas)
+        amount: Option<crate::expr::Compare>,
+    },
     /// `Mode$ LifeGained` – ein Spieler erhielt Leben.
     LifeGained { valid_player: Option<ValidSpec> },
     /// `Mode$ Taps` – eine bleibende Karte wird getappt.
@@ -144,6 +154,8 @@ pub struct CompiledTrigger {
     /// `NoResolvingCheck$ True`: beim Auflösen nicht erneut prüfen.
     pub recheck_on_resolve: bool,
     pub description: String,
+    /// Kapitelfähigkeit einer Saga (`K:Chapter`, CR 714.2).
+    pub chapter: bool,
 }
 
 /// Filter für Zaubersprüche/Fähigkeiten (`ValidSource$ SpellAbility.OppCtrl`).
@@ -305,6 +317,12 @@ pub enum TriggerEvent {
     LifeGained {
         player: PlayerId,
         amount: u32,
+    },
+    /// Eine Marke vom Typ `kind` kam hinzu; `total` = Anzahl danach.
+    CounterAdded {
+        card: CardId,
+        kind: String,
+        total: u32,
     },
     Taps {
         card: CardId,
@@ -543,6 +561,17 @@ pub fn compile_trigger(
                 number,
             }
         }
+        "CounterAdded" => {
+            used.extend(["CounterType", "CounterAmount", "Chapter"]);
+            TriggerKind::CounterAdded {
+                valid_card: valid("ValidCard", &mut used)?,
+                counter_type: p.get("CounterType").map(str::to_string),
+                amount: p
+                    .get("CounterAmount")
+                    .map(|v| crate::expr::Compare::parse(face, v))
+                    .transpose()?,
+            }
+        }
         "LifeGained" => TriggerKind::LifeGained {
             valid_player: valid("ValidPlayer", &mut used)?,
         },
@@ -550,6 +579,8 @@ pub fn compile_trigger(
             valid_card: valid("ValidCard", &mut used)?,
             valid_player: valid("ValidPlayer", &mut used)?,
         },
+        // Reflexiver Trigger: wird nur vom Effekt `ImmediateTrigger` ausgelöst.
+        "Immediate" => TriggerKind::Immediate,
         "Sacrificed" => TriggerKind::Sacrificed {
             valid_card: valid("ValidCard", &mut used)?,
             valid_player: valid("ValidPlayer", &mut used)?,
@@ -643,6 +674,7 @@ pub fn compile_trigger(
             .get("NoResolvingCheck")
             .is_some_and(|v| v.eq_ignore_ascii_case("true")),
         description: p.get("TriggerDescription").unwrap_or("").to_string(),
+        chapter: false,
     })
 }
 
@@ -1136,6 +1168,39 @@ impl GameState {
                 })
             }
             (
+                TriggerKind::CounterAdded {
+                    valid_card,
+                    counter_type,
+                    amount,
+                },
+                TriggerEvent::CounterAdded { card, kind, total },
+            ) => {
+                if counter_type.as_ref().is_some_and(|t| t != kind)
+                    || !self.opt_card(valid_card, *card, source, controller)
+                {
+                    return None;
+                }
+                if let Some(cmp) = amount {
+                    let ectx = crate::expr::EvalCtx {
+                        source,
+                        controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                        paid: &[],
+                    };
+                    if !cmp.holds(*total as i32, self.eval(&cmp.rhs, &ectx)) {
+                        return None;
+                    }
+                }
+                Some(TriggerInfo {
+                    card: Some(*card),
+                    card_lki: Some(*card),
+                    player: Some(self.card(*card).controller),
+                    ..Default::default()
+                })
+            }
+            (
                 TriggerKind::LifeGained { valid_player },
                 TriggerEvent::LifeGained { player, amount },
             ) => {
@@ -1435,6 +1500,7 @@ impl GameState {
                         } else {
                             Vec::new()
                         },
+                        chapter: t.trigger.chapter,
                     },
                     source: t.source,
                     controller: p,

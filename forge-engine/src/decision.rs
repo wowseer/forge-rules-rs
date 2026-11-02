@@ -165,6 +165,12 @@ pub enum CardChoiceReason {
     Sacrifice,
     /// CR 701.28: optionales Transformieren
     Transform,
+    /// Kosten: Karten exilieren (`ExileFromGrave<n/Typ>`)
+    ExileCost,
+    /// Kosten: Permanents tappen (`tapXType<n/Typ>`)
+    TapCost,
+    /// Kosten: Permanents auf die Hand (`Return<n/Typ>`)
+    ReturnCost,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

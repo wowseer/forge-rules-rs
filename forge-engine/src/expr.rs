@@ -116,6 +116,8 @@ impl ObjRef {
             "Sacrificed" => ObjRef::Paid(crate::state::PaidKind::Sacrificed),
             "Discarded" => ObjRef::Paid(crate::state::PaidKind::Discarded),
             "Exiled" => ObjRef::Paid(crate::state::PaidKind::Exiled),
+            "Tapped" => ObjRef::Paid(crate::state::PaidKind::Tapped),
+            "Returned" => ObjRef::Paid(crate::state::PaidKind::Returned),
             _ => return None,
         })
     }

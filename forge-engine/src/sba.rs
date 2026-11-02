@@ -90,6 +90,32 @@ impl GameState {
             }
         }
 
+        // 704.5s / 714.4: Saga mit Lore-Marken ≥ letztem Kapitel, deren
+        // Kapitelfähigkeit weder ausgelöst wartet noch auf dem Stapel liegt.
+        let mut to_sacrifice: Vec<CardId> = Vec::new();
+        for &id in &self.battlefield {
+            let Some(last) = self.card(id).compiled().final_chapter else {
+                continue;
+            };
+            if !self.is_saga(id) || self.card(id).counter("LORE") < last {
+                continue;
+            }
+            let pending = self
+                .pending_triggers
+                .iter()
+                .any(|t| t.source == id && t.trigger.chapter);
+            let on_stack = self.stack.iter().any(|s| {
+                s.source == id
+                    && matches!(
+                        s.kind,
+                        crate::state::StackKind::Trigger { chapter: true, .. }
+                    )
+            });
+            if !pending && !on_stack {
+                to_sacrifice.push(id);
+            }
+        }
+
         // 704.5q: +1/+1- und -1/-1-Marken heben sich auf.
         let mut annihilate: Vec<(CardId, u32)> = Vec::new();
         for &id in &self.battlefield {
@@ -218,6 +244,11 @@ impl GameState {
         for id in to_graveyard {
             if self.card(id).zone == Some(Zone::Battlefield) {
                 self.put_into_graveyard(id);
+                performed = true;
+            }
+        }
+        for id in to_sacrifice {
+            if self.sacrifice(id) {
                 performed = true;
             }
         }

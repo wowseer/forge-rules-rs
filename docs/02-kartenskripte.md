@@ -75,6 +75,17 @@ CompiledAbility {
   `YouDrewThisTurn`, `AttackersDeclared`, `ThisTurnCast_<Filter>`,
   `ThisTurnEntered_<Ziel>[_from_<Herkunft>]_<Filter>` (Filter auf das Objekt vor dem
   Wechsel) und `Morbid.<ja>.<nein>`.
+- Kostenteile: `T`, `Q`, `Sac<…>`, `PayLife<n>`, `Discard<n/Typ>`, `Exile<1/CARDNAME>`,
+  `ExileFromGrave<n/Typ>`, `tapXType<n/Typ>` (ohne die Quelle, wenn `{T}` dabei ist),
+  `Return<n/Typ>`, `AddCounter`/`SubCounter`; in Typfiltern trennt `;` Alternativen.
+  Bezahlte Objekte stehen als `Sacrificed$`, `Discarded$`, `Exiled$`, `Tapped$`,
+  `Returned$` zur Verfügung.
+- `ActivationLimit$ N` / `GameActivationLimit$ N` (je Zug bzw. Partie, gezählt je Objekt
+  in `CardObj::activations`; bei Mana-Fähigkeiten noch nicht unterstützt).
+- Sagas: `K:Chapter:<N>:<SVar1>,…` erzeugt je Kapitel einen `CounterAdded`-Trigger
+  (`CounterType$ LORE | CounterAmount$ EQi`), eine Lore-Marke beim Ankommen und
+  `final_chapter` für SBA 714.4. `ImmediateTrigger` erzeugt einen reflexiven Trigger
+  (`Mode$ Immediate`) mit `TriggerAmount$`.
 - Zusatzkosten von Zaubern (`A:SP$ … | Cost$ 1 R Sac<1/Creature>`): die Nicht-Mana-Teile
   müssen zum Wirken zahlbar sein und werden nach dem Mana bezahlt (Java `Cost.sort`).
 - Bedingungen: Statics/Trigger `IsPresent$`/`PresentCompare$`/`PresentZone$`/
