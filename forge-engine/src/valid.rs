@@ -433,6 +433,7 @@ mod tests {
         }
         assert_eq!(ValidSpec::parse("Any").unwrap().alternatives.len(), 4);
         assert!(ValidSpec::parse("Creature.powerGE3").is_ok());
-        assert!(ValidSpec::parse("Creature.enchanted").is_err());
+        assert!(ValidSpec::parse("Creature.enchanted").is_ok());
+        assert!(ValidSpec::parse("Creature.modified").is_err());
     }
 }
