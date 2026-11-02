@@ -773,7 +773,7 @@ impl GameState {
                     return None;
                 }
                 if let Some(vp) = valid_player
-                    && !self.player_matches(*active, vp, controller)
+                    && !self.player_matches_src(*active, vp, controller, source)
                 {
                     return None;
                 }
@@ -850,7 +850,7 @@ impl GameState {
                             Target::Card(c) => {
                                 self.opt_card(&Some(v.clone()), *c, source, controller)
                             }
-                            Target::Player(p) => self.player_matches(*p, v, controller),
+                            Target::Player(p) => self.player_matches_src(*p, v, controller, source),
                         })
                     });
                     if !hit {
@@ -865,7 +865,7 @@ impl GameState {
                 }
                 if valid_activator
                     .as_ref()
-                    .is_some_and(|v| !self.player_matches(*player, v, controller))
+                    .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
                 {
                     return None;
                 }
@@ -901,14 +901,14 @@ impl GameState {
                 }
                 if attacking_player
                     .as_ref()
-                    .is_some_and(|v| !self.player_matches(*player, v, controller))
+                    .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
                 {
                     return None;
                 }
                 // Java matchesValidParam auf einer Sammlung: einer genügt.
                 if let Some(v) = attacked_target
                     && !attackers.iter().any(|(_, t)| match t {
-                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Player(p) => self.player_matches_src(*p, v, controller, source),
                         Target::Card(c) => self.card_matches(*c, v, source, controller),
                     })
                 {
@@ -949,7 +949,7 @@ impl GameState {
                 if !self.opt_card(valid_card, *card, source, controller)
                     || valid_player
                         .as_ref()
-                        .is_some_and(|v| !self.player_matches(*player, v, controller))
+                        .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
                 {
                     return None;
                 }
@@ -1020,7 +1020,7 @@ impl GameState {
                 }
                 if let Some(v) = valid_target {
                     let ok = match target {
-                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Player(p) => self.player_matches_src(*p, v, controller, source),
                         Target::Card(c) => self.opt_card(&Some(v.clone()), *c, source, controller),
                     };
                     if !ok {
@@ -1104,7 +1104,7 @@ impl GameState {
                     .iter()
                     .filter(|(t, _)| {
                         valid_target.as_ref().is_none_or(|v| match t {
-                            Target::Player(p) => self.player_matches(*p, v, controller),
+                            Target::Player(p) => self.player_matches_src(*p, v, controller, source),
                             Target::Card(c) => self.card_matches(*c, v, source, controller),
                         })
                     })
@@ -1140,7 +1140,7 @@ impl GameState {
                 }
                 if let Some(v) = valid_target {
                     let ok = match target {
-                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Player(p) => self.player_matches_src(*p, v, controller, source),
                         Target::Card(c) => self.opt_card(&Some(v.clone()), *c, source, controller),
                     };
                     if !ok {
@@ -1259,7 +1259,7 @@ impl GameState {
                 }
                 if let Some(v) = valid_defender {
                     let ok = match target {
-                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Player(p) => self.player_matches_src(*p, v, controller, source),
                         Target::Card(c) => self.card_matches(*c, v, source, controller),
                     };
                     if !ok {
@@ -1291,7 +1291,7 @@ impl GameState {
                     || !self.opt_card(valid_card, *card, source, controller)
                     || valid_player
                         .as_ref()
-                        .is_some_and(|v| !self.player_matches(*player, v, controller))
+                        .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
                 {
                     return None;
                 }
@@ -1341,7 +1341,7 @@ impl GameState {
             ) => {
                 if valid_player
                     .as_ref()
-                    .is_some_and(|v| !self.player_matches(*player, v, controller))
+                    .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
                 {
                     return None;
                 }
@@ -1362,7 +1362,7 @@ impl GameState {
                 if !self.opt_card(valid_card, *card, source, controller)
                     || valid_player
                         .as_ref()
-                        .is_some_and(|v| !self.player_matches(ctrl, v, controller))
+                        .is_some_and(|v| !self.player_matches_src(ctrl, v, controller, source))
                 {
                     return None;
                 }
@@ -1391,7 +1391,7 @@ impl GameState {
                 }
                 if valid_player
                     .as_ref()
-                    .is_some_and(|v| !self.player_matches(*player, v, controller))
+                    .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
                 {
                     return None;
                 }
@@ -1426,7 +1426,7 @@ impl GameState {
                 }
                 if let Some(v) = valid_target {
                     let ok = match target {
-                        Target::Player(p) => self.player_matches(*p, v, controller),
+                        Target::Player(p) => self.player_matches_src(*p, v, controller, source),
                         Target::Card(c) => self.card_matches(*c, v, source, controller),
                     };
                     if !ok {

@@ -66,7 +66,7 @@ impl GameState {
                         paid: &[],
                     };
                     if r.effect_zones.contains(&zone)
-                        && self.player_matches(p, &r.affected, o.controller)
+                        && self.player_matches_src(p, &r.affected, o.controller, *c)
                         && self.check_conditions(&r.conditions, &ctx)
                     {
                         v.push((*c, o.controller, r));
@@ -118,7 +118,7 @@ impl GameState {
             .any(|(src, ctrl, r)| {
                 r.player
                     .as_ref()
-                    .is_none_or(|v| self.player_matches(p, v, ctrl))
+                    .is_none_or(|v| self.player_matches_src(p, v, ctrl, src))
                     && r.card_zones
                         .as_ref()
                         .is_none_or(|z| zone.is_some_and(|zone| z.contains(&zone)))
@@ -151,7 +151,7 @@ impl GameState {
             .any(|(src, ctrl, r)| {
                 r.player
                     .as_ref()
-                    .is_none_or(|v| self.player_matches(p, v, ctrl))
+                    .is_none_or(|v| self.player_matches_src(p, v, ctrl, src))
                     && r.card_zones
                         .as_ref()
                         .is_none_or(|z| zone.is_some_and(|zone| z.contains(&zone)))

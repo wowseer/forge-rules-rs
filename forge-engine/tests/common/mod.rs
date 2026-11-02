@@ -221,6 +221,7 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Prowler Lite\nManaCost:G\nTypes:Enchantment\nR:Event$ Counter | ValidSA$ Spell.Creature+YouCtrl | Layer$ CantHappen | ActiveZones$ Battlefield | Description$ x\nOracle:\n",
     "Name:Control Lite\nManaCost:U\nTypes:Enchantment Aura\nK:Enchant:Creature\nS:Mode$ Continuous | AffectedDefined$ Enchanted | GainControl$ You | Description$ x\nOracle:\n",
     "Name:Tap Aura Lite\nManaCost:U\nTypes:Enchantment Aura\nK:Enchant:Creature:creature you like\nT:Mode$ ChangesZone | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigTap | TriggerDescription$ x\nSVar:TrigTap:DB$ Tap | Defined$ Enchanted\nOracle:\n",
+    "Name:Curse Aura Lite\nManaCost:B\nTypes:Enchantment Aura\nK:Enchant:Creature\nT:Mode$ Phase | Phase$ Upkeep | ValidPlayer$ Player.EnchantedController | TriggerZones$ Battlefield | Execute$ TrigLose | TriggerDescription$ x\nSVar:TrigLose:DB$ LoseLife | Defined$ TriggeredPlayer | LifeAmount$ 1\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",

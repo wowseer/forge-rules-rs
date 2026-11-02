@@ -90,6 +90,11 @@ pub enum Prop {
     HasCounters,
     /// `IsMonstrous`/`monstrous` (CR 701.37b)
     Monstrous,
+    /// Spieler: Controller des Objekts, an dem die Quelle hängt (`EnchantedController`)
+    EnchantedController,
+    /// Karte: eine Aura (`enchanted`) bzw. Ausrüstung (`equipped`) hängt daran
+    Enchanted,
+    Equipped,
     /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
     Stat {
         stat: Stat,
@@ -228,6 +233,11 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
         return Ok(Prop::HasCounters);
     }
     match p {
+        "EnchantedController" | "EquippedController" => return Ok(Prop::EnchantedController),
+        "enchanted" => return Ok(Prop::Enchanted),
+        "equipped" => return Ok(Prop::Equipped),
+        "unenchanted" => return Ok(Prop::Not(Box::new(Prop::Enchanted))),
+        "unequipped" => return Ok(Prop::Not(Box::new(Prop::Equipped))),
         "IsMonstrous" | "monstrous" => return Ok(Prop::Monstrous),
         "nonMonstrous" | "IsNotMonstrous" => return Ok(Prop::Not(Box::new(Prop::Monstrous))),
         _ => {}
@@ -368,7 +378,9 @@ impl ValidSpec {
                 b => return Err(ValidError::Unsupported(b.to_string())),
             };
             if let Alternative::Player { props, .. } = &a
-                && props.iter().any(|p| !matches!(p, Prop::PlayerOpponent))
+                && props
+                    .iter()
+                    .any(|p| !matches!(p, Prop::PlayerOpponent | Prop::EnchantedController))
             {
                 return Err(ValidError::Unsupported(alt.to_string()));
             }

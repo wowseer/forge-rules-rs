@@ -571,7 +571,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
     let (affects_self_only, affects_attached) = match get("AffectedDefined") {
         None => (false, false),
         Some("Self") => (true, false),
-        Some("Enchanted") | Some("Equipped") => (false, true),
+        Some("Enchanted") | Some("Equipped") | Some("AttachedBy Self") => (false, true),
         Some(v) => return Err(err("AffectedDefined", v)),
     };
     // CDAs (CR 604.3) wirken immer nur auf die Quelle, in jeder Zone.

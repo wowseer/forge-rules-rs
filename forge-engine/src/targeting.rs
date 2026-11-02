@@ -88,6 +88,17 @@ impl GameState {
             }
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
+            Prop::EnchantedController => false,
+            Prop::Enchanted | Prop::Equipped => {
+                let sub = if matches!(prop, Prop::Enchanted) {
+                    "Aura"
+                } else {
+                    "Equipment"
+                };
+                self.battlefield.iter().any(|&a| {
+                    self.card(a).attached_to == Some(id) && self.chars(a).types.has_subtype(sub)
+                })
+            }
             Prop::HasCounters => c.counters.values().any(|n| *n > 0),
             Prop::Counters { kind, op, value } => crate::expr::Compare {
                 op: *op,
@@ -150,6 +161,28 @@ impl GameState {
     }
 
     pub fn player_matches(&self, p: PlayerId, spec: &ValidSpec, you: PlayerId) -> bool {
+        self.player_matches_impl(p, spec, you, None)
+    }
+
+    /// Wie [`GameState::player_matches`], mit Quelle für quellenbezogene
+    /// Eigenschaften (`Player.EnchantedController`).
+    pub fn player_matches_src(
+        &self,
+        p: PlayerId,
+        spec: &ValidSpec,
+        you: PlayerId,
+        source: CardId,
+    ) -> bool {
+        self.player_matches_impl(p, spec, you, Some(source))
+    }
+
+    fn player_matches_impl(
+        &self,
+        p: PlayerId,
+        spec: &ValidSpec,
+        you: PlayerId,
+        source: Option<CardId>,
+    ) -> bool {
         spec.alternatives.iter().any(|a| match a {
             Alternative::Player { base, props } => {
                 let base_ok = match base {
@@ -158,9 +191,15 @@ impl GameState {
                     PlayerBase::You => p == you,
                 };
                 base_ok
-                    && props
-                        .iter()
-                        .all(|pr| matches!(pr, Prop::PlayerOpponent) && p != you)
+                    && props.iter().all(|pr| match pr {
+                        Prop::PlayerOpponent => p != you,
+                        Prop::EnchantedController => source
+                            .and_then(|s| self.card(s).attached_to)
+                            .is_some_and(|a| {
+                                self.card(a).zone.is_some() && self.card(a).controller == p
+                            }),
+                        _ => false,
+                    })
             }
             Alternative::Card { .. } => false,
         })
@@ -179,7 +218,7 @@ impl GameState {
         match target {
             Target::Player(p) => {
                 self.player(p).is_in_game()
-                    && self.player_matches(p, &spec.valid, you)
+                    && self.player_matches_src(p, &spec.valid, you, source)
                     && !self.player_has_shroud(p)
                     && !(p != you && self.player_has_hexproof(p))
             }

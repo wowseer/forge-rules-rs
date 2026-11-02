@@ -36,3 +36,23 @@ fn enchant_with_description_and_defined_enchanted() {
     d.pass_all(); // ETB-Trigger
     assert!(d.g().card(bear).tapped);
 }
+
+#[test]
+fn enchanted_controller_upkeep_trigger_and_enchanted_filter() {
+    let (db, mut g) = game_at(Step::Upkeep, 10);
+    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    let other = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    let aura = put(&db, &mut g, "Curse Aura Lite", P2, Zone::Battlefield);
+    g.card_mut(aura).attached_to = Some(bear);
+    let spec = forge_engine::valid::ValidSpec::parse("Creature.enchanted").unwrap();
+    assert!(g.card_matches(bear, &spec, aura, P2));
+    assert!(!g.card_matches(other, &spec, aura, P2));
+    let mut d = Driver::new(g);
+    d.pass_all();
+    assert_eq!(
+        d.g().player(P1).life,
+        19,
+        "Controller der verzauberten Kreatur"
+    );
+    assert_eq!(d.g().player(P2).life, 20);
+}
