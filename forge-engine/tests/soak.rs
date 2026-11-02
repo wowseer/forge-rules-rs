@@ -3,7 +3,7 @@
 
 use forge_engine::simple_ai::SimpleAi;
 use forge_engine::state::Flow;
-use forge_engine::{CardDb, Engine, GameRules, GameState, Zone, run_game};
+use forge_engine::{CardDb, Engine, GameRules, GameState, Zone, run_game_limited};
 use std::sync::Arc;
 
 fn invariants(g: &GameState) {
@@ -91,7 +91,7 @@ fn random_games_with_real_cards() {
         let mut e = Engine::new(g);
         let mut a = SimpleAi::new(seed);
         let mut b = SimpleAi::new(seed + 1000);
-        let result = run_game(&mut e, &mut [&mut a, &mut b], 50_000);
+        let result = run_game_limited(&mut e, &mut [&mut a, &mut b], 50_000, 300);
         invariants(e.state());
         if result.is_some() {
             finished += 1;

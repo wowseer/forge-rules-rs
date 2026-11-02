@@ -31,7 +31,7 @@ pub mod zone;
 
 pub use decision::{Action, Choice, Decision, PayAction, Target};
 pub use definition::{CardDb, CardDefinition};
-pub use engine::{Controller, Engine, Status, run_game};
+pub use engine::{Controller, Engine, Status, run_game, run_game_limited};
 pub use ids::{CardId, PlayerId};
 pub use state::{Event, Flow, GameRules, GameState};
 pub use turn::Step;

@@ -398,6 +398,30 @@ pub enum Effect {
     /// Platzhalter für modale Fähigkeiten; wird vor dem Stapeln durch die
     /// gewählten Modi ersetzt (`GameState::choose_modes`).
     Charm(CharmSpec),
+    /// Effekt auf alle passenden bleibenden Karten (`AnimateAll`, `TapAll`,
+    /// `UntapAll`): `inner` erhält die Karten als Ziele (`Defined::Targeted`).
+    /// `players`: nur Karten dieser Spieler (Ziel bzw. `Defined$`).
+    ForAll {
+        valid: ValidSpec,
+        players: Option<Defined>,
+        inner: Box<Effect>,
+    },
+    /// Alle passenden bleibenden Karten gleichzeitig opfern (`SacrificeAll`).
+    SacrificeAll {
+        /// `Defined$`: genau diese Karten (statt `ValidCards$` auf dem Battlefield)
+        what: Option<Defined>,
+        valid: Option<ValidSpec>,
+        /// `Controller$`: nur Karten dieser Spieler
+        controller: Option<Defined>,
+        remember: bool,
+    },
+    /// Allen Kampfschaden in diesem Zug verhindern (`Fog`, CR 615).
+    Fog,
+    /// Proliferieren (CR 701.27): beliebig viele bleibende Karten/Spieler mit
+    /// Marken wählen, jede erhält je Markenart eine weitere; `times`-mal.
+    Proliferate {
+        times: Amount,
+    },
     /// Alle passenden Karten der Ursprungszonen bewegen (`ChangeZoneAll`).
     ChangeZoneAll {
         origin: Vec<crate::zone::Zone>,
@@ -1592,69 +1616,68 @@ fn compile_depth(
         },
         "Animate" => {
             let what = c.defined(Defined::SelfCard)?;
-            let power = match c.get("Power") {
-                Some(v) => Some(c.amount_value("Power", v)?),
-                None => None,
-            };
-            let toughness = match c.get("Toughness") {
-                Some(v) => Some(c.amount_value("Toughness", v)?),
-                None => None,
-            };
-            let types: Vec<String> = c
-                .get("Types")
-                .map(|t| {
-                    t.split(',')
-                        .map(|x| x.trim().to_string())
-                        .filter(|x| !x.is_empty())
-                        .collect()
-                })
-                .unwrap_or_default();
-            if types.iter().any(|t| {
-                t.contains(' ')
-                    || t.starts_with("All")
-                    || (t.starts_with("Chosen") && t != "ChosenType")
-            }) {
-                return Err(c.unsupported("Types", c.ab.params.get("Types").unwrap_or("")));
+            compile_animate(&mut c, what)?
+        }
+        "AnimateAll" | "TapAll" | "UntapAll" => {
+            let valid = ValidSpec::parse(c.get("ValidCards").unwrap_or("Card"))?;
+            match c.get("Zone") {
+                None | Some("Battlefield") => {}
+                Some(v) => return Err(c.unsupported("Zone", v)),
             }
-            let remove_creature_types = c
-                .get("RemoveCreatureTypes")
-                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
-            let keywords = c
-                .get("Keywords")
-                .map(Keyword::parse_list)
-                .unwrap_or_default();
-            if let Some(k) = keywords.iter().find(|k| !k.is_supported()) {
-                return Err(c.unsupported("Keywords", &format!("{k:?}")));
+            let players = if c.ab.params.has("ValidTgts") || c.ab.params.has("Defined") {
+                Some(c.defined(Defined::Targeted)?)
+            } else {
+                None
+            };
+            let inner = match api {
+                "AnimateAll" => compile_animate(&mut c, Defined::Targeted)?,
+                "TapAll" => Effect::Tap {
+                    what: Defined::Targeted,
+                },
+                _ => Effect::Untap {
+                    what: Defined::Targeted,
+                },
+            };
+            Effect::ForAll {
+                valid,
+                players,
+                inner: Box::new(inner),
             }
-            let overwrite = c
-                .get("OverwriteColors")
-                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
-            let colors_chosen =
-                (c.ab.params.get("Colors") == Some("ChosenColor")).then_some(overwrite);
-            let colors = match c.get("Colors") {
-                Some("ChosenColor") => None,
-                Some(v) => Some((
-                    forge_types::ColorSet::from_names(v)
-                        .ok_or_else(|| c.unsupported("Colors", v))?,
-                    overwrite,
-                )),
+        }
+        "Investigate" => Effect::Token {
+            // CR 701.36: einen Clue-Spielstein erschaffen
+            scripts: vec!["c_a_clue_draw".to_string()],
+            amount: c.amount("Num", Some(1))?,
+            owner: c.defined(Defined::You)?,
+            tapped: false,
+            power: None,
+            toughness: None,
+        },
+        "Fog" => Effect::Fog,
+        "Proliferate" => Effect::Proliferate {
+            times: c.amount("Amount", Some(1))?,
+        },
+        "SacrificeAll" => {
+            let what = match c.ab.params.has("Defined") {
+                true => Some(c.defined(Defined::SelfCard)?),
+                false => None,
+            };
+            let valid = match (&what, c.get("ValidCards")) {
+                (None, v) => Some(ValidSpec::parse(v.unwrap_or("Card"))?),
+                (Some(_), _) => None,
+            };
+            let controller = match c.get("Controller") {
                 None => None,
+                Some("You") => Some(Defined::You),
+                Some("TriggeredPlayer") => Some(Defined::TriggeredPlayer),
+                Some(v) => return Err(c.unsupported("Controller", v)),
             };
-            let permanent = match c.get("Duration") {
-                None => false,
-                Some("Permanent") => true,
-                Some(v) => return Err(c.unsupported("Duration", v)),
-            };
-            Effect::Animate {
+            let remember = c.get("RememberSacrificed").is_some();
+            Effect::SacrificeAll {
                 what,
-                power,
-                toughness,
-                types,
-                remove_creature_types,
-                keywords,
-                colors,
-                colors_chosen,
-                permanent,
+                valid,
+                controller,
+                remember,
             }
         }
         "Attach" => {
@@ -1819,6 +1842,69 @@ fn compile_depth(
         cycling,
         activation_limit,
         game_activation_limit,
+    })
+}
+
+fn compile_animate(c: &mut Ctx, what: Defined) -> Result<Effect, CompileError> {
+    let power = match c.get("Power") {
+        Some(v) => Some(c.amount_value("Power", v)?),
+        None => None,
+    };
+    let toughness = match c.get("Toughness") {
+        Some(v) => Some(c.amount_value("Toughness", v)?),
+        None => None,
+    };
+    let types: Vec<String> = c
+        .get("Types")
+        .map(|t| {
+            t.split(',')
+                .map(|x| x.trim().to_string())
+                .filter(|x| !x.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    if types.iter().any(|t| {
+        t.contains(' ') || t.starts_with("All") || (t.starts_with("Chosen") && t != "ChosenType")
+    }) {
+        return Err(c.unsupported("Types", c.ab.params.get("Types").unwrap_or("")));
+    }
+    let remove_creature_types = c
+        .get("RemoveCreatureTypes")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let keywords = c
+        .get("Keywords")
+        .map(Keyword::parse_list)
+        .unwrap_or_default();
+    if let Some(k) = keywords.iter().find(|k| !k.is_supported()) {
+        return Err(c.unsupported("Keywords", &format!("{k:?}")));
+    }
+    let overwrite = c
+        .get("OverwriteColors")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let colors_chosen = (c.ab.params.get("Colors") == Some("ChosenColor")).then_some(overwrite);
+    let colors = match c.get("Colors") {
+        Some("ChosenColor") => None,
+        Some(v) => Some((
+            forge_types::ColorSet::from_names(v).ok_or_else(|| c.unsupported("Colors", v))?,
+            overwrite,
+        )),
+        None => None,
+    };
+    let permanent = match c.get("Duration") {
+        None => false,
+        Some("Permanent") => true,
+        Some(v) => return Err(c.unsupported("Duration", v)),
+    };
+    Ok(Effect::Animate {
+        what,
+        power,
+        toughness,
+        types,
+        remove_creature_types,
+        keywords,
+        colors,
+        colors_chosen,
+        permanent,
     })
 }
 

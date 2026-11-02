@@ -445,6 +445,119 @@ impl GameState {
                     });
                 }
             }
+            Effect::ForAll {
+                valid,
+                players,
+                inner,
+            } => {
+                let owners =
+                    players.map(|d| Self::players_of(&self.resolve_defined(d, targets, ctx)));
+                let cards: Vec<Target> = self
+                    .battlefield
+                    .iter()
+                    .copied()
+                    .filter(|c| {
+                        owners
+                            .as_ref()
+                            .is_none_or(|ps| ps.contains(&self.card(*c).controller))
+                    })
+                    .filter(|c| self.card_matches(*c, valid, ctx.source, ctx.controller))
+                    .map(Target::Card)
+                    .collect();
+                self.apply_effect_inner(inner, &cards, ctx, ch)?;
+            }
+            Effect::SacrificeAll {
+                what,
+                valid,
+                controller,
+                remember,
+            } => {
+                let mut list: Vec<CardId> = match (what, valid) {
+                    (Some(d), _) => self.cards_of(&self.resolve_defined(*d, targets, ctx)),
+                    (None, Some(v)) => self
+                        .battlefield
+                        .iter()
+                        .copied()
+                        .filter(|c| self.card_matches(*c, v, ctx.source, ctx.controller))
+                        .collect(),
+                    (None, None) => Vec::new(),
+                };
+                if let Some(d) = controller {
+                    let ps = Self::players_of(&self.resolve_defined(*d, targets, ctx));
+                    list.retain(|c| ps.contains(&self.card(*c).controller));
+                }
+                if *remember {
+                    self.card_mut(ctx.source).remembered.clear();
+                }
+                let outer_lki = self.lki_battlefield.is_some();
+                if !outer_lki {
+                    self.lki_battlefield = Some(self.battlefield.clone());
+                }
+                for c in list {
+                    if self.sacrifice(c) && *remember {
+                        self.card_mut(ctx.source).remembered.push(c);
+                    }
+                }
+                if !outer_lki {
+                    self.lki_battlefield = None;
+                }
+            }
+            Effect::Fog => self.this_turn.prevent_combat_damage = true,
+            Effect::Proliferate { times } => {
+                for _ in 0..self.amount(times, ctx, targets).max(0) {
+                    let options: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .copied()
+                        .filter(|c| self.card(*c).counters.values().any(|n| *n > 0))
+                        .collect();
+                    let cards = if options.is_empty() {
+                        Vec::new()
+                    } else {
+                        let max = options.len() as u32;
+                        match ch.ask(Decision::ChooseCards {
+                            player: ctx.controller,
+                            reason: crate::decision::CardChoiceReason::Choose,
+                            options,
+                            min: 0,
+                            max,
+                        })? {
+                            Choice::Cards(v) => v,
+                            _ => Vec::new(),
+                        }
+                    };
+                    let mut players = Vec::new();
+                    for p in self.apnap() {
+                        if self.player(p).poison > 0
+                            && matches!(
+                                ch.ask(Decision::Confirm {
+                                    player: ctx.controller,
+                                    prompt: format!("Giftmarke für Spieler {}?", p.0 + 1),
+                                })?,
+                                Choice::Yes
+                            )
+                        {
+                            players.push(p);
+                        }
+                    }
+                    // CR 701.27a: gleichzeitig, je Markenart eine
+                    for c in cards {
+                        let kinds: Vec<String> = self
+                            .card(c)
+                            .counters
+                            .iter()
+                            .filter(|(_, n)| **n > 0)
+                            .map(|(k, _)| k.clone())
+                            .collect();
+                        for k in kinds {
+                            self.add_counters(c, &k, 1);
+                        }
+                    }
+                    for p in players {
+                        self.player_mut(p).poison += 1;
+                    }
+                }
+            }
             Effect::DestroyAll { valid, no_regen } => {
                 let affected: Vec<CardId> = self
                     .battlefield

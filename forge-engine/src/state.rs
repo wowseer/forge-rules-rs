@@ -277,6 +277,8 @@ pub struct TurnHistory {
     pub cast: Vec<CardId>,
     /// Kreaturen, die angegriffen haben, mit ihrem Controller.
     pub attackers: Vec<(PlayerId, CardId)>,
+    /// `Fog`: aller Kampfschaden dieses Zuges wird verhindert.
+    pub prevent_combat_damage: bool,
 }
 
 /// Kontrollwechsel (Layer 2, CR 613.1b) durch `GainControl`.
@@ -822,8 +824,30 @@ impl GameState {
         };
         {
             let _g = crate::expr::DepthGuard::enter();
+            // Die Bedingung hängt nur von der Quelle ab, nicht vom betroffenen
+            // Objekt: bei aktivem Cache einmal je Static auswerten.
             statics.retain(|s| {
-                s.st.conditions.is_empty() || self.check_conditions(&s.st.conditions, &ectx(s))
+                if s.st.conditions.is_empty() {
+                    return true;
+                }
+                let key = (
+                    self as *const GameState as usize,
+                    s.st as *const ContinuousStatic as usize,
+                    s.source,
+                    nested,
+                );
+                if let Some(hit) =
+                    COND_CACHE.with(|c| c.borrow().as_ref().and_then(|m| m.get(&key).copied()))
+                {
+                    return hit;
+                }
+                let r = self.check_conditions(&s.st.conditions, &ectx(s));
+                COND_CACHE.with(|c| {
+                    if let Some(m) = c.borrow_mut().as_mut() {
+                        m.insert(key, r);
+                    }
+                });
+                r
             });
         }
         let value = |this: &GameState, s: &Src, e: &Option<crate::expr::Expr>| -> Option<i32> {
@@ -1178,10 +1202,15 @@ impl GameState {
 }
 
 /// (Zustandsadresse, Objekt, verschachtelt) → Eigenschaften.
+type CondMap = std::collections::HashMap<(usize, usize, CardId, bool), bool>;
 type CharsMap = std::collections::HashMap<(usize, CardId, bool), Characteristics>;
 
 thread_local! {
     static CHARS_CACHE: std::cell::RefCell<Option<CharsMap>> =
+        const { std::cell::RefCell::new(None) };
+    /// Ergebnisse von Static-Bedingungen (Zustand, Static, Quelle, verschachtelt);
+    /// aktiv genau dann, wenn `CHARS_CACHE` aktiv ist.
+    static COND_CACHE: std::cell::RefCell<Option<CondMap>> =
         const { std::cell::RefCell::new(None) };
 }
 
@@ -1200,6 +1229,7 @@ impl CharsCache {
             let mut c = c.borrow_mut();
             if c.is_none() {
                 *c = Some(Default::default());
+                COND_CACHE.with(|k| *k.borrow_mut() = Some(Default::default()));
                 true
             } else {
                 false
@@ -1213,6 +1243,7 @@ impl Drop for CharsCache {
     fn drop(&mut self) {
         if self.owner {
             CHARS_CACHE.with(|c| *c.borrow_mut() = None);
+            COND_CACHE.with(|c| *c.borrow_mut() = None);
         }
     }
 }

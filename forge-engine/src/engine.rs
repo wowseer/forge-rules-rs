@@ -124,8 +124,23 @@ pub fn run_game(
     controllers: &mut [&mut dyn Controller],
     max_decisions: usize,
 ) -> Option<Option<PlayerId>> {
+    run_game_limited(engine, controllers, max_decisions, usize::MAX)
+}
+
+/// Wie [`run_game`], bricht aber ab (`None`), sobald mehr als
+/// `max_permanents` bleibende Karten im Spiel sind – für Lasttests mit
+/// exponentiell wachsenden Partien (z. B. Token-Kopien jedes Upkeep).
+pub fn run_game_limited(
+    engine: &mut Engine,
+    controllers: &mut [&mut dyn Controller],
+    max_decisions: usize,
+    max_permanents: usize,
+) -> Option<Option<PlayerId>> {
     let mut status = engine.advance();
     for _ in 0..max_decisions {
+        if engine.state().battlefield.len() > max_permanents {
+            return None;
+        }
         match status {
             Status::GameOver(w) => return Some(w),
             Status::NeedsDecision(d) => {

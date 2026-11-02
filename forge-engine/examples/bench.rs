@@ -1,5 +1,5 @@
 use forge_engine::simple_ai::SimpleAi;
-use forge_engine::{CardDb, Engine, GameRules, GameState, run_game};
+use forge_engine::{CardDb, Engine, GameRules, GameState, run_game_limited};
 use std::time::Instant;
 fn main() {
     let res = forge_script::corpus::default_res_dir();
@@ -21,9 +21,17 @@ fn main() {
         .iter()
         .map(|n| db.get(n).unwrap().clone())
         .collect();
-    let arg = |i: usize, d: u64| std::env::args().nth(i).and_then(|s| s.parse().ok()).unwrap_or(d);
+    let arg = |i: usize, d: u64| {
+        std::env::args()
+            .nth(i)
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(d)
+    };
     let (from, to) = (arg(1, 0), arg(2, 20));
-    let min_secs: f64 = std::env::var("MIN_SECS").ok().and_then(|s| s.parse().ok()).unwrap_or(0.0);
+    let min_secs: f64 = std::env::var("MIN_SECS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
     for seed in from..to {
         let mut rng = forge_engine::rng::Rng::new(seed * 7919 + 1);
         let mut deck = || {
@@ -41,7 +49,7 @@ fn main() {
         let mut e = Engine::new(g);
         let (mut a, mut b) = (SimpleAi::new(seed), SimpleAi::new(seed + 1000));
         let t = Instant::now();
-        run_game(&mut e, &mut [&mut a, &mut b], 50_000);
+        run_game_limited(&mut e, &mut [&mut a, &mut b], 50_000, 300);
         if t.elapsed().as_secs_f64() < min_secs {
             continue;
         }

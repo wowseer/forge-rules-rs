@@ -189,6 +189,12 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Hue Land Lite\nManaCost:no cost\nTypes:Land\nK:ETBReplacement:Other:ChooseColor\nSVar:ChooseColor:DB$ ChooseColor | Defined$ You | SpellDescription$ x\nA:AB$ Mana | Cost$ T | Produced$ ChosenColor | SpellDescription$ x\nS:Mode$ Continuous | Affected$ Creature.ChosenColor+YouCtrl | AddPower$ 1 | Description$ x\nOracle:\n",
     "Name:Cradle Lite\nManaCost:no cost\nTypes:Legendary Land\nA:AB$ Mana | Cost$ T | Produced$ G | Amount$ X | SpellDescription$ x\nSVar:X:Count$Valid Creature.YouCtrl\nOracle:\n",
     "Name:Clone Lite\nManaCost:U\nTypes:Creature Shapeshifter\nPT:0/0\nK:ETBReplacement:Copy:DBCopy:Optional\nSVar:DBCopy:DB$ Clone | Choices$ Creature.Other | SpellDescription$ x\nOracle:\n",
+    "Name:Holy Day\nManaCost:W\nTypes:Instant\nA:SP$ Fog | SpellDescription$ Prevent all combat damage that would be dealt this turn.\nOracle:\n",
+    "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
+    "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
+    "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",
+    "Name:Mass Animate Lite\nManaCost:G\nTypes:Sorcery\nA:SP$ AnimateAll | ValidCards$ Land.YouCtrl | Types$ Creature,Elemental | Power$ 3 | Toughness$ 3 | SpellDescription$ x\nOracle:\n",
+    "Name:Mass Tap Lite\nManaCost:U\nTypes:Instant\nA:SP$ TapAll | ValidTgts$ Player | ValidCards$ Creature | SubAbility$ DBUntap | SpellDescription$ x\nSVar:DBUntap:DB$ UntapAll | ValidCards$ Land.YouCtrl\nOracle:\n",
     "Name:Kiki Lite\nManaCost:2 R\nTypes:Creature Goblin Shaman\nPT:2/2\nK:Haste\nA:AB$ CopyPermanent | Cost$ T | ValidTgts$ Creature.nonLegendary+YouCtrl+Other | AddKeywords$ Haste | AtEOT$ Sacrifice | SpellDescription$ x\nOracle:\n",
     "Name:Mana Leak\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | TgtPrompt$ Select target spell | ValidTgts$ Card | UnlessCost$ 3 | SpellDescription$ Counter target spell unless its controller pays {3}.\nOracle:\n",
     "Name:Essence Scatter Lite\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | ValidTgts$ Creature | TgtPrompt$ Select target creature spell | SpellDescription$ Counter target creature spell.\nOracle:\n",
@@ -217,6 +223,10 @@ pub const SCRIPTS: &[&str] = &[
 ];
 
 pub const TOKENS: &[(&str, &str)] = &[
+    (
+        "c_a_clue_draw",
+        "Name:Clue Token\nManaCost:no cost\nTypes:Artifact Clue\nA:AB$ Draw | Cost$ 2 Sac<1/CARDNAME/this token> | NumCards$ 1 | SpellDescription$ Draw a card.\nOracle:\n",
+    ),
     (
         "w_1_1_soldier",
         "Name:Soldier Token\nManaCost:no cost\nColors:white\nTypes:Creature Soldier\nPT:1/1\nOracle:\n",

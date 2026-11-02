@@ -16,7 +16,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Trigger | 137 | 0 | 22 | 11 |
 | Replacement Effect | 35 | 0 | 3 | 5 |
 | Static Ability | 90 | 1 | 5 | 0 |
-| Effect (ApiType) | 188 | 2 | 41 | 16 |
+| Effect (ApiType) | 188 | 3 | 47 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 15 | 1 | 3 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **72** | **101** | **81** |
+| **Summe** | **789** | **73** | **107** | **81** |
 
 ## Keyword
 
@@ -137,6 +137,7 @@ Offen (84): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Abandon | ⚪ n/a |  | Archenemy | ability/effects/AbandonEffect.java |
 | AdvanceCrank | ⚪ n/a |  | Unstable | ability/effects/AdvanceCrankEffect.java |
 | Animate | 🟡 teilweise | `library_regen_animate::animate_land_until_end_of_turn` | Power/Toughness, Types, RemoveCreatureTypes, Keywords, Colors/OverwriteColors, Duration Permanent | ability/effects/AnimateEffect.java |
+| AnimateAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Typen/P/T/Keywords/Farben wie Animate, Zielspieler/Defined | ability/effects/AnimateAllEffect.java |
 | Attach | 🟡 teilweise | `auras_equipment::equip_sorcery_speed_own_creature_and_moves` | Object (Standard Self) an Ziel anlegen | ability/effects/AttachEffect.java |
 | AssembleContraption | ⚪ n/a |  | Unstable | ability/effects/AssembleContraptionEffect.java |
 | ChangeZone | 🟡 teilweise | `change_zone::search_library_tapped_then_shuffle` | Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1 | ability/effects/ChangeZoneEffect.java |
@@ -162,9 +163,11 @@ Offen (84): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Draw | 🟡 teilweise | `spells::draw_gain_lose_life_and_pump` | Grundform | ability/effects/DrawEffect.java |
 | Effect | 🟡 teilweise | `effects_objects::effect_grants_hexproof_to_remembered_until_end_of_turn` | Effektobjekt in Command Zone mit Statics/Triggern/Ersatzeffekten, RememberObjects (Targeted/Self/Triggered…), Duration (Zugende, Permanent, UntilYourNextTurn, UntilTheEndOfYourNextTurn) | ability/effects/EffectEffect.java |
 | Fight | 🟡 teilweise | `mass_discard_counter::fight_uses_parent_target_and_put_counter_all` | Kämpfer aus Zielen/Defined wie Java, CR 701.14b | ability/effects/FightEffect.java |
+| Fog | ✅ ja | `mass_effects::fog_prevents_combat_damage_only` | CR 615: aller Kampfschaden dieses Zuges verhindert, anderer Schaden nicht | ability/effects/FogEffect.java |
 | GainControl | 🟡 teilweise | `control::threaten_until_end_of_turn_untaps_and_grants_haste, control::permanent_control_change, control::control_ends_when_source_leaves_battlefield` | Kontrolleffekte nach Zeitstempel (Layer 2), LoseControl EOT/UntilTheEndOfYourNextTurn/LeavesPlay/LoseControl, Untap, AddKWs, NewController | ability/effects/ControlGainEffect.java |
 | GainLife | 🟡 teilweise | `spells::draw_gain_lose_life_and_pump` | Grundform | ability/effects/LifeGainEffect.java |
 | Heist | ⚪ n/a |  | Alchemy | ability/effects/HeistEffect.java |
+| Investigate | 🟡 teilweise | `mass_effects::investigate_creates_clue_that_draws` | Clue-Token (CR 701.36), Num, Defined | ability/effects/InvestigateEffect.java |
 | Intensify | ⚪ n/a |  | Alchemy | ability/effects/IntensifyEffect.java |
 | ImmediateTrigger | 🟡 teilweise | `triggers::immediate_trigger_only_if_done_and_amount_times` | reflexiver Trigger (CR 603.12) mit Execute, Bedingungen, RememberObjects (DelayTriggerRemembered), TriggerAmount | ability/effects/ImmediateTriggerEffect.java |
 | LoseLife | 🟡 teilweise | `spells::draw_gain_lose_life_and_pump` | Grundform | ability/effects/LifeLoseEffect.java |
@@ -175,6 +178,7 @@ Offen (84): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | PeekAndReveal | 🟡 teilweise | `change_zone::peek_and_reveal_remembers_only_matching_revealed_cards` | PeekAmount, RevealValid, NoReveal, RevealOptional (Decision::Confirm), RememberRevealed, RememberPeeked | ability/effects/PeekAndRevealEffect.java |
 | Planeswalk | ⚪ n/a |  | Planechase | ability/effects/PlaneswalkEffect.java |
 | PreventDamage | 🟡 teilweise | `replacements::prevention_shield_next_n_damage_this_turn_after_doubling` | nächste N Schaden in diesem Zug (Karten, Spieler) | ability/effects/DamagePreventEffect.java |
+| Proliferate | 🟡 teilweise | `mass_effects::proliferate_adds_one_of_each_kind_to_chosen` | CR 701.27: beliebige bleibende Karten mit Marken und Spieler mit Giftmarken, je Art +1, Amount | ability/effects/CountersProliferateEffect.java |
 | Pump | 🟡 teilweise | `spells::draw_gain_lose_life_and_pump` | NumAtt/NumDef/KW bis Zugende | ability/effects/PumpEffect.java |
 | PumpAll | 🟡 teilweise | `mass_discard_counter::pump_all_own_creatures_until_end_of_turn` | ValidCards, NumAtt/NumDef, KW bis Zugende | ability/effects/PumpAllEffect.java |
 | PutCounter | 🟡 teilweise | `sba::cr_704_5q_plus_and_minus_counters_annihilate` | Grundform | ability/effects/CountersPutEffect.java |
@@ -185,16 +189,19 @@ Offen (84): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | RollPlanarDice | ⚪ n/a |  | Planechase | ability/effects/RollPlanarDiceEffect.java |
 | RunChaos | ⚪ n/a |  | Planechase | ability/effects/RunChaosEffect.java |
 | Sacrifice | 🟡 teilweise | `sacrifice_unless::edict_target_player_chooses_and_indestructible_can_be_sacrificed, sacrifice_unless::each_player_sacrifices_simultaneously_dies_triggers_see_all, sacrifice_unless::optional_up_to_amount_and_remembered, sacrifice_unless::strict_amount_sacrifices_nothing_if_not_enough, copies::token_copy_with_haste_sacrificed_at_end_step` | SacValid, Defined (Spieler oder Karten), Amount, Optional, StrictAmount, Destroy, RememberSacrificed, gleichzeitig (CR 101.4) | ability/effects/SacrificeEffect.java |
+| SacrificeAll | 🟡 teilweise | `mass_effects::sacrifice_all_hits_every_player_simultaneously` | ValidCards oder Defined, Controller (You/TriggeredPlayer), RememberSacrificed, gleichzeitig mit LKI | ability/effects/SacrificeAllEffect.java |
 | Scry | ✅ ja | `library_regen_animate::scry_bottom_and_reorder_then_draw` |  | ability/effects/ScryEffect.java |
 | Seek | ⚪ n/a |  | Alchemy | ability/effects/SeekEffect.java |
 | SetInMotion | ⚪ n/a |  | Archenemy | ability/effects/SetInMotionEffect.java |
 | SetState | 🟡 teilweise | `multiface::transform_keeps_object_damage_and_counters` | Mode$ Transform (CR 701.28/712.18: gleiches Objekt, neuer Zeitstempel), Optional, ChangeZone Transformed$ | ability/effects/SetStateEffect.java |
 | Surveil | 🟡 teilweise | `library_regen_animate::surveil_puts_chosen_cards_into_graveyard` | Amount, Defined | ability/effects/SurveilEffect.java |
 | Tap | 🟡 teilweise |  | Grundform | ability/effects/TapEffect.java |
+| TapAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Zielspieler/Defined | ability/effects/TapAllEffect.java |
 | Token | 🟡 teilweise | `tokens_charm::tokens_enter_and_trigger_etb` | TokenScript (Liste), TokenAmount, TokenOwner, TokenTapped, TokenPower/Toughness | ability/effects/TokenEffect.java |
 | Untap | 🟡 teilweise |  | Grundform | ability/effects/UntapEffect.java |
+| UntapAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Zielspieler/Defined | ability/effects/UntapAllEffect.java |
 
-Offen (145): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, AnimateAll, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ChooseSource, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, CopySpellAbility, ControlSpell, ControlPlayer, Detain, DayTime, Debuff, DigMultiple, DigUntil, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipCoin, FlipOntoBattlefield, Fog, GainControlVariant, GainOwnership, GameDrawn, GenericChoice, Goad, Haunt, HealDamage, Investigate, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PermanentCreature, PermanentNoncreature, Phases, Play, PlayLandVariant, Poison, Proliferate, Protection, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounter, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, SacrificeAll, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapAll, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, UntapAll, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
+Offen (138): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ChooseSource, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, CopySpellAbility, ControlSpell, ControlPlayer, Detain, DayTime, Debuff, DigMultiple, DigUntil, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipCoin, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, GenericChoice, Goad, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PermanentCreature, PermanentNoncreature, Phases, Play, PlayLandVariant, Poison, Protection, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounter, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
 
 ## Cost
 

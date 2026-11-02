@@ -399,6 +399,9 @@ impl GameState {
         combat: bool,
     ) -> u32 {
         use crate::decision::Target;
+        if combat && self.this_turn.prevent_combat_damage {
+            return 0;
+        }
         let mut hosts: Vec<(u64, CardId)> = self
             .live_cards()
             .map(|id| self.card(id))
