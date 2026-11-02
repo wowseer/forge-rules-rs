@@ -411,6 +411,45 @@ impl GameState {
                     }
                 }
             }
+            Effect::CopySpellAbility {
+                triggered_sa,
+                amount,
+                may_choose_new_targets,
+                controller,
+            } => {
+                let Some(p) = Self::players_of(&self.resolve_defined(*controller, targets, ctx))
+                    .into_iter()
+                    .next()
+                else {
+                    return Ok(());
+                };
+                let originals: Vec<StackItem> = if *triggered_sa {
+                    let id = ctx.trig.as_ref().and_then(|t| t.stack_item);
+                    self.stack
+                        .iter()
+                        .filter(|s| Some(s.id) == id)
+                        .cloned()
+                        .collect()
+                } else {
+                    Self::cards_of_any(targets)
+                        .into_iter()
+                        .filter_map(|card| {
+                            self.stack
+                                .iter()
+                                .find(
+                                    |s| matches!(s.kind, StackKind::Spell { card: c } if c == card),
+                                )
+                                .cloned()
+                        })
+                        .collect()
+                };
+                let n = self.amount(amount, ctx, targets).max(0);
+                for orig in originals {
+                    for _ in 0..n {
+                        self.copy_stack_item(&orig, p, *may_choose_new_targets, ch)?;
+                    }
+                }
+            }
             Effect::Play {
                 defined,
                 valid,

@@ -131,6 +131,14 @@ pub enum Effect {
         amount: Amount,
         mode: CounterMode,
     },
+    /// Zauber/Fähigkeit auf dem Stapel kopieren (CR 707.10, Java `CopySpellAbilityEffect`).
+    CopySpellAbility {
+        /// `true`: das auslösende Stapelobjekt (`TriggeredSpellAbility`), sonst die Ziele
+        triggered_sa: bool,
+        amount: Amount,
+        may_choose_new_targets: bool,
+        controller: Defined,
+    },
     /// Karten während der Auflösung spielen/wirken (Java `PlayEffect`, CR 608.2g).
     Play {
         /// Bekannte Karten (`Defined$`/Ziel); sonst `valid` in `zones`.
@@ -1209,6 +1217,27 @@ fn compile_depth(
         "Tap" => Effect::Tap {
             what: c.defined(Defined::Targeted)?,
         },
+        "CopySpellAbility" => {
+            match c.get("TargetType") {
+                Some("Spell") | None => {}
+                Some(t) => return Err(c.unsupported("TargetType", t)),
+            }
+            let triggered_sa = match c.get("Defined") {
+                None if c.ab.params.has("ValidTgts") => false,
+                Some("Targeted") => false,
+                Some("TriggeredSourceSA" | "TriggeredSpellAbility") => true,
+                v => return Err(c.unsupported("Defined", v.unwrap_or("fehlt"))),
+            };
+            let may_choose_new_targets = c
+                .get("MayChooseTarget")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            Effect::CopySpellAbility {
+                triggered_sa,
+                amount: c.amount("Amount", Some(1))?,
+                may_choose_new_targets,
+                controller: c.defined_key("Controller", Defined::You)?,
+            }
+        }
         "Play" => {
             for k in ["ValidSATitle", "ShowCardToActivator"] {
                 c.get(k);

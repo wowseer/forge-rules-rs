@@ -419,6 +419,11 @@ pub enum Flow {
 /// Protokoll für Tests, Replays und den Abgleich mit der Java-Engine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    /// Ein Stapelobjekt wurde kopiert (CR 707.10).
+    Copied {
+        item: u32,
+        original: u32,
+    },
     TurnBegan {
         turn: u32,
         player: PlayerId,

@@ -209,6 +209,8 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Free Cast Lite\nManaCost:1 U\nTypes:Sorcery\nA:SP$ Play | Valid$ Card.YouOwn | ValidZone$ Hand | ValidSA$ Instant,Sorcery | WithoutManaCost$ True | Optional$ True | SpellDescription$ x\nOracle:\n",
     "Name:Recast Lite\nManaCost:U\nTypes:Instant\nA:SP$ Play | ValidTgts$ Instant.YouOwn | TgtZone$ Graveyard | WithoutManaCost$ True | ReplaceGraveyard$ Exile | SpellDescription$ x\nOracle:\n",
     "Name:Paid Cast Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Play | Valid$ Card.YouOwn | ValidZone$ Hand | Optional$ True | SpellDescription$ x\nOracle:\n",
+    "Name:Twin Lite\nManaCost:U\nTypes:Instant\nA:SP$ CopySpellAbility | ValidTgts$ Instant,Sorcery | TargetType$ Spell | MayChooseTarget$ True | SpellDescription$ x\nOracle:\n",
+    "Name:Echo Lite\nManaCost:2 U\nTypes:Enchantment\nT:Mode$ SpellCast | ValidCard$ Instant,Sorcery | ValidActivatingPlayer$ You | TriggerZones$ Battlefield | Execute$ TrigCopy | TriggerDescription$ x\nSVar:TrigCopy:DB$ CopySpellAbility | Defined$ TriggeredSpellAbility\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",

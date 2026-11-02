@@ -424,6 +424,58 @@ impl GameState {
             <= self.potential_mana(p)
     }
 
+    /// CR 707.10: Kopie eines Stapelobjekts unter Kontrolle von `p` auf den Stapel
+    /// legen (nicht gewirkt, CR 707.10). Zauberkopien sind Objekte ohne Karte
+    /// (hier Token, CR 707.10a/111.1): sie hören außerhalb des Stapels auf zu
+    /// existieren bzw. werden als bleibende Karte zum Token (CR 608.3f).
+    /// Neue Ziele optional (CR 707.10c).
+    pub(crate) fn copy_stack_item(
+        &mut self,
+        orig: &StackItem,
+        p: PlayerId,
+        may_choose_new_targets: bool,
+        ch: &mut Choices,
+    ) -> Res<()> {
+        let mut item = orig.clone();
+        item.id = self.next_stack_id;
+        self.next_stack_id += 1;
+        item.controller = p;
+        if let StackKind::Spell { card } = orig.kind {
+            let o = self.card(card).clone();
+            let new = self.create_card(o.def.clone(), p, Zone::Stack, true);
+            {
+                let n = self.card_mut(new);
+                n.face = o.face;
+                n.cast_x = o.cast_x;
+                n.copy = o.copy.clone();
+                n.chosen_color = o.chosen_color;
+                n.chosen_type = o.chosen_type.clone();
+            }
+            item.kind = StackKind::Spell { card: new };
+            item.source = new;
+        }
+        if may_choose_new_targets
+            && let Some(ab) = item.ability.clone()
+            && ab.chain().iter().any(|a| a.target.is_some())
+            && matches!(
+                ch.ask(Decision::Confirm {
+                    player: p,
+                    prompt: "Neue Ziele für die Kopie wählen?".into(),
+                })?,
+                Choice::Yes
+            )
+        {
+            item.targets = self.choose_targets(p, item.source, &ab, ch)?;
+        }
+        self.push_event(Event::Copied {
+            item: item.id,
+            original: orig.id,
+        });
+        self.stack.push(item);
+        self.fire_becomes_target();
+        Ok(())
+    }
+
     /// Kann `p` die Karte `c` durch einen `Play`-Effekt spielen? Zeitpunkt egal
     /// (CR 608.2g); Länder nur ohne `ValidSA$` und mit freiem Landspiel (CR 305.2).
     pub(crate) fn playable_by_effect(

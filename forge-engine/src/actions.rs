@@ -52,7 +52,9 @@ impl GameState {
             prevent_next: 0,
             copy: None,
         });
-        self.zone_list_mut(zone, owner).push(id);
+        if zone != Zone::Stack {
+            self.zone_list_mut(zone, owner).push(id);
+        }
         id
     }
 

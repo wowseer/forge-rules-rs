@@ -869,10 +869,17 @@ impl GameState {
                 {
                     return None;
                 }
+                let stack_item = self
+                    .stack
+                    .iter()
+                    .rev()
+                    .find(|s| matches!(s.kind, crate::state::StackKind::Spell { card: c } if c == *card))
+                    .map(|s| s.id);
                 Some(TriggerInfo {
                     card: Some(*card),
                     card_lki: Some(*card),
                     player: Some(*player),
+                    stack_item,
                     ..Default::default()
                 })
             }
