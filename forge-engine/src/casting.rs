@@ -112,6 +112,7 @@ impl GameState {
         for c in self.battlefield_of(p).collect::<Vec<_>>() {
             for (i, ab) in self.card(c).compiled().activated.iter().enumerate() {
                 if ab.is_mana_ability()
+                    && !self.cant_activate(p, c, ab)
                     && ab
                         .cost
                         .as_ref()
@@ -364,6 +365,9 @@ impl GameState {
 
     /// Zeitpunkt, Ziele und Zusatzkosten (ohne Manakosten).
     fn castable_base(&self, p: PlayerId, c: CardId, flash: bool) -> bool {
+        if self.cant_cast(p, c) {
+            return false;
+        }
         let card = self.card(c);
         let ch = self.chars(c);
         let instant_speed =
@@ -381,6 +385,9 @@ impl GameState {
     }
 
     fn castable_with(&self, p: PlayerId, c: CardId, grant: Option<&MayPlayGrant>) -> bool {
+        if self.cant_cast(p, c) {
+            return false;
+        }
         let card = self.card(c);
         let ch = self.chars(c);
         let instant_speed = ch.types.has_core(forge_types::CoreType::Instant)
@@ -490,7 +497,7 @@ impl GameState {
             let pl = self.player(p);
             return valid_sa.is_none() && pl.lands_played_this_turn < pl.land_plays_per_turn;
         }
-        if valid_sa.is_some_and(|v| !self.card_matches(c, v, source, p)) {
+        if valid_sa.is_some_and(|v| !self.card_matches(c, v, source, p)) || self.cant_cast(p, c) {
             return false;
         }
         let card = self.card(c);
@@ -792,7 +799,11 @@ impl GameState {
                 });
                 let timing_ok = (!ab.sorcery_speed || self.sorcery_timing(p))
                     && self.below_activation_limit(c, i, ab);
-                if cost_ok && timing_ok && self.has_targets_for(ab, c, p) {
+                if cost_ok
+                    && timing_ok
+                    && self.has_targets_for(ab, c, p)
+                    && !self.cant_activate(p, c, ab)
+                {
                     acts.push(Action::Activate(c, i));
                 }
             }
@@ -815,7 +826,11 @@ impl GameState {
                 } else {
                     ab.is_mana_ability() || !ab.sorcery_speed || self.sorcery_timing(p)
                 } && self.below_activation_limit(c, i, ab);
-                if cost_ok && timing_ok && self.has_targets_for(ab, c, p) {
+                if cost_ok
+                    && timing_ok
+                    && self.has_targets_for(ab, c, p)
+                    && !self.cant_activate(p, c, ab)
+                {
                     acts.push(Action::Activate(c, i));
                 }
             }

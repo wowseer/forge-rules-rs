@@ -113,6 +113,31 @@ pub enum CompiledStatic {
     AlternativeCost(AltCost),
     /// `Continuous` mit `Affected$ You|Player|Opponent`: wirkt auf Spieler.
     Player(PlayerStatic),
+    /// `CantBeCast`/`CantBeActivated` (CR 101.2: „kann nicht“ gewinnt).
+    CantPlay(CantPlay),
+}
+
+/// Verbot, Zauber zu wirken oder Fähigkeiten zu aktivieren
+/// (Java `StaticAbilityCantBeCast`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CantPlay {
+    /// `false` = `CantBeCast`, `true` = `CantBeActivated`
+    pub activate: bool,
+    /// Karte (Zauber bzw. Quelle der Fähigkeit)
+    pub valid_card: ValidSpec,
+    /// `Caster$`/`Activator$`
+    pub player: Option<ValidSpec>,
+    /// `Origin$` (Wirken) bzw. `AffectedZone$` (Aktivieren): Zone der Karte
+    pub card_zones: Option<Vec<Zone>>,
+    /// `NumLimitEachTurn$`: erst ab so vielen gewirkten passenden Zaubern im Zug
+    pub limit_each_turn: Option<u32>,
+    /// `OnlySorcerySpeed$`: nur außerhalb der Hexerei-Zeitpunkte verboten
+    pub only_sorcery_speed: bool,
+    /// `ValidSA$ Activated[.!ManaAbility|.ManaAbility|.Loyalty|.!Loyalty]`
+    pub mana_ability: Option<bool>,
+    pub loyalty: Option<bool>,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
 }
 
 /// Maximale Handgröße (CR 402.2, 514.1).
@@ -356,8 +381,88 @@ impl CompiledStatic {
             CompiledStatic::CostAdjust(c) => &mut c.effect_zones,
             CompiledStatic::AlternativeCost(c) => &mut c.effect_zones,
             CompiledStatic::Player(c) => &mut c.effect_zones,
+            CompiledStatic::CantPlay(c) => &mut c.effect_zones,
         }
     }
+}
+
+fn compile_cant_play(
+    face: &CardFace,
+    s: &ScriptStatic,
+    activate: bool,
+) -> Result<CompiledStatic, CompileError> {
+    let p = &s.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: format!("Static {}", s.mode),
+        key: k.into(),
+        value: v.into(),
+    };
+    let player_key = if activate { "Activator" } else { "Caster" };
+    let zone_key = if activate { "AffectedZone" } else { "Origin" };
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend([
+        "EffectZone",
+        "ValidCard",
+        player_key,
+        zone_key,
+        "NumLimitEachTurn",
+        "OnlySorcerySpeed",
+        "ValidSA",
+    ]);
+    let valid_card = ValidSpec::parse(p.get("ValidCard").unwrap_or("Card"))?;
+    let player = p.get(player_key).map(ValidSpec::parse).transpose()?;
+    let card_zones = match p.get(zone_key) {
+        Some(z) => Some(zones(z).ok_or_else(|| err(zone_key, z))?),
+        None => None,
+    };
+    let limit_each_turn = match p.get("NumLimitEachTurn") {
+        Some(v) if !activate => Some(v.trim().parse().map_err(|_| err("NumLimitEachTurn", v))?),
+        Some(v) => return Err(err("NumLimitEachTurn", v)),
+        None => None,
+    };
+    let only_sorcery_speed = p
+        .get("OnlySorcerySpeed")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let (mut mana_ability, mut loyalty) = (None, None);
+    if let Some(v) = p.get("ValidSA") {
+        let props = match v.split_once('.') {
+            Some(("Activated", rest)) if activate => rest,
+            None if v == "Activated" && activate => "",
+            _ => return Err(err("ValidSA", v)),
+        };
+        for prop in props.split('+').filter(|x| !x.is_empty()) {
+            match prop {
+                "ManaAbility" => mana_ability = Some(true),
+                "!ManaAbility" | "nonManaAbility" => mana_ability = Some(false),
+                "Loyalty" => loyalty = Some(true),
+                "!Loyalty" => loyalty = Some(false),
+                _ => return Err(err("ValidSA", v)),
+            }
+        }
+    }
+    let effect_zones = match p.get("EffectZone") {
+        Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+        None => vec![Zone::Battlefield],
+    };
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    Ok(CompiledStatic::CantPlay(CantPlay {
+        activate,
+        valid_card,
+        player,
+        card_zones,
+        limit_each_turn,
+        only_sorcery_speed,
+        mana_ability,
+        loyalty,
+        effect_zones,
+        conditions,
+    }))
 }
 
 fn compile_combat(
@@ -448,6 +553,8 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         "CantBlock" => return compile_combat(face, s, RestrictionKind::CantBlock),
         "CantAttack" => return compile_combat(face, s, RestrictionKind::CantAttack),
         "MustAttack" => return compile_combat(face, s, RestrictionKind::MustAttack),
+        "CantBeCast" => return compile_cant_play(face, s, false),
+        "CantBeActivated" => return compile_cant_play(face, s, true),
         "ReduceCost" => return compile_cost_adjust(face, s, true),
         "RaiseCost" => return compile_cost_adjust(face, s, false),
         "AlternativeCost" => return compile_alt_cost(face, s),

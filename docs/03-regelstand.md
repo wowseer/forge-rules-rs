@@ -15,7 +15,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Keyword | 198 | 20 | 7 | 4 |
 | Trigger | 137 | 0 | 22 | 11 |
 | Replacement Effect | 35 | 0 | 3 | 5 |
-| Static Ability | 90 | 1 | 5 | 0 |
+| Static Ability | 90 | 1 | 7 | 0 |
 | Effect (ApiType) | 188 | 3 | 51 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **77** | **112** | **81** |
+| **Summe** | **789** | **77** | **114** | **81** |
 
 ## Keyword
 
@@ -127,12 +127,14 @@ Offen (32): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Casca
 |---|---|---|---|---|
 | Continuous | 🟡 teilweise | `layers::affected_set_determined_after_type_change, spells::may_play_exiled_card_this_turn_as_land_drop, spells::may_play_without_mana_cost_with_limit, player_statics::no_maximum_hand_size, player_statics::opponent_hand_size_reduced_but_not_own, player_statics::player_hexproof_only_against_opponents` | Affected/AffectedDefined Self, Zonen (inkl. All), AddType, SetColor, AddKeyword, Set/AddPower/Toughness inkl. Count$-Ausdrücke, CDAs (7a), Bedingungen (IsPresent, CheckSVar, Condition) | staticability/StaticAbility.java |
 | AlternativeCost | 🟡 teilweise | `spells::alternative_cost_instead_of_mana_cost` | ValidSA$ Spell.Self mit Kosten statt Manakosten (CR 118.9), Bedingungen, Zusatzkosten gelten weiter | staticability/StaticAbilityAlternativeCost.java |
+| CantBeCast | 🟡 teilweise | `cant_play::opponents_cant_cast_spells, cant_play::only_one_spell_each_turn` | ValidCard, Caster, Origin, EffectZone, Bedingungen, NumLimitEachTurn, OnlySorcerySpeed | staticability/StaticAbilityCantBeCast.java |
+| CantBeActivated | 🟡 teilweise | `cant_play::opponents_cant_activate_non_mana_abilities` | ValidCard, Activator, AffectedZone, ValidSA Activated[.!ManaAbility/.Loyalty], Bedingungen, auch Mana-Fähigkeiten beim Bezahlen | staticability/StaticAbilityCantBeCast.java |
 | CantAttack | 🟡 teilweise | `combat_restrictions::cant_attack` | ValidCard, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlock | ✅ ja | `combat_restrictions::cant_block` |  | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlockBy | 🟡 teilweise | `combat_restrictions::cant_be_blocked_by_small_creatures_via_effect` | ValidAttacker, ValidBlocker, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | MustAttack | 🟡 teilweise | `combat_restrictions::must_attack_if_able` | ValidCreature (CR 508.1d) | staticability/StaticAbilityMustAttack.java |
 
-Offen (84): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, CantBeCast, CantBeActivated, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackDefender, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, MinMaxBlocker, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, CastWithFlash, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
+Offen (82): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackDefender, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, MinMaxBlocker, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, CastWithFlash, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
 
 ## Effect (ApiType)
 

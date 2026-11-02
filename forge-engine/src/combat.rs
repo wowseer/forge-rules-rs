@@ -77,6 +77,90 @@ impl GameState {
         v
     }
 
+    /// Wirkende `CantBeCast`/`CantBeActivated`-Statics: (Quelle, Controller, Static).
+    fn cant_play_statics(
+        &self,
+        activate: bool,
+    ) -> Vec<(CardId, PlayerId, &crate::statics::CantPlay)> {
+        let mut v = Vec::new();
+        for o in self.cards.iter() {
+            let Some(zone) = o.zone else { continue };
+            if zone == Zone::Library {
+                continue;
+            }
+            for s in &o.compiled().statics {
+                if let crate::statics::CompiledStatic::CantPlay(r) = s.as_ref()
+                    && r.activate == activate
+                    && r.effect_zones.contains(&zone)
+                {
+                    let ctx = crate::expr::EvalCtx {
+                        source: o.id,
+                        controller: o.controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                        paid: &[],
+                    };
+                    if self.check_conditions(&r.conditions, &ctx) {
+                        v.push((o.id, o.controller, r));
+                    }
+                }
+            }
+        }
+        v
+    }
+
+    /// Verbietet ein `CantBeCast`, dass `p` die Karte `c` wirkt?
+    pub fn cant_cast(&self, p: PlayerId, c: CardId) -> bool {
+        let zone = self.card(c).zone;
+        self.cant_play_statics(false)
+            .into_iter()
+            .any(|(src, ctrl, r)| {
+                r.player
+                    .as_ref()
+                    .is_none_or(|v| self.player_matches(p, v, ctrl))
+                    && r.card_zones
+                        .as_ref()
+                        .is_none_or(|z| zone.is_some_and(|zone| z.contains(&zone)))
+                    && self.card_matches(c, &r.valid_card, src, ctrl)
+                    && !(r.only_sorcery_speed && self.sorcery_timing(p))
+                    && r.limit_each_turn.is_none_or(|n| {
+                        self.this_turn
+                            .cast
+                            .iter()
+                            .filter(|x| {
+                                self.card(**x).controller == p
+                                    && self.card_matches(**x, &r.valid_card, src, ctrl)
+                            })
+                            .count() as u32
+                            >= n
+                    })
+            })
+    }
+
+    /// Verbietet ein `CantBeActivated`, dass `p` Fähigkeit `ab` von `c` aktiviert?
+    pub fn cant_activate(
+        &self,
+        p: PlayerId,
+        c: CardId,
+        ab: &crate::effects::CompiledAbility,
+    ) -> bool {
+        let zone = self.card(c).zone;
+        self.cant_play_statics(true)
+            .into_iter()
+            .any(|(src, ctrl, r)| {
+                r.player
+                    .as_ref()
+                    .is_none_or(|v| self.player_matches(p, v, ctrl))
+                    && r.card_zones
+                        .as_ref()
+                        .is_none_or(|z| zone.is_some_and(|zone| z.contains(&zone)))
+                    && r.mana_ability.is_none_or(|m| m == ab.is_mana_ability())
+                    && r.loyalty.is_none_or(|l| l == ab.planeswalker)
+                    && self.card_matches(c, &r.valid_card, src, ctrl)
+            })
+    }
+
     /// Maximale Handgröße von `p` (`None` = keine, CR 402.2); Java: erst
     /// `SetMaxHandSize`, dann `RaiseMaxHandSize`.
     pub fn max_hand_size(&self, p: PlayerId) -> Option<u32> {
