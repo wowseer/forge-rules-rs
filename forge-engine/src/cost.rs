@@ -37,6 +37,9 @@ pub enum CostPart {
     ExileFromGraveyard { amount: u32, valid: ValidSpec },
     /// `tapXType<n/Typ>`: n ungetappte eigene Permanents tappen (CR 302.6 gilt nicht)
     TapType { amount: u32, valid: ValidSpec },
+    /// `tapXType<Any/Filter+withTotalPowerGEn>` (Crew, CR 702.122): beliebig viele
+    /// ungetappte eigene Kreaturen mit Gesamtstärke ≥ n tappen.
+    TapTotalPower { power: u32, valid: ValidSpec },
     /// `Return<1/CARDNAME>`: diese bleibende Karte auf die Hand
     ReturnSelf,
     /// `Return<n/Typ>`: n eigene bleibende Karten auf die Hand
@@ -84,6 +87,9 @@ impl fmt::Display for Cost {
                     format!("ExileFromGrave<{amount}/{valid:?}>")
                 }
                 CostPart::TapType { amount, valid } => format!("tapXType<{amount}/{valid:?}>"),
+                CostPart::TapTotalPower { power, valid } => {
+                    format!("tapXType<Any/{valid:?}+withTotalPowerGE{power}>")
+                }
                 CostPart::ReturnSelf => "Return<1/CARDNAME>".into(),
                 CostPart::Return { amount, valid } => format!("Return<{amount}/{valid:?}>"),
                 CostPart::AddCounter { amount, kind } => format!("AddCounter<{amount}/{kind}>"),
@@ -190,6 +196,18 @@ impl Cost {
                                 CostPart::ExileFromGraveyard {
                                     amount: amount(n, &tok)?,
                                     valid: cost_valid(v)?,
+                                }
+                            }
+                            ("tapXType", ["Any", v, ..]) if v.contains("+withTotalPowerGE") => {
+                                let (spec, n) = v
+                                    .split_once("+withTotalPowerGE")
+                                    .ok_or_else(|| CostError::Unsupported(tok.to_string()))?;
+                                CostPart::TapTotalPower {
+                                    power: n
+                                        .trim()
+                                        .parse()
+                                        .map_err(|_| CostError::Unsupported(tok.to_string()))?,
+                                    valid: cost_valid(spec)?,
                                 }
                             }
                             ("tapXType", [n, v, ..]) => CostPart::TapType {

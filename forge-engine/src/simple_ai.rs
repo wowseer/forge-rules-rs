@@ -177,6 +177,14 @@ impl Controller for SimpleAi {
                 reason: CardChoiceReason::Search,
                 ..
             } => Choice::Cards(options[..*max as usize].to_vec()),
+            // Crew u. ä. (beliebig viele tappen): alle wählen, das reicht immer.
+            Decision::ChooseCards {
+                options,
+                max,
+                min,
+                reason: CardChoiceReason::TapCost,
+                ..
+            } if max > min => Choice::Cards(options[..(*max as usize).min(options.len())].to_vec()),
             // Kostenhilfen voll nutzen (die Engine begrenzt `max` auf den Nutzen).
             Decision::ChooseCards {
                 options,

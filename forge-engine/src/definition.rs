@@ -646,6 +646,18 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
 /// Übersetzt `Cycling:<Kosten>` / `TypeCycling:<Typ>:<Kosten>` in ein Fähigkeitsskript
 /// (wie Java `CardFactoryUtil.addSpellAbility`).
 fn cycling_script(k: &str) -> Option<String> {
+    // CR 702.122: Crew (Java CardFactoryUtil): Animate zum Artefakt-Kreatur bis Zugende
+    if let Some(rest) = k.strip_prefix("Crew:") {
+        let mut parts = rest.split(':');
+        let n = parts.next()?.trim();
+        n.parse::<u32>().ok()?;
+        if parts.next().is_some() {
+            return None;
+        }
+        return Some(format!(
+            "AB$ Animate | Cost$ tapXType<Any/Creature.Other+withTotalPowerGE{n}> | Defined$ Self | Types$ Artifact,Creature | SpellDescription$ Crew {n}"
+        ));
+    }
     if let Some(cost) = k.strip_prefix("Cycling:") {
         return Some(format!(
             "AB$ Draw | Cost$ {cost} Discard<1/CARDNAME> | ActivationZone$ Hand | IsCycling$ True | NumCards$ 1 | SpellDescription$ Cycling {cost}"

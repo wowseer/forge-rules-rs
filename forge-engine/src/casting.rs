@@ -86,6 +86,13 @@ impl GameState {
             CostPart::TapType { amount, valid } => {
                 self.tap_type_options(cost, valid, source, p).len() as u32 >= *amount
             }
+            CostPart::TapTotalPower { power, valid } => {
+                self.tap_type_options(cost, valid, source, p)
+                    .iter()
+                    .map(|c| self.chars(*c).power.unwrap_or(0).max(0))
+                    .sum::<i32>()
+                    >= *power as i32
+            }
             CostPart::Return { amount, valid } => {
                 self.battlefield_of(p)
                     .filter(|c| self.card_matches(*c, valid, source, p))
@@ -1356,6 +1363,32 @@ impl GameState {
                     for c in
                         self.choose_cost_cards(p, CardChoiceReason::TapCost, options, *amount, ch)?
                     {
+                        self.tap(c);
+                        note(PaidKind::Tapped, c);
+                    }
+                }
+                CostPart::TapTotalPower { power, valid } => {
+                    let options = self.tap_type_options(cost, valid, source, p);
+                    let chosen = match ch.ask(Decision::ChooseCards {
+                        player: p,
+                        reason: CardChoiceReason::TapCost,
+                        options: options.clone(),
+                        min: 1,
+                        max: options.len() as u32,
+                    })? {
+                        Choice::Cards(c) => c,
+                        _ => return Err(Interrupt::Cancelled),
+                    };
+                    let total: i32 = chosen
+                        .iter()
+                        .filter(|c| options.contains(c))
+                        .map(|c| self.chars(*c).power.unwrap_or(0).max(0))
+                        .sum();
+                    if total < *power as i32 {
+                        // ungültige Auswahl: wie ein Abbruch (CR 728)
+                        return Err(Interrupt::Cancelled);
+                    }
+                    for c in chosen {
                         self.tap(c);
                         note(PaidKind::Tapped, c);
                     }
