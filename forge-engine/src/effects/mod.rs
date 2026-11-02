@@ -1764,9 +1764,7 @@ fn compile_depth(
             }
         }
         "RollDice" => {
-            for k in ["AILogic"] {
-                c.get(k);
-            }
+            c.get("AILogic");
             let sides = match c.get("Sides") {
                 None => 6,
                 Some(v) => v.trim().parse().map_err(|_| c.unsupported("Sides", v))?,
