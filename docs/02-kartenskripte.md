@@ -190,6 +190,25 @@ CompiledAbility {
 - Wichtig: Ohne Angabe meint nur `Defined$` die Ziele der Fähigkeit; andere Spieler-/
   Kartenschlüssel (`Controller$`, `TokenOwner$`, `Object$` …) haben ihren eigenen Standard.
 
+- Filtervariablen `cmc|power|toughness<Op><SVar>` (`Prop::StatVar`): Wert = SVar der
+  Quelle, beim Prüfen ausgewertet; X = `CardObj::last_x` (zuletzt gewähltes X), bei der
+  Wirkbarkeitsprüfung das höchstmögliche X. Beim Laden muss die SVar auswertbar sein.
+- Ausdrücke: `Count$Valid <Filter>$<Aggregat>` (`GreatestCardPower`, `CardPower`, `Colors`,
+  `DifferentCardPower`, `CardTypes` …), `PlayerCount<Players|Opponents>$Amount|Highest…|Lowest…`,
+  `Count$Party`, `Count$RememberedSize`, `Count$Kicked.A.B`.
+- `ConditionDefined$ Self`; `Condition$` gilt auch in Effekten (u. a. `Kicked`).
+- Kicker: `K:Kicker:<Kosten>[:<Kosten>]`, `CardObj::kicked`, Filter `kicked[ 1| 2]`,
+  `etbCounter:<Art>:<n>:CheckSVar$ <SVar>[ | SVarCompare$ …]`.
+- Filter `wasCast[From…]` (`CardObj::cast_from`), `ExiledWithSource`, Basis `Emblem`,
+  `<Farbe>Source`; `Defined$ ExiledWith`.
+- `GenericChoice` (`Choices$`, `Defined$`, `AtRandom$`, `TempRemember$ Chooser`),
+  `ChooseSource`, `Pump NumAtt$ Double`, `ChangeNum$ Any`.
+- Versteckte Keywords `HIDDEN CARDNAME can't block./attack.`; „doesn't untap during your
+  next untap step“ mit `Duration$ Permanent` → `CardObj::skip_next_untap`.
+- `Duration$ UntilHostLeavesPlay` bei `ChangeZone` (`CardObj::exiled_until`) und `Effect`.
+- Schadens-Ersatz `ReplaceWith$` → `ChangeZone Defined$ Self Origin$ Command Destination$ Exile`
+  mit `PreventionEffect$`: einmal verhindern (`DamageAction::PreventOnce`).
+
 ## Token und modale Fähigkeiten
 
 - `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,

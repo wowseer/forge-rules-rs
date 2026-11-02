@@ -5,6 +5,48 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-02 – Sitzung 9: Filtervariablen, Ausdrücke, Kicker, Wahl-Effekte, „bis … verlässt“
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Filter mit Variablen (`cmcLEX`, `powerLTY` …) | ✅ |
+| Ausdrücke: Aggregate über Karten, `PlayerCount…`, Party, RememberedSize | ✅ |
+| `wasCast…`, `ConditionDefined$ Self`, Pump `Double`, `ChangeNum$ Any` | ✅ |
+| Kicker (CR 702.33) inkl. „wenn gekickt“, bedingte `etbCounter` | ✅ |
+| `GenericChoice`, `ChooseSource`, Emblem-Filter, „nächstes Mal verhindern“ | ✅ |
+| Versteckte Keywords „can't block/attack“, „enttappt nächstes Mal nicht“ | ✅ |
+| `Duration$ UntilHostLeavesPlay` (ChangeZone, Effect), `ExiledWith` | ✅ |
+| Tests | alle grün, Lasttest grün |
+| Unterstützte Karten im Zielpool | 44,3 % → **47,0 %** |
+
+### Entscheidungen
+
+- Filtervariablen werden zur Laufzeit aus der SVar der Quelle ausgewertet (gecacht je
+  Definition); X kommt aus `CardObj::last_x`. Für die Wirkbarkeit gilt das höchstmögliche X
+  (sonst hätten X-Zauber mit `cmcLEX`-Zielen nie Ziele).
+- Kicker wird nur angeboten, wenn die Gesamtkosten grob bezahlbar sind (vermeidet
+  Abbruch-Schleifen der KI). Status wird wie `cast_from` vom Stapel auf die bleibende Karte
+  übertragen.
+- Exil-Herkunft über `GameState::effect_source` (gesetzt in `apply_effect`), statt die
+  Quelle durch alle Bewegungsfunktionen zu reichen.
+- Effektobjekte übernehmen gewählte Karte/Farbe/Typ der Quelle (wie Java EffectEffect).
+- Commits nur noch nach grünem Volltest (Befehlskette prüft das Ergebnis).
+
+### Bekannte Lücken
+
+- `ExiledWithSourceLKI`, `Imprint`, `Multikicker`, `ResolvedThisTurn`, `Converge`.
+- Kommandeur-Mechaniken (`IsCommander`, 94), `ChoosePlayer` (80), `RollDice` (82), Crew.
+
+### Nächste Schritte
+
+1. Commander-Grundlagen (Befehlszone, `IsCommander`, Steuer) – auch für das Zielformat nötig.
+2. `ChoosePlayer`, `RollDice`, `Branch`, `Crew`.
+3. Trigger `TurnFaceUp`/Morph (121), Split-Karten (124).
+
+---
+
 ## 2026-11-02 – Sitzung 8: Play, Kopien, DigUntil, Verbote, Auren
 
 ### Ergebnis
