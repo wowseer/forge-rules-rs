@@ -181,3 +181,27 @@ fn remember_changed_flicker_returns_new_object() {
     assert_ne!(back, bear, "neues Objekt (CR 400.7)");
     assert_eq!(d.g().card(back).damage, 0);
 }
+
+#[test]
+fn peek_and_reveal_remembers_only_matching_revealed_cards() {
+    // Java PeekAndRevealEffect: RevealValid, RevealOptional, RememberRevealed
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 2);
+    let a = put(&db, &mut g, "Peek Lite", P1, Zone::Hand);
+    let b = put(&db, &mut g, "Peek Creature Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    let (hand, lib) = (d.g().player(P1).hand.len(), d.g().player(P1).library.len());
+    d.cast(b, &[]);
+    d.pass_all();
+    assert_eq!(
+        d.g().player(P1).library.len(),
+        lib,
+        "Insel ist keine Kreatur"
+    );
+    d.cast(a, &[]);
+    d.pass_all();
+    assert!(matches!(d.decision(), Decision::Confirm { .. }));
+    d.submit(Choice::Yes);
+    assert_eq!(d.g().player(P1).library.len(), lib - 1);
+    assert_eq!(d.g().player(P1).hand.len(), hand - 2 + 1);
+}

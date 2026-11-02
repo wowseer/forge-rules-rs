@@ -64,6 +64,10 @@ pub enum Prop {
     OppOwn,
     /// Von der Quelle gemerkt (`IsRemembered`)
     IsRemembered,
+    /// Von der Quelle gewählt (`ChosenCard`; `strict`: genau dieses Objekt)
+    ChosenCard {
+        strict: bool,
+    },
     /// Controller ist ein von der Quelle gemerkter Spieler (`RememberedPlayerCtrl`)
     RememberedPlayerCtrl,
     /// Die Quelle (Aura/Ausrüstung) ist an dieses Objekt angelegt.
@@ -160,6 +164,12 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     if p == "IsRemembered" {
         return Ok(Prop::IsRemembered);
+    }
+    match p {
+        "ChosenCard" => return Ok(Prop::ChosenCard { strict: false }),
+        "ChosenCardStrict" => return Ok(Prop::ChosenCard { strict: true }),
+        "nonChosenCard" => return Ok(Prop::Not(Box::new(Prop::ChosenCard { strict: false }))),
+        _ => {}
     }
     if p == "RememberedPlayerCtrl" {
         return Ok(Prop::RememberedPlayerCtrl);

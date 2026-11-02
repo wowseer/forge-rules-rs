@@ -2,7 +2,7 @@
 
 mod common;
 use common::*;
-use forge_engine::decision::{Action, Decision, Target};
+use forge_engine::decision::{Action, Choice, Decision, Target};
 use forge_engine::keyword::Keyword;
 use forge_engine::{Step, Zone};
 
@@ -86,4 +86,30 @@ fn effect_trigger_fires_from_command_zone() {
         "Bolt gespielt, eine Karte gezogen"
     );
     let _ = Action::Pass;
+}
+
+#[test]
+fn choose_card_then_destroy_all_non_chosen() {
+    // Java ChooseCardEffect: Mandatory, Defined$ ChosenCard, Filter nonChosenCard,
+    // ConditionDefined$ ChosenCard
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Plains", P1, Zone::Battlefield);
+    let keep = put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
+    put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
+    let s = put(&db, &mut g, "Spare Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(s, &[]);
+    d.pass_all();
+    match d.decision() {
+        Decision::ChooseCards { options, min, .. } => {
+            assert_eq!(options.len(), 2, "nur eigene Kreaturen");
+            assert_eq!(*min, 1);
+        }
+        other => panic!("{other:?}"),
+    }
+    d.submit(Choice::Cards(vec![keep]));
+    assert_eq!(count(d.g(), "Grizzly Bears", Zone::Graveyard), 2);
+    assert_eq!(d.g().card(keep).zone, Some(Zone::Battlefield));
+    assert_eq!(d.g().chars(keep).power, Some(5));
 }

@@ -110,6 +110,12 @@ impl GameState {
                 .and_then(|t| t.target)
                 .into_iter()
                 .collect(),
+            Defined::ChosenCard => self
+                .card(ctx.source)
+                .chosen_cards
+                .iter()
+                .map(|c| Target::Card(self.current_object(*c)))
+                .collect(),
             Defined::Remembered => self
                 .remembered_current(ctx.source)
                 .into_iter()
@@ -951,6 +957,121 @@ impl GameState {
                     }
                     for c in grave {
                         self.move_card(c, Zone::Graveyard, true);
+                    }
+                }
+            }
+            Effect::ChooseCard {
+                who,
+                zones,
+                choices,
+                defined_cards,
+                amount,
+                min,
+                mandatory,
+                controlled_by_chooser,
+                target_controls,
+                at_random,
+                remember,
+                forget,
+            } => {
+                // Java ChooseCardEffect
+                let choosers = Self::players_of(&self.resolve_defined(*who, targets, ctx));
+                let mut pool: Vec<CardId> = match defined_cards {
+                    Some(d) => self.cards_of(&self.resolve_defined(*d, targets, ctx)),
+                    None => {
+                        let all = self.players_from(self.active);
+                        self.cards_in_zones(zones, &all)
+                            .into_iter()
+                            .filter(|c| {
+                                choices.as_ref().is_none_or(|v| {
+                                    self.card_matches(*c, v, ctx.source, ctx.controller)
+                                })
+                            })
+                            .collect()
+                    }
+                };
+                if *target_controls {
+                    pool.retain(|c| choosers.contains(&self.card(*c).controller));
+                }
+                let n = self.amount(amount, ctx, targets);
+                let mut all_chosen: Vec<CardId> = Vec::new();
+                if n > 0 {
+                    for p in choosers {
+                        let mut opts = pool.clone();
+                        if *controlled_by_chooser {
+                            opts.retain(|c| self.card(*c).controller == p);
+                        }
+                        let max = (n as usize).min(opts.len());
+                        let chosen = if *at_random {
+                            self.rng.shuffle(&mut opts);
+                            opts.into_iter().take(max).collect()
+                        } else if max == 0 {
+                            Vec::new()
+                        } else {
+                            let want_min = min.unwrap_or(n as u32).min(max as u32);
+                            match ch.ask(Decision::ChooseCards {
+                                player: p,
+                                reason: crate::decision::CardChoiceReason::Choose,
+                                options: opts,
+                                min: if *mandatory { want_min } else { 0 },
+                                max: max as u32,
+                            })? {
+                                Choice::Cards(c) => c,
+                                _ => Vec::new(),
+                            }
+                        };
+                        all_chosen.extend(chosen);
+                    }
+                }
+                let src = self.card_mut(ctx.source);
+                src.chosen_cards = all_chosen.clone();
+                if *remember {
+                    src.remembered.extend(all_chosen.iter().copied());
+                }
+                if *forget {
+                    src.remembered.retain(|c| !all_chosen.contains(c));
+                }
+            }
+            Effect::PeekAndReveal {
+                who,
+                num,
+                reveal_valid,
+                no_reveal,
+                reveal_optional,
+                remember_revealed,
+                remember_peeked,
+            } => {
+                // Java PeekAndRevealEffect: je Spieler die obersten N Karten.
+                let n = self.amount(num, ctx, targets).max(0) as usize;
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let top: Vec<CardId> = self
+                        .player(p)
+                        .library
+                        .iter()
+                        .rev()
+                        .take(n)
+                        .copied()
+                        .collect();
+                    let revealable: Vec<CardId> = top
+                        .into_iter()
+                        .filter(|c| {
+                            reveal_valid.as_ref().is_none_or(|v| {
+                                self.card_matches(*c, v, ctx.source, ctx.controller)
+                            })
+                        })
+                        .collect();
+                    let mut reveal = !*no_reveal && !revealable.is_empty();
+                    if reveal && *reveal_optional {
+                        reveal = matches!(
+                            ch.ask(Decision::Confirm {
+                                player: ctx.controller,
+                                prompt: "Karten aufdecken?".into(),
+                            })?,
+                            Choice::Yes
+                        );
+                    }
+                    if (reveal && *remember_revealed) || (!reveal && *remember_peeked) {
+                        self.card_mut(ctx.source).remembered.extend(revealable);
                     }
                 }
             }

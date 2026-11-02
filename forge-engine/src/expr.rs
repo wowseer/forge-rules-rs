@@ -196,6 +196,8 @@ pub enum Condition {
         lki: bool,
         /// `ConditionDefined$ Targeted`: die Ziele der Fähigkeit statt der gemerkten.
         targeted: bool,
+        /// `ConditionDefined$ ChosenCard`: die gewählten Karten der Quelle.
+        chosen: bool,
     },
 }
 
@@ -484,7 +486,10 @@ pub fn parse_conditions(
     };
     if let Some(d) = defined {
         // Java: ohne ConditionPresent$ wird ConditionDefined$ nicht geprüft.
-        if !matches!(d, "Remembered" | "RememberedLKI" | "Targeted") {
+        if !matches!(
+            d,
+            "Remembered" | "RememberedLKI" | "Targeted" | "ChosenCard"
+        ) {
             return Err(bad("ConditionDefined", d));
         }
         if params.has(k_zone) || params.has(k_player) {
@@ -496,6 +501,7 @@ pub fn parse_conditions(
                 cmp: Compare::parse(face, params.get(k_cmp).unwrap_or("GE1"))?,
                 lki: d == "RememberedLKI",
                 targeted: d == "Targeted",
+                chosen: d == "ChosenCard",
             });
         }
     } else if let Some(p) = params.get(k_present) {
@@ -887,6 +893,7 @@ impl GameState {
                 cmp,
                 lki,
                 targeted,
+                chosen,
             } => {
                 if *targeted {
                     let n = ctx
@@ -903,7 +910,13 @@ impl GameState {
                         .count() as i32;
                     return cmp.holds(n, self.eval(&cmp.rhs, ctx));
                 }
-                let objs = if *lki {
+                let objs = if *chosen {
+                    self.card(ctx.source)
+                        .chosen_cards
+                        .iter()
+                        .map(|c| self.current_object(*c))
+                        .collect()
+                } else if *lki {
                     self.card(ctx.source).remembered.clone()
                 } else {
                     self.remembered_current(ctx.source)

@@ -16,7 +16,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Trigger | 137 | 0 | 21 | 11 |
 | Replacement Effect | 35 | 0 | 2 | 5 |
 | Static Ability | 90 | 1 | 4 | 0 |
-| Effect (ApiType) | 188 | 2 | 35 | 16 |
+| Effect (ApiType) | 188 | 2 | 37 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 15 | 1 | 3 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **71** | **92** | **81** |
+| **Summe** | **789** | **71** | **94** | **81** |
 
 ## Keyword
 
@@ -139,6 +139,7 @@ Offen (85): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | ChangeZoneAll | 🟡 teilweise | `change_zone::change_zone_all_bounces_everything` | ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger) | ability/effects/ChangeZoneAllEffect.java |
 | ChaosEnsues | ⚪ n/a |  | Planechase | ability/effects/ChaosEnsuesEffect.java |
 | Charm | 🟡 teilweise | `tokens_charm::charm_choose_two_resolve_in_printed_order` | CharmNum/MinCharmNum, CanRepeatModes, nur Modi mit legalen Zielen, Druckreihenfolge, bei Triggern beim Stapeln | ability/effects/CharmEffect.java |
+| ChooseCard | 🟡 teilweise | `effects_objects::choose_card_then_destroy_all_non_chosen` | Choices, ChoiceZone, DefinedCards, Amount, MinAmount, Mandatory, ControlledByPlayer Chooser, TargetControls, AtRandom, RememberChosen, ForgetChosen | ability/effects/ChooseCardEffect.java |
 | ChooseSector | ⚪ n/a |  | Unstable | ability/effects/ChooseSectorEffect.java |
 | Cleanup | 🟡 teilweise | `sacrifice_unless::condition_defined_remembered_and_cleanup` | ClearRemembered (übrige Clear…-Flags ohne Wirkung, da der Zustand nicht existiert) | ability/effects/CleanUpEffect.java |
 | Counter | 🟡 teilweise | `mass_discard_counter::mana_leak_pay_or_countered` | Zauber neutralisieren, allgemeines UnlessCost | ability/effects/CounterEffect.java |
@@ -163,6 +164,7 @@ Offen (85): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Mana | 🟡 teilweise | `spells::manual_mana_payment_and_cancel` |  | ability/effects/ManaEffect.java |
 | Mill | 🟡 teilweise | `library_regen_animate::mill_target_player` | NumCards, Defined/Ziel | ability/effects/MillEffect.java |
 | OpenAttraction | ⚪ n/a |  | Unfinity | ability/effects/OpenAttractionEffect.java |
+| PeekAndReveal | 🟡 teilweise | `change_zone::peek_and_reveal_remembers_only_matching_revealed_cards` | PeekAmount, RevealValid, NoReveal, RevealOptional (Decision::Confirm), RememberRevealed, RememberPeeked | ability/effects/PeekAndRevealEffect.java |
 | Planeswalk | ⚪ n/a |  | Planechase | ability/effects/PlaneswalkEffect.java |
 | PreventDamage | 🟡 teilweise | `replacements::prevention_shield_next_n_damage_this_turn_after_doubling` | nächste N Schaden in diesem Zug (Karten, Spieler) | ability/effects/DamagePreventEffect.java |
 | Pump | 🟡 teilweise | `spells::draw_gain_lose_life_and_pump` | NumAtt/NumDef/KW bis Zugende | ability/effects/PumpEffect.java |
@@ -184,7 +186,7 @@ Offen (85): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Token | 🟡 teilweise | `tokens_charm::tokens_enter_and_trigger_etb` | TokenScript (Liste), TokenAmount, TokenOwner, TokenTapped, TokenPower/Toughness | ability/effects/TokenEffect.java |
 | Untap | 🟡 teilweise |  | Grundform | ability/effects/UntapEffect.java |
 
-Offen (151): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, AnimateAll, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseCard, ChooseColor, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ChooseSource, ChooseType, ClaimThePrize, Clash, ClassLevelUp, Cloak, Clone, Connive, CopyPermanent, CopySpellAbility, ControlSpell, ControlPlayer, Detain, DayTime, Debuff, DigMultiple, DigUntil, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipCoin, FlipOntoBattlefield, Fog, GainControlVariant, GainOwnership, GameDrawn, GenericChoice, Goad, Haunt, HealDamage, Investigate, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PeekAndReveal, PermanentCreature, PermanentNoncreature, Phases, Play, PlayLandVariant, Poison, Proliferate, Protection, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounter, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, SacrificeAll, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapAll, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, UntapAll, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
+Offen (149): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, AnimateAll, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseColor, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ChooseSource, ChooseType, ClaimThePrize, Clash, ClassLevelUp, Cloak, Clone, Connive, CopyPermanent, CopySpellAbility, ControlSpell, ControlPlayer, Detain, DayTime, Debuff, DigMultiple, DigUntil, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipCoin, FlipOntoBattlefield, Fog, GainControlVariant, GainOwnership, GameDrawn, GenericChoice, Goad, Haunt, HealDamage, Investigate, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PermanentCreature, PermanentNoncreature, Phases, Play, PlayLandVariant, Poison, Proliferate, Protection, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounter, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, SacrificeAll, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapAll, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, UntapAll, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
 
 ## Cost
 

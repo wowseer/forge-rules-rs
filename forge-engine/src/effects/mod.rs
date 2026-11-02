@@ -61,6 +61,8 @@ pub enum Defined {
     Remembered,
     /// … bzw. so, wie sie gemerkt wurden (`RememberedLKI`).
     RememberedLki,
+    /// Von der Quelle gewählte Karten in ihrem aktuellen Zustand (`ChosenCard`).
+    ChosenCard,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -166,6 +168,40 @@ pub enum Effect {
     Scry {
         who: Defined,
         num: Amount,
+    },
+    /// Karten wählen (`ChooseCard`): die Quelle merkt sie als „gewählt“.
+    ChooseCard {
+        who: Defined,
+        zones: Vec<crate::zone::Zone>,
+        choices: Option<ValidSpec>,
+        /// `DefinedCards$`: statt Zonen/Filter genau diese Karten
+        defined_cards: Option<Defined>,
+        amount: Amount,
+        /// `MinAmount$` (Standard: `Amount$`)
+        min: Option<u32>,
+        mandatory: bool,
+        /// `ControlledByPlayer$ Chooser`
+        controlled_by_chooser: bool,
+        /// `TargetControls$`: nur Karten der gewählten Spieler
+        target_controls: bool,
+        at_random: bool,
+        remember: bool,
+        forget: bool,
+    },
+    /// Oberste Karten ansehen und ggf. aufdecken (`PeekAndReveal`).
+    PeekAndReveal {
+        who: Defined,
+        num: Amount,
+        /// `RevealValid$`: nur passende Karten werden aufgedeckt
+        reveal_valid: Option<ValidSpec>,
+        /// `NoReveal$`: nur ansehen
+        no_reveal: bool,
+        /// `RevealOptional$`: Aufdecken ist freiwillig
+        reveal_optional: bool,
+        /// `RememberRevealed$`: Quelle merkt sich die aufgedeckten Karten
+        remember_revealed: bool,
+        /// `RememberPeeked$`: … ohne Aufdecken die angesehenen (passenden) Karten
+        remember_peeked: bool,
     },
     /// Oberste Karten ansehen, beliebig in den Friedhof oder zurück (`Surveil`, CR 701.25).
     Surveil {
@@ -631,6 +667,7 @@ impl<'a> Ctx<'a> {
                 "TriggeredSource" | "TriggeredSourceLKICopy" => Defined::TriggeredSource,
                 // Gemerkte Karten und Spieler (Java `getDefinedObjects("Remembered")`).
                 "Remembered" | "Player.IsRemembered" => Defined::Remembered,
+                "ChosenCard" => Defined::ChosenCard,
                 "RememberedLKI" => Defined::RememberedLki,
                 other => return Err(self.unsupported(key, other)),
             }),
@@ -1283,6 +1320,76 @@ fn compile_depth(
             }
         }
         "Effect" => compile_effect_object(&mut c, face)?,
+        "ChooseCard" => {
+            let has = |c: &mut Ctx, k: &'static str| c.get(k).is_some();
+            // reine Anzeige-/Informationsparameter
+            for k in [
+                "ChoiceTitle",
+                "ChoiceTitleAppend",
+                "Reveal",
+                "RevealTitle",
+                "Secretly",
+                "ChoiceDesc",
+                "LockInText",
+            ] {
+                c.get(k);
+            }
+            let zones = match c.get("ChoiceZone") {
+                Some(z) => parse_zones(&c, "ChoiceZone", z)?,
+                None => vec![crate::zone::Zone::Battlefield],
+            };
+            let controlled_by_chooser = match c.get("ControlledByPlayer") {
+                None => false,
+                Some("Chooser") => true,
+                Some(v) => return Err(c.unsupported("ControlledByPlayer", v)),
+            };
+            let min = match c.get("MinAmount") {
+                None => None,
+                Some(v) => Some(
+                    v.trim()
+                        .parse()
+                        .map_err(|_| c.unsupported("MinAmount", v))?,
+                ),
+            };
+            let defined_cards = if c.ab.params.has("DefinedCards") {
+                Some(c.defined_key("DefinedCards", Defined::SelfCard)?)
+            } else {
+                None
+            };
+            Effect::ChooseCard {
+                zones,
+                choices: c.get("Choices").map(ValidSpec::parse).transpose()?,
+                defined_cards,
+                amount: c.amount("Amount", Some(1))?,
+                min,
+                mandatory: has(&mut c, "Mandatory"),
+                controlled_by_chooser,
+                target_controls: has(&mut c, "TargetControls"),
+                at_random: has(&mut c, "AtRandom"),
+                remember: has(&mut c, "RememberChosen"),
+                forget: has(&mut c, "ForgetChosen"),
+                who: c.defined(Defined::You)?,
+            }
+        }
+        "PeekAndReveal" => {
+            if let Some(z) = c.get("SourceZone")
+                && z != "Library"
+            {
+                return Err(c.unsupported("SourceZone", z));
+            }
+            let has = |c: &mut Ctx, k: &'static str| c.get(k).is_some();
+            // NoPeek$: nur Informationsfluss (wer sieht die Karten) – ohne Regelwirkung
+            has(&mut c, "NoPeek");
+            Effect::PeekAndReveal {
+                num: c.amount("PeekAmount", Some(1))?,
+                reveal_valid: c.get("RevealValid").map(ValidSpec::parse).transpose()?,
+                no_reveal: has(&mut c, "NoReveal"),
+                reveal_optional: has(&mut c, "RevealOptional"),
+                remember_revealed: has(&mut c, "RememberRevealed"),
+                remember_peeked: has(&mut c, "RememberPeeked"),
+                who: c.defined(Defined::You)?,
+            }
+        }
         "Scry" => {
             let num = c.amount("ScryNum", Some(1))?;
             Effect::Scry {

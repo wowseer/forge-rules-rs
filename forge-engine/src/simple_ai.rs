@@ -169,7 +169,7 @@ impl Controller for SimpleAi {
             Decision::OrderTriggers { descriptions, .. } => {
                 Choice::Order((0..descriptions.len()).collect())
             }
-            Decision::OptionalTrigger { .. } => Choice::Yes,
+            Decision::OptionalTrigger { .. } | Decision::Confirm { .. } => Choice::Yes,
             Decision::ChooseCards {
                 options,
                 max,

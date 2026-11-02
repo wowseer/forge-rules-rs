@@ -137,6 +137,8 @@ pub struct CardObj {
     pub remembered: Vec<CardId>,
     /// Gemerkte Spieler (`RememberObjects$` mit Spielern, `RepeatEach`).
     pub remembered_players: Vec<PlayerId>,
+    /// Gewählte Karten (`ChooseCard`, Java `Card.chosenCards`).
+    pub chosen_cards: Vec<CardId>,
     /// Nur bei Effektobjekten (`Effect`): wann sie enden.
     pub effect: Option<EffectInfo>,
     /// Aura/Ausrüstung: an welches Objekt angelegt (CR 301.5, 303.4).

@@ -171,6 +171,9 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Land Bounce Lite\nManaCost:U\nTypes:Enchantment\nA:AB$ Draw | Cost$ Return<1/Land;Creature> | NumCards$ 1 | SpellDescription$ x\nOracle:\n",
     "Name:Reflex Lite\nManaCost:R\nTypes:Enchantment\nA:AB$ Discard | Cost$ 1 | Defined$ You | Mode$ TgtChoose | NumCards$ 1 | RememberDiscarded$ True | SubAbility$ DBImmediate | SpellDescription$ x\nSVar:DBImmediate:DB$ ImmediateTrigger | Execute$ TrigDmg | ConditionDefined$ Remembered | ConditionPresent$ Card | TriggerAmount$ 2 | SubAbility$ DBCleanup | TriggerDescription$ When you do, deal 1 damage to any target twice.\nSVar:TrigDmg:DB$ DealDamage | ValidTgts$ Any | NumDmg$ 1\nSVar:DBCleanup:DB$ Cleanup | ClearRemembered$ True\nOracle:\n",
     "Name:Tapper Lite\nManaCost:W\nTypes:Creature Human\nPT:1/1\nA:AB$ GainLife | Cost$ T tapXType<1/Creature> | LifeAmount$ 1 | SpellDescription$ x\nOracle:\n",
+    "Name:Peek Lite\nManaCost:G\nTypes:Sorcery\nA:SP$ PeekAndReveal | PeekAmount$ 1 | RevealValid$ Land | RevealOptional$ True | RememberRevealed$ True | SubAbility$ DBTake | SpellDescription$ x\nSVar:DBTake:DB$ ChangeZone | Defined$ Remembered | Origin$ Library | Destination$ Hand | SubAbility$ DBCleanup\nSVar:DBCleanup:DB$ Cleanup | ClearRemembered$ True\nOracle:\n",
+    "Name:Peek Creature Lite\nManaCost:G\nTypes:Sorcery\nA:SP$ PeekAndReveal | PeekAmount$ 1 | RevealValid$ Creature | RememberRevealed$ True | SubAbility$ DBTake | SpellDescription$ x\nSVar:DBTake:DB$ ChangeZone | Defined$ Remembered | Origin$ Library | Destination$ Hand | SubAbility$ DBCleanup\nSVar:DBCleanup:DB$ Cleanup | ClearRemembered$ True\nOracle:\n",
+    "Name:Spare Lite\nManaCost:W\nTypes:Sorcery\nA:SP$ ChooseCard | Defined$ You | Choices$ Creature.YouCtrl | Mandatory$ True | SubAbility$ DBWrath | SpellDescription$ x\nSVar:DBWrath:DB$ DestroyAll | ValidCards$ Creature.nonChosenCard | SubAbility$ DBPump\nSVar:DBPump:DB$ Pump | Defined$ ChosenCard | NumAtt$ +2 | ConditionDefined$ ChosenCard | ConditionPresent$ Creature | ConditionCompare$ GE1\nOracle:\n",
     "Name:Mana Leak\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | TgtPrompt$ Select target spell | ValidTgts$ Card | UnlessCost$ 3 | SpellDescription$ Counter target spell unless its controller pays {3}.\nOracle:\n",
     "Name:Essence Scatter Lite\nManaCost:1 U\nTypes:Instant\nA:SP$ Counter | TargetType$ Spell | ValidTgts$ Creature | TgtPrompt$ Select target creature spell | SpellDescription$ Counter target creature spell.\nOracle:\n",
     "Name:Blessing Lite\nManaCost:W\nTypes:Instant\nA:SP$ Effect | ValidTgts$ Creature | StaticAbilities$ STHexproof | RememberObjects$ Targeted | SpellDescription$ Target creature gains hexproof until end of turn.\nSVar:STHexproof:Mode$ Continuous | Affected$ Creature.IsRemembered | AddKeyword$ Hexproof | Description$ Hexproof.\nOracle:\n",
@@ -438,7 +441,7 @@ pub fn default_choice(d: &Decision) -> Choice {
         Decision::OrderTriggers { descriptions, .. } => {
             Choice::Order((0..descriptions.len()).collect())
         }
-        Decision::OptionalTrigger { .. } => Choice::Yes,
+        Decision::OptionalTrigger { .. } | Decision::Confirm { .. } => Choice::Yes,
         Decision::ChooseCards { options, min, .. } => {
             Choice::Cards(options[..*min as usize].to_vec())
         }

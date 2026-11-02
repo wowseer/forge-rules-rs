@@ -146,6 +146,11 @@ pub enum Decision {
         player: PlayerId,
         description: String,
     },
+    /// Allgemeine Ja/Nein-Frage eines Effekts (z. B. „du darfst aufdecken“).
+    Confirm {
+        player: PlayerId,
+        prompt: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -171,6 +176,8 @@ pub enum CardChoiceReason {
     TapCost,
     /// Kosten: Permanents auf die Hand (`Return<n/Typ>`)
     ReturnCost,
+    /// `ChooseCard`: Karten für einen Effekt wählen
+    Choose,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -239,6 +246,7 @@ impl Decision {
             | Decision::ChooseCards { player, .. }
             | Decision::OrderTriggers { player, .. }
             | Decision::OptionalTrigger { player, .. }
+            | Decision::Confirm { player, .. }
             | Decision::ChooseModes { player, .. }
             | Decision::PayUnlessCost { player, .. }
             | Decision::Scry { player, .. } => *player,
@@ -389,7 +397,9 @@ impl Decision {
                 Ok(())
             }
             (
-                Decision::OptionalTrigger { .. } | Decision::PayUnlessCost { .. },
+                Decision::OptionalTrigger { .. }
+                | Decision::PayUnlessCost { .. }
+                | Decision::Confirm { .. },
                 Choice::Yes | Choice::No,
             ) => Ok(()),
             (Decision::Scry { cards, .. }, Choice::Arrange { top, bottom }) => {
