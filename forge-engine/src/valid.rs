@@ -95,6 +95,13 @@ pub enum Prop {
     /// Karte: eine Aura (`enchanted`) bzw. Ausrüstung (`equipped`) hängt daran
     Enchanted,
     Equipped,
+    /// `cmcLEX`, `powerLTY`: Vergleich mit einer SVar der Quelle (Java
+    /// `AbilityUtils.calculateAmount(source, …)`), beim Prüfen ausgewertet.
+    StatVar {
+        stat: Stat,
+        op: crate::expr::CmpOp,
+        var: String,
+    },
     /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
     Stat {
         stat: Stat,
@@ -176,6 +183,33 @@ fn is_type_word(w: &str) -> bool {
         Some(reg) => reg.kind_of(w).is_some(),
         None => true,
     }
+}
+
+/// SVar-Name als Vergleichswert in Filtern (`X`, `Y`, `Z`, `MaxCMC` …):
+/// beginnt mit einem Großbuchstaben, nur Buchstaben/Ziffern.
+pub fn is_filter_var(v: &str) -> bool {
+    v.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+        && v.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
+/// Alle Variablennamen in Filter-Eigenschaften eines Textes (`cmcLEX` → `X`).
+pub fn filter_vars_in(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for word in text.split(|c: char| !c.is_ascii_alphanumeric()) {
+        for prefix in ["cmc", "power", "toughness"] {
+            if let Some(rest) = word.strip_prefix(prefix)
+                && rest.len() > 2
+                && cmp_op(&rest[..2]).is_some()
+                && rest[2..].parse::<i32>().is_err()
+                && is_filter_var(&rest[2..])
+            {
+                out.push(rest[2..].to_string());
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
 }
 
 /// Vergleichsoperator in Filtern (`GE`, `LT` …).
@@ -289,6 +323,16 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
                     let op = cmp_op(&rest[..2]);
                     if let (Some(op), Ok(value)) = (op, rest[2..].parse::<i32>()) {
                         return Ok(Prop::Stat { stat, op, value });
+                    }
+                    let var = &rest[2..];
+                    if let Some(op) = op
+                        && is_filter_var(var)
+                    {
+                        return Ok(Prop::StatVar {
+                            stat,
+                            op,
+                            var: var.to_string(),
+                        });
                     }
                 }
             }

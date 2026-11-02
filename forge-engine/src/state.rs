@@ -161,6 +161,9 @@ pub struct CardObj {
     pub may_play_uses: Vec<(usize, u32)>,
     /// CR 701.37b: ist monströs (durch Monstrosity).
     pub monstrous: bool,
+    /// Zuletzt für einen Zauber/eine Fähigkeit dieser Quelle gewähltes X
+    /// (für Filter wie `cmcLEX` mit `X = Count$xPaid`).
+    pub last_x: u32,
     /// Zauber auf dem Stapel: statt in den Friedhof ins Exil (`Play | ReplaceGraveyard$ Exile`).
     pub exile_from_stack: bool,
     /// Kopie eines anderen Objekts (CR 707): `def`/`face`/`base_pt` sind dann die

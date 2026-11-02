@@ -8,6 +8,11 @@ use crate::state::{Characteristics, GameState};
 use crate::valid::{Alternative, CardBase, PlayerBase, Prop, ValidSpec};
 use crate::zone::Zone;
 
+thread_local! {
+    /// Angenommenes X für Filtervariablen während Wirkbarkeitsprüfungen.
+    static ASSUMED_X: std::cell::Cell<Option<u32>> = const { std::cell::Cell::new(None) };
+}
+
 impl GameState {
     fn card_base_matches(&self, id: CardId, ch: &Characteristics, base: &CardBase) -> bool {
         match base {
@@ -105,6 +110,26 @@ impl GameState {
                 rhs: crate::expr::Expr::Const(*value),
             }
             .holds(c.counter(kind) as i32, *value),
+            Prop::StatVar { stat, op, var } => {
+                let v = match stat {
+                    crate::valid::Stat::Power => ch.power,
+                    crate::valid::Stat::Toughness => ch.toughness,
+                    crate::valid::Stat::ManaValue => Some(
+                        ch.mana_cost
+                            .as_ref()
+                            .map(|m| m.mana_value() as i32)
+                            .unwrap_or(0),
+                    ),
+                };
+                let rhs = self.filter_var(source, var, you);
+                v.is_some_and(|v| {
+                    crate::expr::Compare {
+                        op: *op,
+                        rhs: crate::expr::Expr::Const(rhs),
+                    }
+                    .holds(v, rhs)
+                })
+            }
             Prop::Stat { stat, op, value } => {
                 let v = match stat {
                     crate::valid::Stat::Power => ch.power,
@@ -125,6 +150,56 @@ impl GameState {
                 })
             }
         }
+    }
+
+    /// Wert der SVar `var` der Quelle für Filtervergleiche (`cmcLEX`); X ist das
+    /// zuletzt für die Quelle gewählte X. Unbekannt → 0.
+    pub fn filter_var(&self, source: CardId, var: &str, you: PlayerId) -> i32 {
+        type Key = (usize, usize, String);
+        thread_local! {
+            static CACHE: std::cell::RefCell<
+                std::collections::HashMap<Key, Option<std::sync::Arc<crate::expr::Expr>>>,
+            > = Default::default();
+        }
+        let card = self.card(source);
+        let key = (
+            std::sync::Arc::as_ptr(&card.def) as usize,
+            card.face,
+            var.to_string(),
+        );
+        let expr = CACHE.with(|c| {
+            c.borrow_mut()
+                .entry(key)
+                .or_insert_with(|| {
+                    let face = card.face();
+                    face.svar(var)
+                        .and_then(|sv| crate::expr::Expr::parse_svar(face, sv).ok())
+                        .map(std::sync::Arc::new)
+                })
+                .clone()
+        });
+        let Some(e) = expr else { return 0 };
+        let x = ASSUMED_X.with(|a| a.get()).unwrap_or(card.last_x);
+        let _g = crate::expr::DepthGuard::enter();
+        self.eval(
+            &e,
+            &crate::expr::EvalCtx {
+                source,
+                controller: you,
+                x,
+                targets: &[],
+                trig: None,
+                paid: &[],
+            },
+        )
+    }
+
+    /// Prüft `f` mit angenommenem X (Wirkbarkeit vor der Wahl von X, CR 601.2b).
+    pub(crate) fn with_assumed_x<T>(&self, x: u32, f: impl FnOnce() -> T) -> T {
+        let prev = ASSUMED_X.with(|a| a.replace(Some(x)));
+        let r = f();
+        ASSUMED_X.with(|a| a.set(prev));
+        r
     }
 
     /// Erfüllt das Objekt den Filter (aus Sicht von `you`, Quelle `source`)?

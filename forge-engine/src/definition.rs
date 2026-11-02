@@ -113,7 +113,34 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
     .collect()
 }
 
+/// Filtervariablen (`cmcLEX`) müssen als auswertbare SVar der Karte vorliegen.
+fn check_filter_vars(face: &CardFace, unsupported: &mut Vec<String>) {
+    let mut texts: Vec<String> = Vec::new();
+    texts.extend(face.svars.iter().map(|(_, v)| v.clone()));
+    texts.extend(face.abilities.iter().map(|a| format!("{a:?}")));
+    texts.extend(face.triggers.iter().map(|t| format!("{t:?}")));
+    texts.extend(face.statics.iter().map(|s| format!("{s:?}")));
+    texts.extend(face.replacements.iter().map(|r| format!("{r:?}")));
+    let mut vars: Vec<String> = texts
+        .iter()
+        .flat_map(|t| crate::valid::filter_vars_in(t))
+        .collect();
+    vars.sort();
+    vars.dedup();
+    for v in vars {
+        match face.svar(&v) {
+            None => unsupported.push(format!("Filtervariable {v} ohne SVar")),
+            Some(sv) => {
+                if let Err(e) = crate::expr::Expr::parse_svar(face, sv) {
+                    unsupported.push(format!("Filtervariable {v} ({e})"));
+                }
+            }
+        }
+    }
+}
+
 fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace {
+    check_filter_vars(face, unsupported);
     let mut out = CompiledFace {
         keywords: Vec::new(),
         spell: None,

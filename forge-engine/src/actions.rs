@@ -49,6 +49,7 @@ impl GameState {
             may_play_uses: Vec::new(),
             monstrous: false,
             exile_from_stack: false,
+            last_x: 0,
             prevent_next: 0,
             copy: None,
         });
@@ -169,6 +170,7 @@ impl GameState {
             may_play_uses: Vec::new(),
             monstrous: false,
             exile_from_stack: false,
+            last_x: 0,
             prevent_next: 0,
             copy: None,
         });

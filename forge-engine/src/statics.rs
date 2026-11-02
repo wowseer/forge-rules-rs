@@ -646,7 +646,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         |k: &'static str, used: &mut Vec<&'static str>| -> Result<Option<Expr>, CompileError> {
             used.push(k);
             match p.get(k) {
-                Some(v) => Expr::parse_value(face, v).map(Some).map_err(|_| err(k, v)),
+                Some(v) => Expr::parse_value(face, v).map(Some),
                 None => Ok(None),
             }
         };

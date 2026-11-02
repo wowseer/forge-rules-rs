@@ -376,7 +376,7 @@ impl GameState {
             return false;
         }
         card.compiled().spell.as_ref().is_none_or(|spell| {
-            self.has_targets_for(spell, c, p)
+            self.with_assumed_x(self.potential_mana(p), || self.has_targets_for(spell, c, p))
                 && spell
                     .cost
                     .as_ref()
@@ -397,7 +397,8 @@ impl GameState {
             return false;
         }
         if let Some(spell) = &card.compiled().spell {
-            if !self.has_targets_for(spell, c, p) {
+            let max_x = self.potential_mana(p);
+            if !self.with_assumed_x(max_x, || self.has_targets_for(spell, c, p)) {
                 return false;
             }
             // CR 601.2f/h: Zusatzkosten (`Cost$ … Sac<1/Creature>`) müssen zahlbar sein.
@@ -502,7 +503,7 @@ impl GameState {
         }
         let card = self.card(c);
         card.compiled().spell.as_ref().is_none_or(|spell| {
-            self.has_targets_for(spell, c, p)
+            self.with_assumed_x(self.potential_mana(p), || self.has_targets_for(spell, c, p))
                 && spell
                     .cost
                     .as_ref()
@@ -801,7 +802,8 @@ impl GameState {
                     && self.below_activation_limit(c, i, ab);
                 if cost_ok
                     && timing_ok
-                    && self.has_targets_for(ab, c, p)
+                    && self
+                        .with_assumed_x(self.potential_mana(p), || self.has_targets_for(ab, c, p))
                     && !self.cant_activate(p, c, ab)
                 {
                     acts.push(Action::Activate(c, i));
@@ -828,7 +830,8 @@ impl GameState {
                 } && self.below_activation_limit(c, i, ab);
                 if cost_ok
                     && timing_ok
-                    && self.has_targets_for(ab, c, p)
+                    && self
+                        .with_assumed_x(self.potential_mana(p), || self.has_targets_for(ab, c, p))
                     && !self.cant_activate(p, c, ab)
                 {
                     acts.push(Action::Activate(c, i));
@@ -1002,6 +1005,7 @@ impl GameState {
         } else {
             0
         };
+        self.card_mut(on_stack).last_x = x;
         // 601.2b: Modi
         let spell_ab = match spell_ab {
             Some(ab) => Some(self.choose_modes(p, on_stack, &ab, ch)?),
@@ -1101,6 +1105,7 @@ impl GameState {
         } else {
             0
         };
+        self.card_mut(source).last_x = x;
         let ab = self.choose_modes(p, source, &ab, ch)?;
         let targets = self.choose_targets(p, source, &ab, ch)?;
         let paid = self.pay_nonmana_costs(p, source, &cost, ch)?;
