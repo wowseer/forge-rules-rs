@@ -171,7 +171,14 @@ impl GameState {
                     self.add_counters(c, "LORE", 1);
                 }
             }
-            Step::Main2 | Step::End => {}
+            Step::Main2 => {}
+            Step::End => {
+                // CR 724.2: Der Monarch zieht zu Beginn seines Endsegments (vereinfacht
+                // ohne Stapel).
+                if self.monarch == Some(ap) {
+                    self.draw(ap);
+                }
+            }
             Step::BeginCombat => {
                 self.combat = Some(Combat::default());
             }

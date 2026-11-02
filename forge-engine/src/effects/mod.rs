@@ -140,6 +140,10 @@ pub enum Effect {
         amount: Amount,
         mode: CounterMode,
     },
+    /// CR 724.1: Spieler wird Monarch.
+    BecomeMonarch {
+        who: Defined,
+    },
     /// Eine Quelle wählen (Java `ChooseSourceEffect`): bleibende Karten, Objekte auf
     /// dem Stapel und in der Befehlszone; Ergebnis in `chosen_cards` der Quelle.
     ChooseSource {
@@ -1463,6 +1467,9 @@ fn compile_depth(
                 optional,
             }
         }
+        "BecomeMonarch" => Effect::BecomeMonarch {
+            who: c.defined(Defined::You)?,
+        },
         "Untap" => Effect::Untap {
             what: c.defined(Defined::Targeted)?,
         },

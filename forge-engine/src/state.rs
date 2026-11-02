@@ -589,6 +589,8 @@ pub struct GameState {
     /// mit Verschachtelungstiefe; `None` = jeder Wechsel ein eigenes Ereignis.
     pub zone_batch: Option<Vec<ZoneMove>>,
     pub zone_batch_depth: u32,
+    /// Monarch (CR 724), höchstens ein Spieler.
+    pub monarch: Option<PlayerId>,
     /// Quelle des gerade aufgelösten Effekts (für „exiled with“, CR 406.6/610.3)
     pub effect_source: Option<CardId>,
     /// Kontrolleffekte in Zeitstempelreihenfolge (jüngster zuletzt).
@@ -1230,6 +1232,7 @@ impl GameState {
             zone_batch: None,
             zone_batch_depth: 0,
             effect_source: None,
+            monarch: None,
             damage_batch: None,
             log: Vec::new(),
             this_turn: TurnHistory::default(),

@@ -321,6 +321,16 @@ impl GameState {
             self.push_event(Event::PlayerLost { player: p, reason });
             self.remove_player_objects(p);
             performed = true;
+            // CR 724.4: verlässt der Monarch das Spiel, wird der aktive Spieler
+            // Monarch (bzw. der nächste, falls er selbst ausscheidet)
+            if self.monarch == Some(p) {
+                let next = if self.active != p && self.player(self.active).is_in_game() {
+                    self.active
+                } else {
+                    self.next_player(self.active)
+                };
+                self.monarch = self.player(next).is_in_game().then_some(next);
+            }
         }
         for id in cease {
             self.cease_to_exist(id);

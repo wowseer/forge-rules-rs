@@ -420,6 +420,11 @@ impl GameState {
                 if !self.player(p).is_in_game() {
                     return;
                 }
+                // CR 724.2: Kampfschaden einer Kreatur an den Monarchen → deren
+                // Controller wird Monarch (vereinfacht ohne Stapel)
+                if combat && self.monarch == Some(p) && src.types.is_creature() {
+                    self.monarch = Some(self.card(source).controller);
+                }
                 // CR 903.10a: Kampfschaden von Commandern wird je Commander gezählt
                 if combat
                     && self.rules.commander

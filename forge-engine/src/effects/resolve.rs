@@ -450,6 +450,14 @@ impl GameState {
                     }
                 }
             }
+            Effect::BecomeMonarch { who } => {
+                if let Some(p) = Self::players_of(&self.resolve_defined(*who, targets, ctx))
+                    .into_iter()
+                    .find(|p| self.player(*p).is_in_game())
+                {
+                    self.monarch = Some(p);
+                }
+            }
             Effect::ChooseSource { choices, remember } => {
                 let mut options: Vec<CardId> = self
                     .battlefield

@@ -97,6 +97,8 @@ pub enum Expr {
     Party,
     /// `Count$RememberedSize`: gemerkte Objekte (Karten und Spieler) der Quelle.
     RememberedSize,
+    /// `Count$Monarch.<ja>.<nein>`: bist du der Monarch?
+    YouAreMonarch(Box<Expr>, Box<Expr>),
     /// `Count$Kicked.<ja>.<nein>`: wurde die Quelle gekickt?
     Kicked(Box<Expr>, Box<Expr>),
     /// Wert nur, wenn der Vergleich gilt (sonst 0) – `etbCounter … CheckSVar$`.
@@ -152,6 +154,8 @@ pub enum PlayerGroup {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlayerAgg {
     Amount,
+    /// `HasPropertyisMonarch`: Anzahl Spieler, die Monarch sind
+    MonarchCount,
     Sum(PlayerQty),
     Highest(PlayerQty),
     Lowest(PlayerQty),
@@ -300,6 +304,8 @@ pub enum Condition {
     FatefulHour(bool),
     /// `Condition$ Kicked`: die Quelle wurde gekickt.
     Kicked,
+    /// Du bist der Monarch (`Condition$ Monarch`, `CheckDefinedPlayer$ You.isMonarch`).
+    Monarch,
     /// Gemerkte Objekte der Quelle filtern und zählen
     /// (`ConditionDefined$ Remembered` + `ConditionPresent$`).
     RememberedPresent {
@@ -414,6 +420,13 @@ impl Expr {
                     Box::new(Expr::parse_value(face, b)?),
                 );
                 (base, op)
+            } else if let Some(args) = main.strip_prefix("Monarch.") {
+                let (a, b) = args.split_once('.').ok_or_else(|| bad("Count", sv))?;
+                let base = Expr::YouAreMonarch(
+                    Box::new(Expr::parse_value(face, a)?),
+                    Box::new(Expr::parse_value(face, b)?),
+                );
+                (base, op)
             } else if let Some(args) = main.strip_prefix("Kicked.") {
                 let (a, b) = args.split_once('.').ok_or_else(|| bad("Count", sv))?;
                 let base = Expr::Kicked(
@@ -438,6 +451,8 @@ impl Expr {
             };
             let prop = if main == "Amount" {
                 PlayerAgg::Amount
+            } else if main == "HasPropertyisMonarch" {
+                PlayerAgg::MonarchCount
             } else if let Some(q) = main.strip_prefix("Highest") {
                 PlayerAgg::Highest(PlayerQty::parse(q).ok_or_else(|| bad("SVar", sv))?)
             } else if let Some(q) = main.strip_prefix("Lowest") {
@@ -685,6 +700,13 @@ pub fn parse_conditions(
         let cmp = Compare::parse(face, params.get(k_svar_cmp).unwrap_or("GE1"))?;
         conds.push(Condition::Value { expr, cmp });
     }
+    used.push("CheckDefinedPlayer");
+    if let Some(v) = params.get("CheckDefinedPlayer") {
+        conds.push(match v.trim() {
+            "You.isMonarch" => Condition::Monarch,
+            other => return Err(bad("CheckDefinedPlayer", other)),
+        });
+    }
     // `Condition$` gilt für Statics/Trigger und für Effekte (Java SpellAbilityCondition).
     used.push("Condition");
     if let Some(c) = params.get("Condition") {
@@ -697,6 +719,7 @@ pub fn parse_conditions(
             "Hellbent" => Condition::Hellbent(true),
             "FatefulHour" => Condition::FatefulHour(true),
             "Kicked" => Condition::Kicked,
+            "Monarch" => Condition::Monarch,
             other => return Err(bad("Condition", other)),
         });
     }
@@ -969,6 +992,9 @@ impl GameState {
                 };
                 match prop {
                     PlayerAgg::Amount => players.len() as i32,
+                    PlayerAgg::MonarchCount => {
+                        players.iter().filter(|p| self.monarch == Some(**p)).count() as i32
+                    }
                     PlayerAgg::Sum(q) => players.iter().map(|p| qty(*p, q)).sum(),
                     PlayerAgg::Highest(q) => {
                         players.iter().map(|p| qty(*p, q)).max().unwrap_or(0).max(0)
@@ -1017,6 +1043,13 @@ impl GameState {
                     b
                 }
                 best(0, &fits, &mut [false; 4])
+            }
+            Expr::YouAreMonarch(a, b) => {
+                if self.monarch == Some(ctx.controller) {
+                    self.eval(a, ctx)
+                } else {
+                    self.eval(b, ctx)
+                }
             }
             Expr::Kicked(a, b) => {
                 if self.card(ctx.source).kicked != 0 {
@@ -1199,6 +1232,7 @@ impl GameState {
             Condition::Hellbent(b) => self.player(you).hand.is_empty() == *b,
             Condition::FatefulHour(b) => (self.player(you).life <= 5) == *b,
             Condition::Kicked => self.card(ctx.source).kicked != 0,
+            Condition::Monarch => self.monarch == Some(you),
             Condition::RememberedPresent {
                 spec,
                 cmp,
