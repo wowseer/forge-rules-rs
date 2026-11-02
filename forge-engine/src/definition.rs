@@ -139,7 +139,44 @@ fn check_filter_vars(face: &CardFace, unsupported: &mut Vec<String>) {
     }
 }
 
+/// `ResultSVar$ <Name>` (RollDice u. a.) setzt zur Laufzeit einen Wert, den spätere
+/// Fähigkeiten als `<Name>` lesen: fehlt die SVar, wird sie als Laufzeitvariable ergänzt.
+fn with_runtime_svars(face: &CardFace) -> std::borrow::Cow<'_, CardFace> {
+    let texts = face
+        .svars
+        .iter()
+        .map(|(_, v)| v.clone())
+        .chain(face.abilities.iter().map(|a| format!("{a:?}")))
+        .chain(face.triggers.iter().map(|t| format!("{t:?}")))
+        .collect::<Vec<_>>();
+    let mut names: Vec<String> = Vec::new();
+    for t in &texts {
+        let mut rest = t.as_str();
+        while let Some(i) = rest.find("ResultSVar") {
+            rest = &rest[i + "ResultSVar".len()..];
+            let name: String = rest
+                .trim_start_matches(|c: char| !c.is_ascii_alphanumeric())
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric())
+                .collect();
+            if !name.is_empty() && face.svar(&name).is_none() && !names.contains(&name) {
+                names.push(name);
+            }
+        }
+    }
+    if names.is_empty() {
+        return std::borrow::Cow::Borrowed(face);
+    }
+    let mut f = face.clone();
+    for n in names {
+        f.svars.push((n.clone(), format!("Count$RuntimeVar.{n}")));
+    }
+    std::borrow::Cow::Owned(f)
+}
+
 fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace {
+    let face_owned = with_runtime_svars(face);
+    let face: &CardFace = &face_owned;
     check_filter_vars(face, unsupported);
     let mut out = CompiledFace {
         keywords: Vec::new(),

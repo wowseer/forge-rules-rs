@@ -456,6 +456,16 @@ pub enum Effect {
         random: bool,
         remember: bool,
     },
+    /// Würfeln (CR 706): Summe von `amount` Würfeln mit `sides` Seiten + `modifier`;
+    /// je Ergebnisbereich eine Unterfähigkeit, Ergebnis optional als Laufzeitwert.
+    RollDice {
+        sides: u32,
+        amount: Amount,
+        modifier: Option<Amount>,
+        result_var: Option<String>,
+        /// (von, bis, Fähigkeit); `Else` = (0, u32::MAX) am Ende
+        results: Vec<(u32, u32, Arc<CompiledAbility>)>,
+    },
     /// `Branch`: je nach Bedingung `TrueSubAbility$` oder `FalseSubAbility$`.
     Branch {
         check: crate::expr::Expr,
@@ -1751,6 +1761,66 @@ fn compile_depth(
                 choices: ValidSpec::parse(c.get("Choices").unwrap_or("Player"))?,
                 random: flag(&mut c, "Random"),
                 remember: flag(&mut c, "RememberChosen"),
+            }
+        }
+        "RollDice" => {
+            for k in ["AILogic"] {
+                c.get(k);
+            }
+            let sides = match c.get("Sides") {
+                None => 6,
+                Some(v) => v.trim().parse().map_err(|_| c.unsupported("Sides", v))?,
+            };
+            let amount = c.amount("Amount", Some(1))?;
+            let modifier = match c.get("Modifier") {
+                Some(v) => Some(c.amount_value("Modifier", v)?),
+                None => None,
+            };
+            let result_var = c.get("ResultSVar").map(str::to_string);
+            let mut results = Vec::new();
+            if let Some(spec) = c.get("ResultSubAbilities") {
+                for part in spec.split(',') {
+                    let (range, name) = part
+                        .split_once(':')
+                        .ok_or_else(|| c.unsupported("ResultSubAbilities", spec))?;
+                    let (lo, hi) = match range.trim() {
+                        "Else" => (0, u32::MAX),
+                        r => match r.split_once('-') {
+                            Some((a, b)) => (
+                                a.trim()
+                                    .parse()
+                                    .map_err(|_| c.unsupported("ResultSubAbilities", spec))?,
+                                b.trim()
+                                    .parse()
+                                    .map_err(|_| c.unsupported("ResultSubAbilities", spec))?,
+                            ),
+                            None => {
+                                let n: u32 = r
+                                    .parse()
+                                    .map_err(|_| c.unsupported("ResultSubAbilities", spec))?;
+                                (n, n)
+                            }
+                        },
+                    };
+                    let sv = face
+                        .svar(name.trim())
+                        .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+                    let ab = ScriptAbility::from_svar(sv)
+                        .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+                        .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+                    let compiled = compile_depth(face, &ab, depth + 1)?;
+                    if compiled.chain().iter().any(|a| a.target.is_some()) {
+                        return Err(c.unsupported("ResultSubAbilities", "mit Zielen"));
+                    }
+                    results.push((lo, hi, Arc::new(compiled)));
+                }
+            }
+            Effect::RollDice {
+                sides,
+                amount,
+                modifier,
+                result_var,
+                results,
             }
         }
         "Branch" => {

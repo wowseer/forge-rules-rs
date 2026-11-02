@@ -1483,6 +1483,38 @@ impl GameState {
                     }
                 }
             }
+            Effect::RollDice {
+                sides,
+                amount,
+                modifier,
+                result_var,
+                results,
+            } => {
+                let n = self.amount(amount, ctx, targets).max(0);
+                let mut rolls = Vec::new();
+                for _ in 0..n {
+                    rolls.push(self.rng.below(u64::from((*sides).max(1))) as i32 + 1);
+                }
+                let m = modifier
+                    .as_ref()
+                    .map_or(0, |a| self.amount(a, ctx, targets));
+                let total = (rolls.iter().sum::<i32>() + m).max(0);
+                self.push_event(Event::DiceRolled {
+                    player: ctx.controller,
+                    sides: *sides,
+                    rolls,
+                    total,
+                });
+                if let Some(v) = result_var {
+                    self.card_mut(ctx.source)
+                        .runtime_vars
+                        .insert(v.clone(), total);
+                }
+                let t = total as u32;
+                if let Some((_, _, ab)) = results.iter().find(|(lo, hi, _)| *lo <= t && t <= *hi) {
+                    self.apply_chain_inherit(ab, targets, ctx, ch)?;
+                }
+            }
             Effect::Branch {
                 check,
                 cmp,

@@ -161,6 +161,8 @@ pub struct CardObj {
     pub chosen_cards: Vec<CardId>,
     /// Gewählter Typ (`ChooseType`, Java `Card.chosenType`).
     pub chosen_type: Option<String>,
+    /// Laufzeitwerte (`ResultSVar$`), z. B. Würfelergebnis.
+    pub runtime_vars: BTreeMap<String, i32>,
     /// Gewählter Spieler (`ChoosePlayer`, Java `Card.chosenPlayer`).
     pub chosen_player: Option<PlayerId>,
     /// Gewählte Farbe (`ChooseColor`, Java `Card.chosenColors`).
@@ -469,6 +471,13 @@ pub enum Flow {
 /// Protokoll für Tests, Replays und den Abgleich mit der Java-Engine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    /// Gewürfelt (CR 706).
+    DiceRolled {
+        player: PlayerId,
+        sides: u32,
+        rolls: Vec<i32>,
+        total: i32,
+    },
     /// Karten wurden aufgedeckt (CR 701.20).
     Revealed {
         player: PlayerId,
