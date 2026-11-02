@@ -64,6 +64,8 @@ pub enum Prop {
     OppOwn,
     /// Von der Quelle gemerkt (`IsRemembered`)
     IsRemembered,
+    /// `inZone<Zone>`: liegt in dieser Zone
+    InZone(crate::zone::Zone),
     /// Von der Quelle gewählt (`ChosenCard`; `strict`: genau dieses Objekt)
     ChosenCard {
         strict: bool,
@@ -164,6 +166,11 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     if p == "IsRemembered" {
         return Ok(Prop::IsRemembered);
+    }
+    if let Some(z) = p.strip_prefix("inZone")
+        && let Some(z) = crate::zone::Zone::parse(z)
+    {
+        return Ok(Prop::InZone(z));
     }
     match p {
         "ChosenCard" => return Ok(Prop::ChosenCard { strict: false }),

@@ -33,6 +33,8 @@ pub struct CompiledFace {
     pub enchant: Option<crate::valid::ValidSpec>,
     /// `K:Chapter:<N>:…`: höchste Kapitelnummer einer Saga (CR 714.2d).
     pub final_chapter: Option<u32>,
+    /// `R:Event$ Untap` (enttappt nicht).
+    pub untap_replacements: Vec<Arc<crate::replacements::UntapReplacement>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -118,6 +120,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         etb_counters: Vec::new(),
         enchant: None,
         final_chapter: None,
+        untap_replacements: Vec::new(),
     };
     let mut equip: Vec<Arc<CompiledAbility>> = Vec::new();
     for k in &face.keywords {
@@ -279,6 +282,13 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         }
     }
     for r in &face.replacements {
+        if r.mode == "Untap" {
+            match crate::replacements::compile_untap_replacement(face, r) {
+                Ok(c) => out.untap_replacements.push(Arc::new(c)),
+                Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
+            }
+            continue;
+        }
         if r.mode == "DamageDone" {
             match crate::replacements::compile_damage_replacement(face, r) {
                 Ok(c) => out.damage_replacements.push(Arc::new(c)),

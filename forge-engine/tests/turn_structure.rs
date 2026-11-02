@@ -227,3 +227,19 @@ fn deterministic_with_same_seed() {
     assert_eq!(w1, w2);
     assert_eq!(l1, l2);
 }
+
+#[test]
+fn doesnt_untap_during_your_untap_step() {
+    // CR 502.3 + Ersatzeffekt Untap (Java ReplaceUntap, Layer$ CantHappen)
+    let (db, mut g) = game_at(Step::Main1, 10);
+    let giant = put(&db, &mut g, "Frozen Giant Lite", P1, Zone::Battlefield);
+    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    g.card_mut(giant).tapped = true;
+    g.card_mut(bear).tapped = true;
+    let mut d = Driver::new(g);
+    d.run_until(|g, dec| {
+        g.turn == 4 && g.step == Step::Upkeep && matches!(dec, Decision::Priority { .. })
+    });
+    assert!(d.g().card(giant).tapped);
+    assert!(!d.g().card(bear).tapped);
+}

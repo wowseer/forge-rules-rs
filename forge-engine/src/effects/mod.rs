@@ -832,6 +832,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         etb_counters: Vec::new(),
         enchant: None,
         final_chapter: None,
+        untap_replacements: Vec::new(),
     };
     let svar = |n: &str| {
         face.svar(n)
@@ -857,6 +858,12 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
     for n in &repl_n {
         let r = forge_script::ScriptReplacement::parse(forge_script::ParamMap::parse(svar(n)?))
             .map_err(|_| CompileError::MissingSvar(n.clone()))?;
+        if r.mode == "Untap" {
+            let mut u = crate::replacements::compile_untap_replacement(face, &r)?;
+            u.active_zones = Some(vec![crate::zone::Zone::Command]);
+            compiled.untap_replacements.push(Arc::new(u));
+            continue;
+        }
         if r.mode == "DamageDone" {
             let mut d = crate::replacements::compile_damage_replacement(face, &r)?;
             // Effektobjekte wirken aus der Command Zone.

@@ -59,6 +59,7 @@ impl GameState {
             Prop::Not(inner) => !self.prop_matches(id, ch, inner, source, you),
             Prop::OppOwn => c.owner != you,
             Prop::IsRemembered => self.card(source).remembered.contains(&id),
+            Prop::InZone(z) => c.zone == Some(*z),
             Prop::ChosenCard { strict } => self
                 .card(source)
                 .chosen_cards

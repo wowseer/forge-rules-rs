@@ -106,7 +106,7 @@ Replacement Effect;SetInMotion;n/a;;Archenemy
 Trigger;ChangesZone;teilweise;triggers::dies_trigger_looks_back_in_time;Grundform inkl. Rückblick (603.10a) und gleichzeitiger Tode; Bedingungen (IsPresent, CheckSVar …) fehlen
 Trigger;Phase;teilweise;triggers::upkeep_trigger_with_sub_ability;Phase$ als Liste einzelner Schritte; Bedingungen fehlen
 Trigger;Attacks;teilweise;triggers::attack_trigger_with_triggered_player;Bedingungen (Alone, Attacked …) fehlen
-Trigger;SpellCast;teilweise;triggers::spell_cast_trigger_resolves_before_spell;ValidCard/ValidActivatingPlayer; TargetsValid, ActivatorThisTurnCast fehlen
+Trigger;SpellCast;teilweise;triggers::spell_cast_trigger_resolves_before_spell, triggers::spell_cast_targets_valid_heroic;ValidCard/ValidActivatingPlayer, TargetsValid; ActivatorThisTurnCast fehlt
 Trigger;DamageDone;teilweise;triggers::combat_damage_trigger;ValidSource/ValidTarget/CombatDamage
 Effect (ApiType);ChangeZone;teilweise;change_zone::search_library_tapped_then_shuffle;Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1; RememberChanged u. a. fehlen
 Effect (ApiType);ChangeZoneAll;teilweise;change_zone::change_zone_all_bounces_everything;ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger)
@@ -249,3 +249,4 @@ Cost;Return;ja;sacrifice_unless::exile_tap_and_return_cost_parts;Return<1/CARDNA
 Effect (ApiType);ImmediateTrigger;teilweise;triggers::immediate_trigger_only_if_done_and_amount_times;reflexiver Trigger (CR 603.12) mit Execute, Bedingungen, RememberObjects (DelayTriggerRemembered), TriggerAmount; RememberEach, RememberSVarAmount fehlen
 Effect (ApiType);ChooseCard;teilweise;effects_objects::choose_card_then_destroy_all_non_chosen;Choices, ChoiceZone, DefinedCards, Amount, MinAmount, Mandatory, ControlledByPlayer Chooser, TargetControls, AtRandom, RememberChosen, ForgetChosen; Defined/Filter/ConditionDefined ChosenCard; EachBasicType, ChooseEach, WithTotalPower, ImprintChosen fehlen
 Effect (ApiType);PeekAndReveal;teilweise;change_zone::peek_and_reveal_remembers_only_matching_revealed_cards;PeekAmount, RevealValid, NoReveal, RevealOptional (Decision::Confirm), RememberRevealed, RememberPeeked; ImprintRevealed, SourceZone≠Library fehlen
+Replacement Effect;Untap;teilweise;turn_structure::doesnt_untap_during_your_untap_step;„enttappt nicht während deines Enttappsegments“ (ValidStepTurnToController$ You, Layer$ CantHappen, Bedingungen, auch aus Effektobjekten); ReplaceWith-Varianten und Enttappen durch Effekte fehlen

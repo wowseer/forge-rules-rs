@@ -14,7 +14,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 |---|---:|---:|---:|---:|
 | Keyword | 198 | 15 | 7 | 4 |
 | Trigger | 137 | 0 | 21 | 11 |
-| Replacement Effect | 35 | 0 | 2 | 5 |
+| Replacement Effect | 35 | 0 | 3 | 5 |
 | Static Ability | 90 | 1 | 4 | 0 |
 | Effect (ApiType) | 188 | 2 | 37 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **71** | **94** | **81** |
+| **Summe** | **789** | **71** | **95** | **81** |
 
 ## Keyword
 
@@ -93,7 +93,7 @@ Offen (176): Absorb, Affinity, Afflict, Afterlife, Aftermath, Amplify, Annihilat
 | Sacrificed | 🟡 teilweise | `sacrifice_unless::sacrificed_trigger_only_for_own_sacrifices_not_destroy, sacrifice_unless::self_sacrifice_as_cost_triggers_from_lki` | ValidCard (LKI), ValidPlayer, auch bei Opferkosten | trigger/TriggerSacrificed.java |
 | SeekAll | ⚪ n/a |  | Alchemy | trigger/TriggerSeekAll.java |
 | SetInMotion | ⚪ n/a |  | Archenemy | trigger/TriggerSetInMotion.java |
-| SpellCast | 🟡 teilweise | `triggers::spell_cast_trigger_resolves_before_spell` | ValidCard/ValidActivatingPlayer | trigger/TriggerSpellAbilityCastOrCopy.java |
+| SpellCast | 🟡 teilweise | `triggers::spell_cast_trigger_resolves_before_spell, triggers::spell_cast_targets_valid_heroic` | ValidCard/ValidActivatingPlayer, TargetsValid | trigger/TriggerSpellAbilityCastOrCopy.java |
 | StickerPlaced | ⚪ n/a |  | Unfinity | trigger/TriggerStickerPlaced.java |
 | Taps | 🟡 teilweise | `triggers::drawn_number_life_gained_and_taps_triggers` | ValidCard, ValidPlayer | trigger/TriggerTaps.java |
 | VisitAttraction | ⚪ n/a |  | Unfinity | trigger/TriggerVisitAttraction.java |
@@ -111,8 +111,9 @@ Offen (116): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Alw
 | Planeswalk | ⚪ n/a |  | Planechase | replacement/ReplacePlaneswalk.java |
 | RollPlanarDice | ⚪ n/a |  | Planechase | replacement/ReplaceRollPlanarDice.java |
 | SetInMotion | ⚪ n/a |  | Archenemy | replacement/ReplaceSetInMotion.java |
+| Untap | 🟡 teilweise | `turn_structure::doesnt_untap_during_your_untap_step` | „enttappt nicht während deines Enttappsegments“ (ValidStepTurnToController$ You, Layer$ CantHappen, Bedingungen, auch aus Effektobjekten) | replacement/ReplaceUntap.java |
 
-Offen (33): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Cascade, Connive, Counter, CopySpell, CreateToken, DealtDamage, DeclareBlocker, Destroy, Draw, DrawCards, Explore, GainLife, GameLoss, GameWin, Learn, LifeReduced, LoseMana, Mill, PayLife, ProduceMana, Proliferate, RemoveCounter, RollDice, Scry, Tap, Transform, TurnFaceUp, Untap
+Offen (32): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Cascade, Connive, Counter, CopySpell, CreateToken, DealtDamage, DeclareBlocker, Destroy, Draw, DrawCards, Explore, GainLife, GameLoss, GameWin, Learn, LifeReduced, LoseMana, Mill, PayLife, ProduceMana, Proliferate, RemoveCounter, RollDice, Scry, Tap, Transform, TurnFaceUp
 
 ## Static Ability
 

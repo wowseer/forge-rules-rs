@@ -159,6 +159,86 @@ pub fn compile_replacement(
     })
 }
 
+/// `R:Event$ Untap | ValidStepTurnToController$ You | Layer$ CantHappen`:
+/// „… enttappt nicht während deines Enttappsegments“ (Java `ReplaceUntap`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UntapReplacement {
+    pub valid_card: ValidSpec,
+    pub active_zones: Option<Vec<Zone>>,
+    pub conditions: Vec<Condition>,
+}
+
+pub fn compile_untap_replacement(
+    face: &CardFace,
+    r: &ScriptReplacement,
+) -> Result<UntapReplacement, CompileError> {
+    let p = &r.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: "Replacement Untap".into(),
+        key: k.into(),
+        value: v.into(),
+    };
+    if p.get("Layer") != Some("CantHappen") || p.has("ReplaceWith") {
+        return Err(err("Layer", p.get("Layer").unwrap_or("fehlt")));
+    }
+    if p.get("ValidStepTurnToController") != Some("You") {
+        return Err(err(
+            "ValidStepTurnToController",
+            p.get("ValidStepTurnToController").unwrap_or("fehlt"),
+        ));
+    }
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend([
+        "ValidCard",
+        "ActiveZones",
+        "ValidStepTurnToController",
+        "EnduringStory",
+    ]);
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    Ok(UntapReplacement {
+        valid_card: ValidSpec::parse(p.get("ValidCard").unwrap_or("Card"))
+            .map_err(CompileError::Valid)?,
+        active_zones: match p.get("ActiveZones") {
+            Some(z) => Some(zones(z).ok_or_else(|| err("ActiveZones", z))?),
+            None => None,
+        },
+        conditions,
+    })
+}
+
+impl GameState {
+    /// CR 502.3 / 614: Wird `c` im Enttappsegment von `ap` am Enttappen gehindert?
+    pub fn untap_prevented(&self, c: CardId, ap: crate::ids::PlayerId) -> bool {
+        self.live_cards().any(|hid| {
+            let h = self.card(hid);
+            let Some(hz) = h.zone else { return false };
+            // ValidStepTurnToController$ You: nur im Zug des Controllers der Quelle
+            h.controller == ap
+                && h.compiled().untap_replacements.iter().any(|r| {
+                    r.active_zones.as_ref().is_none_or(|z| z.contains(&hz))
+                        && self.card_matches(c, &r.valid_card, hid, h.controller)
+                        && self.check_conditions(
+                            &r.conditions,
+                            &EvalCtx {
+                                source: hid,
+                                controller: h.controller,
+                                x: 0,
+                                targets: &[],
+                                trig: None,
+                                paid: &[],
+                            },
+                        )
+                })
+        })
+    }
+}
+
 /// Was ein Schadens-Ersatzeffekt tut.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DamageAction {

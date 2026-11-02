@@ -431,3 +431,23 @@ fn put_hand(d: &mut Driver, db: &forge_engine::CardDb, name: &str) -> forge_engi
     *d = Driver::new(g);
     c
 }
+
+#[test]
+fn spell_cast_targets_valid_heroic() {
+    // Java TriggerSpellAbilityCastOrCopy: TargetsValid$ Card.Self
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 2);
+    let h = put(&db, &mut g, "Heroic Soldier Lite", P1, Zone::Battlefield);
+    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    let g1 = put(&db, &mut g, "Giant Growth", P1, Zone::Hand);
+    let g2 = put(&db, &mut g, "Giant Growth", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(g1, &[Target::Card(bear)]);
+    assert_eq!(d.g().stack.len(), 1, "kein Trigger");
+    d.pass_all();
+    d.cast(g2, &[Target::Card(h)]);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().card(h).counter("P1P1"), 1);
+    assert_eq!(d.g().chars(h).power, Some(5));
+}

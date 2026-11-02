@@ -48,6 +48,8 @@ pub enum TriggerKind {
     SpellCast {
         valid_card: Option<ValidSpec>,
         valid_activator: Option<ValidSpec>,
+        /// `TargetsValid$`: der Zauber zielt auf etwas Passendes (Heroic u. ä.)
+        targets_valid: Option<ValidSpec>,
     },
     /// `Mode$ AttackersDeclared` – Angreifer wurden deklariert (CR 508.1m).
     AttackersDeclared {
@@ -442,6 +444,7 @@ pub fn compile_trigger(
         "SpellCast" => TriggerKind::SpellCast {
             valid_card: valid("ValidCard", &mut used)?,
             valid_activator: valid("ValidActivatingPlayer", &mut used)?,
+            targets_valid: valid("TargetsValid", &mut used)?,
         },
         "AttackersDeclared" | "AttackersDeclaredOneTarget" => {
             used.push("ValidAttackersAmount");
@@ -765,9 +768,27 @@ impl GameState {
                 TriggerKind::SpellCast {
                     valid_card,
                     valid_activator,
+                    targets_valid,
                 },
                 TriggerEvent::SpellCast { card, player },
             ) => {
+                // Java TriggerSpellAbilityCastOrCopy: irgendein Ziel der Kette passt.
+                if let Some(v) = targets_valid {
+                    let item = self.stack.iter().rev().find(
+                        |s| matches!(s.kind, crate::state::StackKind::Spell { card: c } if c == *card),
+                    );
+                    let hit = item.is_some_and(|s| {
+                        s.targets.iter().flatten().any(|t| match t {
+                            Target::Card(c) => {
+                                self.opt_card(&Some(v.clone()), *c, source, controller)
+                            }
+                            Target::Player(p) => self.player_matches(*p, v, controller),
+                        })
+                    });
+                    if !hit {
+                        return None;
+                    }
+                }
                 if valid_card
                     .as_ref()
                     .is_some_and(|v| !self.card_matches(*card, v, source, controller))
