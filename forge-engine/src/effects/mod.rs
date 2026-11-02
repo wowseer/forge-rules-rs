@@ -169,6 +169,10 @@ pub enum Effect {
         who: Defined,
         num: Amount,
     },
+    /// Bibliothek mischen (`Shuffle`, CR 701.20).
+    Shuffle {
+        who: Defined,
+    },
     /// Karten wählen (`ChooseCard`): die Quelle merkt sie als „gewählt“.
     ChooseCard {
         who: Defined,
@@ -1329,6 +1333,9 @@ fn compile_depth(
             }
         }
         "Effect" => compile_effect_object(&mut c, face)?,
+        "Shuffle" => Effect::Shuffle {
+            who: c.defined(Defined::You)?,
+        },
         "ChooseCard" => {
             let has = |c: &mut Ctx, k: &'static str| c.get(k).is_some();
             // reine Anzeige-/Informationsparameter

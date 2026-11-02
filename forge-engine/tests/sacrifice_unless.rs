@@ -366,3 +366,17 @@ fn tap_type_cost_excludes_source_when_tap_symbol_is_paid() {
     put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
     assert!(g.legal_actions(P1).contains(&Action::Activate(t, 0)));
 }
+
+#[test]
+fn exile_from_hand_cost_and_shuffle() {
+    // Java CostExile (ExileFromHand<1/CARDNAME>), ShuffleEffect
+    let (db, mut g) = game_at(Step::Main1, 10);
+    let c = put(&db, &mut g, "Hand Exile Lite", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    let lib = d.g().player(P1).library.len();
+    d.act(Action::Activate(c, 0));
+    d.pass_all();
+    assert_eq!(count(d.g(), "Hand Exile Lite", Zone::Exile), 1);
+    assert_eq!(d.g().player(P1).life, 22);
+    assert_eq!(d.g().player(P1).library.len(), lib);
+}

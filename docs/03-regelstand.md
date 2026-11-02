@@ -15,7 +15,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Keyword | 198 | 15 | 7 | 4 |
 | Trigger | 137 | 0 | 21 | 11 |
 | Replacement Effect | 35 | 0 | 3 | 5 |
-| Static Ability | 90 | 1 | 4 | 0 |
+| Static Ability | 90 | 1 | 5 | 0 |
 | Effect (ApiType) | 188 | 2 | 37 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **71** | **95** | **81** |
+| **Summe** | **789** | **71** | **96** | **81** |
 
 ## Keyword
 
@@ -120,12 +120,13 @@ Offen (32): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Casca
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Continuous | 🟡 teilweise | `layers::affected_set_determined_after_type_change, spells::may_play_exiled_card_this_turn_as_land_drop, spells::may_play_without_mana_cost_with_limit` | Affected/AffectedDefined Self, Zonen (inkl. All), AddType, SetColor, AddKeyword, Set/AddPower/Toughness inkl. Count$-Ausdrücke, CDAs (7a), Bedingungen (IsPresent, CheckSVar, Condition) | staticability/StaticAbility.java |
+| AlternativeCost | 🟡 teilweise | `spells::alternative_cost_instead_of_mana_cost` | ValidSA$ Spell.Self mit Kosten statt Manakosten (CR 118.9), Bedingungen, Zusatzkosten gelten weiter | staticability/StaticAbilityAlternativeCost.java |
 | CantAttack | 🟡 teilweise | `combat_restrictions::cant_attack` | ValidCard, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlock | ✅ ja | `combat_restrictions::cant_block` |  | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlockBy | 🟡 teilweise | `combat_restrictions::cant_be_blocked_by_small_creatures_via_effect` | ValidAttacker, ValidBlocker, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | MustAttack | 🟡 teilweise | `combat_restrictions::must_attack_if_able` | ValidCreature (CR 508.1d) | staticability/StaticAbilityMustAttack.java |
 
-Offen (85): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, AlternativeCost, CantBeCast, CantBeActivated, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackDefender, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, MinMaxBlocker, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, CastWithFlash, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
+Offen (84): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, CantBeCast, CantBeActivated, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackDefender, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, MinMaxBlocker, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, CastWithFlash, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
 
 ## Effect (ApiType)
 
@@ -202,7 +203,7 @@ Offen (149): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, Al
 | Discard | 🟡 teilweise |  | Discard<n/Typ> | cost/CostDiscard.java |
 | PayLife | ✅ ja | `spells::phyrexian_mana_with_life` |  | cost/CostPayLife.java |
 | PayShards | ⚪ n/a |  | Adventure-Modus | cost/CostPayShards.java |
-| Exile | 🟡 teilweise | `keywords_misc::exile_from_graveyard_cost_activates_from_graveyard, sacrifice_unless::exile_tap_and_return_cost_parts` | ExileFromGrave<1/CARDNAME>, ExileFromGrave<n/Typ>, Exile<1/CARDNAME> | cost/CostExile.java |
+| Exile | 🟡 teilweise | `keywords_misc::exile_from_graveyard_cost_activates_from_graveyard, sacrifice_unless::exile_tap_and_return_cost_parts, sacrifice_unless::exile_from_hand_cost_and_shuffle` | ExileFromGrave<1/CARDNAME>, ExileFromGrave<n/Typ>, Exile<1/CARDNAME>, ExileFromHand<1/CARDNAME>, ExileFromHand<n/Typ> | cost/CostExile.java |
 | Return | ✅ ja | `sacrifice_unless::exile_tap_and_return_cost_parts` | Return<1/CARDNAME> und Return<n/Typ> (eigene bleibende Karten auf die Hand) | cost/CostReturn.java |
 | AddCounter | 🟡 teilweise | `planeswalkers::enters_with_loyalty_and_activates_once_per_turn_at_sorcery_speed` | Marken auf die Quelle (n fest) | cost/CostPutCounter.java |
 | SubCounter | 🟡 teilweise | `planeswalkers::minus_ability_to_zero_loyalty_goes_to_graveyard` | Marken von der Quelle (n fest) | cost/CostRemoveCounter.java |

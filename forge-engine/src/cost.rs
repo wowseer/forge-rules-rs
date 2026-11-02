@@ -29,6 +29,10 @@ pub enum CostPart {
     ExileSelfFromGraveyard,
     /// `Exile<1/CARDNAME>`: diese bleibende Karte ins Exil
     ExileSelf,
+    /// `ExileFromHand<1/CARDNAME>`: diese Karte aus der Hand ins Exil
+    ExileSelfFromHand,
+    /// `ExileFromHand<n/Typ>`: n andere Handkarten ins Exil
+    ExileFromHand { amount: u32, valid: ValidSpec },
     /// `ExileFromGrave<n/Typ>`: n Karten aus dem eigenen Friedhof exilieren
     ExileFromGraveyard { amount: u32, valid: ValidSpec },
     /// `tapXType<n/Typ>`: n ungetappte eigene Permanents tappen (CR 302.6 gilt nicht)
@@ -72,6 +76,10 @@ impl fmt::Display for Cost {
                 CostPart::DiscardSelf => "Discard<1/CARDNAME>".into(),
                 CostPart::ExileSelfFromGraveyard => "ExileFromGrave<1/CARDNAME>".into(),
                 CostPart::ExileSelf => "Exile<1/CARDNAME>".into(),
+                CostPart::ExileSelfFromHand => "ExileFromHand<1/CARDNAME>".into(),
+                CostPart::ExileFromHand { amount, valid } => {
+                    format!("ExileFromHand<{amount}/{valid:?}>")
+                }
                 CostPart::ExileFromGraveyard { amount, valid } => {
                     format!("ExileFromGrave<{amount}/{valid:?}>")
                 }
@@ -171,6 +179,13 @@ impl Cost {
                             ("Exile", [n, "CARDNAME", ..]) if n.trim() == "1" => {
                                 CostPart::ExileSelf
                             }
+                            ("ExileFromHand", [n, "CARDNAME", ..]) if n.trim() == "1" => {
+                                CostPart::ExileSelfFromHand
+                            }
+                            ("ExileFromHand", [n, v, ..]) => CostPart::ExileFromHand {
+                                amount: amount(n, &tok)?,
+                                valid: cost_valid(v)?,
+                            },
                             ("ExileFromGrave", [n, v, ..]) if *v != "CARDNAME" => {
                                 CostPart::ExileFromGraveyard {
                                     amount: amount(n, &tok)?,

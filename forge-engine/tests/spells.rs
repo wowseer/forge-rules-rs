@@ -385,3 +385,38 @@ fn may_play_without_mana_cost_with_limit() {
         "Limit 1"
     );
 }
+
+#[test]
+fn alternative_cost_instead_of_mana_cost() {
+    // CR 118.9, Java StaticAbility AlternativeCost (ValidSA$ Spell.Self)
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put(&db, &mut g, "Mountain", P1, Zone::Battlefield);
+    let force = put(&db, &mut g, "Force Lite", P1, Zone::Hand);
+    let leak = put(&db, &mut g, "Mana Leak", P1, Zone::Hand);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    assert!(
+        !g.legal_actions(P1).contains(&Action::Cast(force)),
+        "kein Mana"
+    );
+    let mut d = Driver::new(g);
+    d.cast(bolt, &[T2]);
+    let acts = d.g().legal_actions(P1);
+    assert!(acts.contains(&Action::CastWithAltCost(force, 0)));
+    d.act(Action::CastWithAltCost(force, 0));
+    let spell = d.g().stack[0].source;
+    loop {
+        match d.decision().clone() {
+            Decision::ChooseTargets { .. } => d.submit(Choice::Targets(vec![Target::Card(spell)])),
+            Decision::ChooseCards { options, .. } => {
+                assert_eq!(options, vec![leak], "nur andere blaue Karten");
+                d.submit(Choice::Cards(vec![leak]));
+            }
+            _ => break,
+        }
+    }
+    assert_eq!(d.g().player(P1).life, 19);
+    assert_eq!(count(d.g(), "Mana Leak", Zone::Exile), 1);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 20, "Blitz neutralisiert");
+}

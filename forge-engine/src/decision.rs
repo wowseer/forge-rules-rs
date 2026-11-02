@@ -28,6 +28,9 @@ pub enum Action {
     PlayLandAlt(CardId, usize),
     /// Aktivierte Fähigkeit: Karte + Index in `CompiledFace::activated`.
     Activate(CardId, usize),
+    /// Zauber mit Alternativkosten wirken: Karte + Index in `CompiledFace::statics`
+    /// (`AlternativeCost`, CR 118.9).
+    CastWithAltCost(CardId, usize),
 }
 
 /// Option beim Bezahlen von Manakosten.

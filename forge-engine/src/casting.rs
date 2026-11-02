@@ -66,6 +66,15 @@ impl GameState {
             CostPart::DiscardSelf => src.zone == Some(Zone::Hand) && src.owner == p,
             CostPart::ExileSelfFromGraveyard => src.zone == Some(Zone::Graveyard) && src.owner == p,
             CostPart::ExileSelf | CostPart::ReturnSelf => src.zone == Some(Zone::Battlefield),
+            CostPart::ExileSelfFromHand => src.zone == Some(Zone::Hand) && src.owner == p,
+            CostPart::ExileFromHand { amount, valid } => {
+                self.player(p)
+                    .hand
+                    .iter()
+                    .filter(|c| **c != source && self.card_matches(**c, valid, source, p))
+                    .count() as u32
+                    >= *amount
+            }
             CostPart::ExileFromGraveyard { amount, valid } => {
                 self.player(p)
                     .graveyard
@@ -289,6 +298,56 @@ impl GameState {
     }
 
     /// Wie [`GameState::castable_now`], mit einer `MayPlay`-Erlaubnis (Flash, ohne Manakosten).
+    /// Alternativkosten (`AlternativeCost`) von Handkarte `c`, die `p` jetzt nutzen kann.
+    fn alt_cost_options(&self, p: PlayerId, c: CardId) -> Vec<usize> {
+        use crate::statics::CompiledStatic;
+        let card = self.card(c);
+        let mut v = Vec::new();
+        for (i, cs) in card.compiled().statics.iter().enumerate() {
+            let CompiledStatic::AlternativeCost(alt) = cs.as_ref() else {
+                continue;
+            };
+            let ctx = crate::expr::EvalCtx {
+                source: c,
+                controller: p,
+                x: 0,
+                targets: &[],
+                trig: None,
+                paid: &[],
+            };
+            if self.check_conditions(&alt.conditions, &ctx)
+                && self.castable_base(p, c, false)
+                && self.can_pay_nonmana(&alt.cost, c, p)
+                && alt
+                    .cost
+                    .mana
+                    .as_ref()
+                    .is_none_or(|m| m.mana_value() <= self.potential_mana(p))
+            {
+                v.push(i);
+            }
+        }
+        v
+    }
+
+    /// Zeitpunkt, Ziele und Zusatzkosten (ohne Manakosten).
+    fn castable_base(&self, p: PlayerId, c: CardId, flash: bool) -> bool {
+        let card = self.card(c);
+        let ch = self.chars(c);
+        let instant_speed =
+            ch.types.has_core(forge_types::CoreType::Instant) || ch.has(&Keyword::Flash) || flash;
+        if !(instant_speed || self.sorcery_timing(p)) {
+            return false;
+        }
+        card.compiled().spell.as_ref().is_none_or(|spell| {
+            self.has_targets_for(spell, c, p)
+                && spell
+                    .cost
+                    .as_ref()
+                    .is_none_or(|cost| self.can_pay_nonmana(cost, c, p))
+        })
+    }
+
     fn castable_with(&self, p: PlayerId, c: CardId, grant: Option<&MayPlayGrant>) -> bool {
         let card = self.card(c);
         let ch = self.chars(c);
@@ -358,8 +417,13 @@ impl GameState {
                 if land_ok {
                     acts.push(Action::PlayLand(c));
                 }
-            } else if self.castable_now(p, c) {
-                acts.push(Action::Cast(c));
+            } else {
+                if self.castable_now(p, c) {
+                    acts.push(Action::Cast(c));
+                }
+                for i in self.alt_cost_options(p, c) {
+                    acts.push(Action::CastWithAltCost(c, i));
+                }
             }
             // Andere Seite (Adventure, modale doppelseitige Karte)
             if let Some(face) = card.def.alt_cast_face() {
@@ -471,7 +535,16 @@ impl GameState {
                     _ if self.card(c).on_adventure => None,
                     _ => self.use_may_play(p, c, true),
                 };
-                self.cast_spell_free(p, c, grant, ch)
+                self.cast_spell_free(p, c, grant, None, ch)
+            }
+            Action::CastWithAltCost(c, i) => {
+                let crate::statics::CompiledStatic::AlternativeCost(alt) =
+                    self.card(c).compiled().statics[i].as_ref()
+                else {
+                    return Err(Interrupt::Cancelled);
+                };
+                let cost = alt.cost.clone();
+                self.cast_spell_free(p, c, None, Some(cost), ch)
             }
             Action::CastAlt(c, face) => {
                 // Die Seite bleibt beim Wechsel auf den Stapel erhalten.
@@ -531,7 +604,7 @@ impl GameState {
     }
 
     fn cast_spell(&mut self, p: PlayerId, card: CardId, ch: &mut Choices) -> Res<()> {
-        self.cast_spell_free(p, card, None, ch)
+        self.cast_spell_free(p, card, None, None, ch)
     }
 
     /// Nutzt die erste passende `MayPlay`-Erlaubnis (bevorzugt „ohne Manakosten“, wenn
@@ -559,13 +632,17 @@ impl GameState {
         p: PlayerId,
         card: CardId,
         grant: Option<MayPlayGrant>,
+        alt: Option<Cost>,
         ch: &mut Choices,
     ) -> Res<()> {
         // CR 601.2a: Auf den Stapel legen.
         let spell_ab = self.card(card).compiled().spell.clone();
-        // CR 118.9 / 107.3: ohne Manakosten gewirkt → keine Manakosten, X = 0.
+        // CR 118.9 / 107.3: ohne Manakosten gewirkt → keine Manakosten, X = 0;
+        // Alternativkosten ersetzen die Manakosten.
         let mut mana_cost = if grant.is_some_and(|g| g.without_mana_cost) {
             ManaCost::default()
+        } else if let Some(a) = &alt {
+            a.mana.clone().unwrap_or_default()
         } else {
             self.chars(card).mana_cost.clone().unwrap_or_default()
         };
@@ -615,11 +692,17 @@ impl GameState {
         // 601.2g–h
         self.pay_mana_cost(p, &mana_cost, x, None, ch)?;
         // Zusatzkosten nach dem Mana (Java `Cost.sort`: Mana vor Zonenwechseln).
-        let paid = match spell_ab.as_ref().and_then(|ab| ab.cost.clone()) {
-            Some(cost) if !cost.parts.is_empty() => {
-                self.pay_nonmana_costs(p, on_stack, &cost, ch)?
-            }
-            _ => Vec::new(),
+        let mut nonmana = spell_ab
+            .as_ref()
+            .and_then(|ab| ab.cost.clone())
+            .unwrap_or_default();
+        if let Some(a) = &alt {
+            nonmana.parts.extend(a.parts.iter().cloned());
+        }
+        let paid = if nonmana.parts.is_empty() {
+            Vec::new()
+        } else {
+            self.pay_nonmana_costs(p, on_stack, &nonmana, ch)?
         };
 
         self.card_mut(remember_x_on).cast_x = x;
@@ -839,9 +922,30 @@ impl GameState {
                         note(PaidKind::Discarded, c);
                     }
                 }
-                CostPart::ExileSelfFromGraveyard | CostPart::ExileSelf => {
+                CostPart::ExileSelfFromGraveyard
+                | CostPart::ExileSelf
+                | CostPart::ExileSelfFromHand => {
                     self.move_card(source, Zone::Exile, true);
                     note(PaidKind::Exiled, source);
+                }
+                CostPart::ExileFromHand { amount, valid } => {
+                    let options: Vec<CardId> = self
+                        .player(p)
+                        .hand
+                        .iter()
+                        .copied()
+                        .filter(|c| *c != source && self.card_matches(*c, valid, source, p))
+                        .collect();
+                    for c in self.choose_cost_cards(
+                        p,
+                        CardChoiceReason::ExileCost,
+                        options,
+                        *amount,
+                        ch,
+                    )? {
+                        self.move_card(c, Zone::Exile, true);
+                        note(PaidKind::Exiled, c);
+                    }
                 }
                 CostPart::ReturnSelf => {
                     self.move_card(source, Zone::Hand, true);

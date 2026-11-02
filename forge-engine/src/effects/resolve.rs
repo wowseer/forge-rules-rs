@@ -960,6 +960,11 @@ impl GameState {
                     }
                 }
             }
+            Effect::Shuffle { who } => {
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    self.shuffle_library(p);
+                }
+            }
             Effect::ChooseCard {
                 who,
                 zones,

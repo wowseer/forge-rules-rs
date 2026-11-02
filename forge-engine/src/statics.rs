@@ -107,6 +107,16 @@ pub enum CompiledStatic {
     Combat(CombatRestriction),
     /// Kostenänderung für Zaubersprüche (`ReduceCost`/`RaiseCost`, CR 601.2f).
     CostAdjust(CostAdjust),
+    /// Alternativkosten für den Zauber selbst (`AlternativeCost | ValidSA$ Spell.Self`, CR 118.9).
+    AlternativeCost(AltCost),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AltCost {
+    pub cost: crate::cost::Cost,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
+    pub description: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,6 +129,56 @@ pub struct CostAdjust {
     pub activator: Option<ValidSpec>,
     pub effect_zones: Vec<Zone>,
     pub conditions: Vec<Condition>,
+}
+
+fn compile_alt_cost(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStatic, CompileError> {
+    let p = &s.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: "Static AlternativeCost".into(),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = vec![
+        "Mode",
+        "Description",
+        "Secondary",
+        "EffectZone",
+        "ValidSA",
+        "ValidCard",
+        "ValidPlayer",
+        "Cost",
+    ];
+    let self_spell = matches!(
+        (p.get("ValidSA"), p.get("ValidCard")),
+        (Some("Spell.Self"), None | Some("Card.Self")) | (Some("Spell"), Some("Card.Self"))
+    );
+    if !self_spell {
+        return Err(err("ValidSA", p.get("ValidSA").unwrap_or("fehlt")));
+    }
+    if !matches!(p.get("EffectZone"), Some("All") | Some("Hand")) {
+        return Err(err("EffectZone", p.get("EffectZone").unwrap_or("fehlt")));
+    }
+    if !matches!(p.get("ValidPlayer"), None | Some("You")) {
+        return Err(err("ValidPlayer", p.get("ValidPlayer").unwrap_or("")));
+    }
+    let cost_s = p.get("Cost").ok_or_else(|| err("Cost", "fehlt"))?;
+    let cost = crate::cost::Cost::parse(cost_s)?;
+    if cost.mana.as_ref().is_some_and(|m| m.x_count() > 0) {
+        return Err(err("Cost", cost_s));
+    }
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    Ok(CompiledStatic::AlternativeCost(AltCost {
+        cost,
+        effect_zones: ALL.to_vec(),
+        conditions,
+        description: p.get("Description").unwrap_or("").to_string(),
+    }))
 }
 
 fn compile_cost_adjust(
@@ -206,6 +266,7 @@ impl CompiledStatic {
             CompiledStatic::Continuous(c) => &mut c.effect_zones,
             CompiledStatic::Combat(c) => &mut c.effect_zones,
             CompiledStatic::CostAdjust(c) => &mut c.effect_zones,
+            CompiledStatic::AlternativeCost(c) => &mut c.effect_zones,
         }
     }
 }
@@ -264,7 +325,8 @@ fn compile_combat(
     }))
 }
 
-const NEUTRAL: &[&str] = &["Mode", "Description", "Secondary", "AILogic"];
+// `MayLookAt$`: nur Informationsfluss (wer verdeckte Karten sehen darf), ohne Regelwirkung.
+const NEUTRAL: &[&str] = &["Mode", "Description", "Secondary", "AILogic", "MayLookAt"];
 
 const ALL: [Zone; 7] = [
     Zone::Library,
@@ -299,6 +361,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         "MustAttack" => return compile_combat(face, s, RestrictionKind::MustAttack),
         "ReduceCost" => return compile_cost_adjust(face, s, true),
         "RaiseCost" => return compile_cost_adjust(face, s, false),
+        "AlternativeCost" => return compile_alt_cost(face, s),
         _ => return Err(CompileError::UnsupportedApi(format!("Static {}", s.mode))),
     }
     let mut used: Vec<&str> = NEUTRAL.to_vec();
@@ -401,8 +464,6 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
             "MayPlayPlayer",
             "MayPlayIgnoreType",
             "MayPlayIgnoreColor",
-            // nur Informationsfluss (wer die Karte sehen darf)
-            "MayLookAt",
         ]);
         let without_mana_cost = flag("MayPlayWithoutManaCost");
         if without_mana_cost && affected_zones.contains(&Zone::Hand) {
