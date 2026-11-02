@@ -175,6 +175,7 @@ impl GameState {
             combat.attackers.retain(|a| a.card != id);
             combat.blocks.retain(|(b, _)| *b != id);
         }
+        self.this_turn.moves.push((id, new_id, from, to));
         self.push_event(Event::ZoneChange {
             old: id,
             new: new_id,
@@ -234,6 +235,7 @@ impl GameState {
             return;
         }
         self.player_mut(p).life += n;
+        self.player_mut(p).life_gained_this_turn += n;
         self.push_event(Event::LifeChanged {
             player: p,
             delta: n,
@@ -260,6 +262,7 @@ impl GameState {
             return;
         }
         self.player_mut(p).life -= n;
+        self.player_mut(p).life_lost_this_turn += n;
         self.push_event(Event::LifeChanged {
             player: p,
             delta: -n,

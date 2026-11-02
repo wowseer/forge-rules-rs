@@ -2,7 +2,7 @@
 
 mod common;
 use common::*;
-use forge_engine::decision::{CardChoiceReason, Choice, Decision, Target};
+use forge_engine::decision::{Action, CardChoiceReason, Choice, Decision, PayAction, Target};
 use forge_engine::{Step, Zone};
 
 fn expect_sacrifice_choice(
@@ -283,4 +283,37 @@ fn self_sacrifice_as_cost_triggers_from_lki() {
     d.pass_all();
     d.pass_all();
     assert_eq!(d.g().player(P1).life, 24);
+}
+
+#[test]
+fn spell_additional_sacrifice_cost_is_required_and_remembered() {
+    // CR 601.2f/h: Zusatzkosten; Java `Sacrificed$CardPower` = LKI des Geopferten
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 2);
+    let fling = put(&db, &mut g, "Fling Lite", P1, Zone::Hand);
+    assert!(
+        !g.legal_actions(P1).contains(&Action::Cast(fling)),
+        "ohne Kreatur nicht wirkbar"
+    );
+    let giant = put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.act(Action::Cast(fling));
+    loop {
+        match d.decision().clone() {
+            Decision::ChooseTargets { .. } => d.submit(Choice::Targets(vec![T2])),
+            Decision::PayMana { .. } => d.submit(Choice::Pay(PayAction::AutoPay)),
+            Decision::ChooseCards { options, .. } => {
+                assert_eq!(options, vec![giant]);
+                d.submit(Choice::Cards(vec![giant]));
+            }
+            _ => break,
+        }
+    }
+    assert_eq!(
+        count(d.g(), "Hill Giant", Zone::Graveyard),
+        1,
+        "beim Wirken geopfert"
+    );
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 17);
 }

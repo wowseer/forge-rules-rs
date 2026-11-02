@@ -11,7 +11,9 @@ use crate::effects::{CompiledAbility, ManaProduce};
 use crate::ids::{CardId, PlayerId};
 use crate::keyword::Keyword;
 use crate::mana_pool::{ManaPool, PhyrexianPay};
-use crate::state::{Choices, Event, GameState, Interrupt, Res, StackItem, StackKind};
+use crate::state::{
+    Choices, Event, GameState, Interrupt, Paid, PaidKind, Res, StackItem, StackKind,
+};
 use crate::zone::Zone;
 use forge_types::{Color, ManaCost};
 use std::sync::Arc;
@@ -184,10 +186,18 @@ impl GameState {
         if !(instant_speed || self.sorcery_timing(p)) {
             return false;
         }
-        if let Some(spell) = &card.compiled().spell
-            && !self.has_targets_for(spell, c, p)
-        {
-            return false;
+        if let Some(spell) = &card.compiled().spell {
+            if !self.has_targets_for(spell, c, p) {
+                return false;
+            }
+            // CR 601.2f/h: Zusatzkosten (`Cost$ … Sac<1/Creature>`) müssen zahlbar sein.
+            if spell
+                .cost
+                .as_ref()
+                .is_some_and(|cost| !self.can_pay_nonmana(cost, c, p))
+            {
+                return false;
+            }
         }
         if ch.mana_cost.as_ref().is_some_and(|m| m.no_cost) {
             return false; // CR 118.6: ohne Manakosten nicht normal wirkbar
@@ -399,6 +409,13 @@ impl GameState {
         let mana_cost = self.adjusted_spell_cost(p, on_stack, &mana_cost);
         // 601.2g–h
         self.pay_mana_cost(p, &mana_cost, x, None, ch)?;
+        // Zusatzkosten nach dem Mana (Java `Cost.sort`: Mana vor Zonenwechseln).
+        let paid = match spell_ab.as_ref().and_then(|ab| ab.cost.clone()) {
+            Some(cost) if !cost.parts.is_empty() => {
+                self.pay_nonmana_costs(p, on_stack, &cost, ch)?
+            }
+            _ => Vec::new(),
+        };
 
         self.card_mut(remember_x_on).cast_x = x;
         self.stack.push(StackItem {
@@ -409,7 +426,9 @@ impl GameState {
             ability: spell_ab,
             targets,
             x,
+            paid,
         });
+        self.this_turn.cast.push(on_stack);
         self.push_event(Event::Cast {
             player: p,
             card: on_stack,
@@ -470,7 +489,7 @@ impl GameState {
         };
         let ab = self.choose_modes(p, source, &ab, ch)?;
         let targets = self.choose_targets(p, source, &ab, ch)?;
-        self.pay_nonmana_costs(p, source, &cost, ch)?;
+        let paid = self.pay_nonmana_costs(p, source, &cost, ch)?;
         if cost.mana.is_some() {
             self.pay_mana_cost(p, &mana, x, Some(source), ch)?;
         }
@@ -492,6 +511,7 @@ impl GameState {
             ability: Some(ab),
             targets,
             x,
+            paid,
         });
         self.push_event(Event::Activated {
             player: p,
@@ -511,12 +531,13 @@ impl GameState {
         ch: &mut Choices,
     ) -> Res<()> {
         let cost = ab.cost.clone().unwrap_or_default();
-        self.pay_nonmana_costs(p, source, &cost, ch)?;
+        let paid = self.pay_nonmana_costs(p, source, &cost, ch)?;
         let ctx = ResolveCtx {
             source,
             controller: p,
             x: 0,
             trig: None,
+            paid,
         };
         self.apply_chain(ab, &[], &ctx, ch)
     }
@@ -527,14 +548,15 @@ impl GameState {
         source: CardId,
         cost: &Cost,
         ch: &mut Choices,
-    ) -> Res<()> {
+    ) -> Res<Vec<Paid>> {
         if !self.can_pay_nonmana(cost, source, p) {
             return Err(Interrupt::Cancelled);
         }
         self.begin_zone_batch();
-        let r = self.pay_nonmana_parts(p, source, cost, ch);
+        let mut paid = Vec::new();
+        let r = self.pay_nonmana_parts(p, source, cost, ch, &mut paid);
         self.end_zone_batch();
-        r
+        r.map(|()| paid)
     }
 
     fn pay_nonmana_parts(
@@ -543,7 +565,9 @@ impl GameState {
         source: CardId,
         cost: &Cost,
         ch: &mut Choices,
+        paid: &mut Vec<Paid>,
     ) -> Res<()> {
+        let mut note = |kind, card| paid.push(Paid { kind, card });
         for part in &cost.parts {
             match part {
                 CostPart::Tap => {
@@ -551,12 +575,15 @@ impl GameState {
                 }
                 CostPart::Untap => self.card_mut(source).tapped = false,
                 CostPart::SacrificeSelf => {
-                    self.sacrifice(source);
+                    if self.sacrifice(source) {
+                        note(PaidKind::Sacrificed, source);
+                    }
                 }
                 CostPart::PayLife(n) => self.lose_life(p, *n as i32),
                 CostPart::AddCounter { amount, kind } => self.add_counters(source, kind, *amount),
                 CostPart::DiscardSelf => {
                     self.discard(source);
+                    note(PaidKind::Discarded, source);
                 }
                 CostPart::RemoveCounter { amount, kind } => {
                     let o = self.card_mut(source);
@@ -579,7 +606,9 @@ impl GameState {
                         _ => return Err(Interrupt::Cancelled),
                     };
                     for c in chosen {
-                        self.sacrifice(c);
+                        if self.sacrifice(c) {
+                            note(PaidKind::Sacrificed, c);
+                        }
                     }
                 }
                 CostPart::Discard { amount, valid } => {
@@ -602,10 +631,12 @@ impl GameState {
                     };
                     for c in chosen {
                         self.discard(c);
+                        note(PaidKind::Discarded, c);
                     }
                 }
                 CostPart::ExileSelfFromGraveyard => {
                     self.move_card(source, Zone::Exile, true);
+                    note(PaidKind::Exiled, source);
                 }
             }
         }
@@ -807,6 +838,7 @@ impl GameState {
                     x: 0,
                     targets: &[],
                     trig: None,
+                    paid: &[],
                 };
                 if !self.check_conditions(&a.conditions, &ctx) {
                     continue;

@@ -99,7 +99,10 @@ impl GameState {
         for pl in &mut self.players {
             pl.lands_played_this_turn = 0;
             pl.cards_drawn_this_turn = 0;
+            pl.life_gained_this_turn = 0;
+            pl.life_lost_this_turn = 0;
         }
+        self.this_turn = Default::default();
         self.push_event(Event::TurnBegan {
             turn: number,
             player: p,

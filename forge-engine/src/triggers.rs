@@ -197,6 +197,8 @@ pub struct TriggerInfo {
     pub stack_item: Option<u32>,
     /// Blocker (`TriggeredBlocker`), wenn `card` der Angreifer ist.
     pub blocker: Option<CardId>,
+    /// Menge des Ereignisses (`TriggerCount$DamageAmount`, `…$LifeAmount`).
+    pub amount: Option<i32>,
 }
 
 /// Verzögerter Trigger (CR 603.7), angelegt vom Effekt `DelayedTrigger`.
@@ -795,6 +797,7 @@ impl GameState {
                         x: 0,
                         targets: &[],
                         trig: None,
+                        paid: &[],
                     };
                     if !cmp.holds(n, self.eval(&cmp.rhs, &ectx)) {
                         return None;
@@ -941,6 +944,7 @@ impl GameState {
                         x: 0,
                         targets: &[],
                         trig: None,
+                        paid: &[],
                     };
                     if !cmp.holds(cards.len() as i32, self.eval(&cmp.rhs, &ectx)) {
                         return None;
@@ -991,6 +995,7 @@ impl GameState {
                         x: 0,
                         targets: &[],
                         trig: None,
+                        paid: &[],
                     };
                     if !cmp.holds(total as i32, self.eval(&cmp.rhs, &ectx)) {
                         return None;
@@ -1005,6 +1010,7 @@ impl GameState {
                     },
                     source: first,
                     attacking_player: first.map(|s| self.card(s).controller),
+                    amount: Some(total as i32),
                     ..Default::default()
                 })
             }
@@ -1056,6 +1062,7 @@ impl GameState {
                         x: 0,
                         targets: &[],
                         trig: None,
+                        paid: &[],
                     };
                     if !cmp.holds(n, self.eval(&cmp.rhs, &ectx)) {
                         return None;
@@ -1128,7 +1135,10 @@ impl GameState {
                     ..Default::default()
                 })
             }
-            (TriggerKind::LifeGained { valid_player }, TriggerEvent::LifeGained { player, .. }) => {
+            (
+                TriggerKind::LifeGained { valid_player },
+                TriggerEvent::LifeGained { player, amount },
+            ) => {
                 if valid_player
                     .as_ref()
                     .is_some_and(|v| !self.player_matches(*player, v, controller))
@@ -1137,6 +1147,7 @@ impl GameState {
                 }
                 Some(TriggerInfo {
                     player: Some(*player),
+                    amount: Some(*amount as i32),
                     ..Default::default()
                 })
             }
@@ -1232,6 +1243,7 @@ impl GameState {
                     source: Some(*dsrc),
                     target: Some(*target),
                     player,
+                    amount: Some(*amount as i32),
                     ..Default::default()
                 })
             }
@@ -1329,6 +1341,7 @@ impl GameState {
                             x: 0,
                             targets: &[],
                             trig: Some(info),
+                            paid: &[],
                         };
                         self.check_conditions(&t.conditions, &ectx)
                     })
@@ -1357,6 +1370,7 @@ impl GameState {
                         x: 0,
                         targets: &[],
                         trig: Some(info),
+                        paid: &[],
                     };
                     self.check_conditions(&d.trigger.conditions, &ectx)
                 });
@@ -1427,6 +1441,7 @@ impl GameState {
                     ability: Some(ab),
                     targets,
                     x: 0,
+                    paid: Vec::new(),
                 });
                 self.fire_becomes_target();
                 any = true;

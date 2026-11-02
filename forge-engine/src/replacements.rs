@@ -359,6 +359,7 @@ impl GameState {
                         x: amount.max(0) as u32,
                         targets: &[],
                         trig: None,
+                        paid: &[],
                     };
                     if !self.check_conditions(&r.conditions, &ctx) {
                         continue;
@@ -430,6 +431,7 @@ impl GameState {
                     x: 0,
                     targets: &[],
                     trig: None,
+                    paid: &[],
                 };
                 if !self.check_conditions(&r.conditions, &ctx) {
                     continue;
@@ -446,6 +448,7 @@ impl GameState {
                             x: 0,
                             targets: &[],
                             trig: None,
+                            paid: &[],
                         };
                         if self.check_conditions(conds, &ctx) {
                             mods.tapped = true;
@@ -463,6 +466,7 @@ impl GameState {
                 x: moving.cast_x,
                 targets: &[],
                 trig: None,
+                paid: &[],
             };
             for (kind, amount) in &moving.compiled().etb_counters {
                 let n = self.eval(amount, &ctx).max(0) as u32;

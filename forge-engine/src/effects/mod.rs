@@ -560,7 +560,10 @@ impl<'a> Ctx<'a> {
 
     fn amount_value(&self, key: &str, v: &str) -> Result<Amount, CompileError> {
         use crate::expr::Expr;
-        match Expr::parse_value(self.face, v).map_err(|_| self.unsupported(key, v))? {
+        // Der innere Fehler nennt den eigentlichen Ausdruck (`Count$…`) und
+        // bündelt so gleiche Ursachen über verschiedene Parameter hinweg.
+        let _ = key;
+        match Expr::parse_value(self.face, v)? {
             Expr::Const(n) => Ok(Amount::Fixed(n)),
             Expr::XPaid => Ok(Amount::XPaid),
             e => Ok(Amount::Expr(Arc::new(e))),

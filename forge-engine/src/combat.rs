@@ -32,6 +32,7 @@ impl GameState {
                         x: 0,
                         targets: &[],
                         trig: None,
+                        paid: &[],
                     };
                     if r.kind == kind
                         && r.effect_zones.contains(&zone)
@@ -187,6 +188,10 @@ impl GameState {
             if !self.has_keyword(*c, &Keyword::Vigilance) {
                 self.tap(*c);
             }
+        }
+        for i in &infos {
+            let ctrl = self.card(i.card).controller;
+            self.this_turn.attackers.push((ctrl, i.card));
         }
         for i in &infos {
             self.fire(crate::triggers::TriggerEvent::Attacks {

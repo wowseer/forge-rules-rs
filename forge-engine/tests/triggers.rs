@@ -370,3 +370,29 @@ fn attacker_blocked_by_creature_names_the_blocker() {
     d.run_until(|g, _| g.step == Step::Main2);
     assert_eq!(count(d.g(), "Wall of Stone", Zone::Graveyard), 1);
 }
+
+#[test]
+fn trigger_count_damage_and_life_amount() {
+    // Java TriggerDamageDoneOnce/TriggerLifeGained: TriggerCount$DamageAmount/LifeAmount
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 1);
+    put_n(&db, &mut g, "Plains", P1, Zone::Battlefield, 1);
+    let r = put(&db, &mut g, "Reckoner Lite", P2, Zone::Battlefield);
+    put(&db, &mut g, "Life Mirror Lite", P1, Zone::Battlefield);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let salve = put(&db, &mut g, "Healing Salve", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    d.cast(bolt, &[Target::Card(r)]);
+    d.pass_all();
+    // Trigger des Reckoners (P2) zielt auf P1
+    d.run_until(|_, dec| matches!(dec, Decision::ChooseTargets { .. }));
+    d.submit(Choice::Targets(vec![Target::Player(P1)]));
+    d.pass_all();
+    assert_eq!(d.g().player(P1).life, 17, "3 Schaden zurück");
+    d.priority_in(Step::Main1, P1);
+    d.cast(salve, &[Target::Player(P1)]);
+    d.pass_all();
+    d.pass_all();
+    assert_eq!(d.g().player(P1).life, 20);
+    assert_eq!(d.g().player(P2).life, 14, "2 × 3 Leben");
+}

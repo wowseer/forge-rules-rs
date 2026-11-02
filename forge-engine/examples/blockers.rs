@@ -18,7 +18,11 @@ fn main() {
     }
     let mut v: Vec<_> = m.into_iter().collect();
     v.sort_by_key(|e| std::cmp::Reverse(e.1));
-    for (r, c) in v.into_iter().take(40) {
+    let limit = std::env::var("LIMIT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(40);
+    for (r, c) in v.into_iter().take(limit) {
         println!("{c:5}  {r}");
     }
 }

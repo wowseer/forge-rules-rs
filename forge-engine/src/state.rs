@@ -76,6 +76,9 @@ pub struct Player {
     pub kept_hand: bool,
     /// Verhinderungsschild: die nächsten N Schaden in diesem Zug (CR 615.7).
     pub prevent_next: u32,
+    /// In diesem Zug erhaltenes bzw. verlorenes Leben (`Count$LifeYou…ThisTurn`).
+    pub life_gained_this_turn: i32,
+    pub life_lost_this_turn: i32,
 }
 
 impl Player {
@@ -213,6 +216,17 @@ pub struct ContinuousEffect {
 /// Ein Zonenwechsel: (altes Objekt, neues Objekt, von, nach).
 pub type ZoneMove = (CardId, CardId, Option<Zone>, Zone);
 
+/// Was in diesem Zug geschah (für `Count$ThisTurn…`, Morbid, `AttackersDeclared`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TurnHistory {
+    /// Alle Zonenwechsel (altes Objekt = Zustand vor dem Wechsel).
+    pub moves: Vec<ZoneMove>,
+    /// Gewirkte Zauber (Objekt auf dem Stapel).
+    pub cast: Vec<CardId>,
+    /// Kreaturen, die angegriffen haben, mit ihrem Controller.
+    pub attackers: Vec<(PlayerId, CardId)>,
+}
+
 /// Kontrollwechsel (Layer 2, CR 613.1b) durch `GainControl`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ControlEffect {
@@ -259,6 +273,23 @@ pub struct StackItem {
     /// Ziele je Fähigkeit der `SubAbility`-Kette.
     pub targets: Vec<Vec<Target>>,
     pub x: u32,
+    /// Als Kosten bezahlte Objekte (`Sacrificed$…`, `Discarded$…`, `Exiled$…`).
+    pub paid: Vec<Paid>,
+}
+
+/// Art einer Kostenzahlung mit Objekt (Java `CostPart.getHashForLKIList`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaidKind {
+    Sacrificed,
+    Discarded,
+    Exiled,
+}
+
+/// Ein als Kosten bezahltes Objekt (LKI: das Objekt vor dem Zonenwechsel).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Paid {
+    pub kind: PaidKind,
+    pub card: CardId,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -441,6 +472,9 @@ pub struct GameState {
     /// `DamageDoneOnce`; `None` = jeder Schaden ist ein eigenes Ereignis.
     pub damage_batch: Option<Vec<(CardId, crate::decision::Target, u32, bool)>>,
     pub log: Vec<Event>,
+    /// Zugstatistik (Java `Zone.cardsAddedThisTurn`, `MagicStack.spellsCastThisTurn`,
+    /// `Player.creaturesAttackedThisTurn`); wird zu Beginn jedes Zuges geleert.
+    pub this_turn: TurnHistory,
     /// Token-Definitionen (`res/tokenscripts`), nach Skriptname.
     pub token_defs: Arc<std::collections::HashMap<String, Arc<Def>>>,
 }
@@ -691,6 +725,7 @@ impl GameState {
             x: 0,
             targets: &[],
             trig: None,
+            paid: &[],
         };
         {
             let _g = crate::expr::DepthGuard::enter();
@@ -901,6 +936,7 @@ impl GameState {
             zone_batch_depth: 0,
             damage_batch: None,
             log: Vec::new(),
+            this_turn: TurnHistory::default(),
             token_defs: Arc::default(),
             rules: rules.clone(),
         };
@@ -917,6 +953,8 @@ impl GameState {
                 mana_pool: ManaPool::default(),
                 lands_played_this_turn: 0,
                 cards_drawn_this_turn: 0,
+                life_gained_this_turn: 0,
+                life_lost_this_turn: 0,
                 land_plays_per_turn: 1,
                 drew_from_empty_library: false,
                 lost: None,

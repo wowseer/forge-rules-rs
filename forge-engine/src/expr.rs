@@ -59,6 +59,29 @@ pub enum Expr {
         objs: ObjRef,
         prop: ObjPropKind,
     },
+    /// Menge des auslösenden Ereignisses (`TriggerCount$DamageAmount`,
+    /// `TriggerCount$LifeAmount`); ohne Trigger-Kontext 0.
+    TriggerAmount,
+    /// `Count$LifeYouGainedThisTurn` / `LifeYouLostThisTurn` / `LifeOppsLostThisTurn`
+    LifeGainedThisTurn,
+    LifeLostThisTurn,
+    OppsLifeLostThisTurn,
+    /// `Count$YouDrewThisTurn`
+    DrewThisTurn,
+    /// `Count$AttackersDeclared`: verschiedene Kreaturen, die du in diesem Zug
+    /// angreifen ließt.
+    AttackersDeclared,
+    /// `Count$ThisTurnCast_<Valid>`
+    ThisTurnCast(ValidSpec),
+    /// `Count$ThisTurnEntered_<Ziel>[_from_<Herkunft>]_<Valid>` (Filter auf das
+    /// Objekt vor dem Zonenwechsel)
+    ThisTurnEntered {
+        to: Zone,
+        from: Option<Zone>,
+        spec: ValidSpec,
+    },
+    /// `Count$Morbid.<ja>.<nein>`: starb in diesem Zug eine Kreatur?
+    Morbid(Box<Expr>, Box<Expr>),
     Math(Box<Expr>, MathOp, Box<Expr>),
 }
 
@@ -77,6 +100,8 @@ pub enum ObjRef {
     TargetedPlayer,
     /// `TriggeredPlayer`
     TriggeredPlayer,
+    /// `Sacrificed`, `Discarded`, `Exiled`: als Kosten bezahlte Objekte
+    Paid(crate::state::PaidKind),
 }
 
 impl ObjRef {
@@ -88,6 +113,9 @@ impl ObjRef {
             "TriggeredCards" => ObjRef::TriggeredCards,
             "TargetedPlayer" => ObjRef::TargetedPlayer,
             "TriggeredPlayer" => ObjRef::TriggeredPlayer,
+            "Sacrificed" => ObjRef::Paid(crate::state::PaidKind::Sacrificed),
+            "Discarded" => ObjRef::Paid(crate::state::PaidKind::Discarded),
+            "Exiled" => ObjRef::Paid(crate::state::PaidKind::Exiled),
             _ => return None,
         })
     }
@@ -179,6 +207,8 @@ pub struct EvalCtx<'a> {
     pub targets: &'a [crate::decision::Target],
     /// Trigger-Kontext (für `TriggeredCard$…`-Ausdrücke).
     pub trig: Option<&'a crate::triggers::TriggerInfo>,
+    /// Als Kosten bezahlte Objekte (für `Sacrificed$…`-Ausdrücke).
+    pub paid: &'a [crate::state::Paid],
 }
 
 // ---------------------------------------------------------------------------
@@ -244,12 +274,30 @@ impl Expr {
                 .map(Expr::Const)
                 .map_err(|_| bad("Number", sv));
         }
-        let (base, op) = if let Some(rest) = sv.strip_prefix("Count$") {
+        let (base, op) = if let Some(rest) = sv.strip_prefix("TriggerCount$") {
             let (main, op) = match rest.split_once('/') {
                 Some((m, o)) => (m, Some(o)),
                 None => (rest, None),
             };
-            (Expr::parse_count(main).ok_or_else(|| bad("Count", sv))?, op)
+            match main {
+                "DamageAmount" | "LifeAmount" => (Expr::TriggerAmount, op),
+                _ => return Err(bad("TriggerCount", sv)),
+            }
+        } else if let Some(rest) = sv.strip_prefix("Count$") {
+            let (main, op) = match rest.split_once('/') {
+                Some((m, o)) => (m, Some(o)),
+                None => (rest, None),
+            };
+            if let Some(args) = main.strip_prefix("Morbid.") {
+                let (a, b) = args.split_once('.').ok_or_else(|| bad("Count", sv))?;
+                let base = Expr::Morbid(
+                    Box::new(Expr::parse_value(face, a)?),
+                    Box::new(Expr::parse_value(face, b)?),
+                );
+                (base, op)
+            } else {
+                (Expr::parse_count(main).ok_or_else(|| bad("Count", sv))?, op)
+            }
         } else if let Some((head, rest)) = sv.split_once('$')
             && let Some(objs) = ObjRef::parse(head)
         {
@@ -303,6 +351,22 @@ impl Expr {
                 spec: ValidSpec::parse(spec).ok()?,
             });
         }
+        if let Some(v) = main.strip_prefix("ThisTurnCast_") {
+            return Some(Expr::ThisTurnCast(ValidSpec::parse(v).ok()?));
+        }
+        if let Some(rest) = main.strip_prefix("ThisTurnEntered_") {
+            let parts: Vec<&str> = rest.splitn(4, '_').collect();
+            let (to, from, v) = match parts.as_slice() {
+                [to, "from", from, v] => (*to, Some(Zone::parse(from)?), *v),
+                [to, v] => (*to, None, *v),
+                _ => return None,
+            };
+            return Some(Expr::ThisTurnEntered {
+                to: Zone::parse(to)?,
+                from,
+                spec: ValidSpec::parse(v).ok()?,
+            });
+        }
         if let Some(kind) = main.strip_prefix("CardCounters.") {
             return Some(Expr::CardCounters(kind.to_string()));
         }
@@ -314,6 +378,11 @@ impl Expr {
             "YourStartingLife" => Expr::YourStartingLife,
             "CardsInYourHand" | "InYourHand" => Expr::CardsInYourHand,
             "Domain" => Expr::Domain,
+            "LifeYouGainedThisTurn" => Expr::LifeGainedThisTurn,
+            "LifeYouLostThisTurn" => Expr::LifeLostThisTurn,
+            "LifeOppsLostThisTurn" => Expr::OppsLifeLostThisTurn,
+            "YouDrewThisTurn" => Expr::DrewThisTurn,
+            "AttackersDeclared" => Expr::AttackersDeclared,
             _ => return None,
         })
     }
@@ -503,6 +572,7 @@ pub fn parse_conditions(
 // ---------------------------------------------------------------------------
 
 thread_local! {
+    static MORBID_SPEC: ValidSpec = ValidSpec::parse("Creature").expect("Filter Creature");
     /// Schachtelungstiefe von Auswertungen innerhalb von `chars()` – verhindert
     /// Endlosrekursion, wenn ein Ausdruck Eigenschaften anderer Objekte braucht
     /// (z. B. „+X/+X für jede Kreatur“). Siehe `GameState::chars`.
@@ -606,6 +676,12 @@ impl GameState {
                 self.card(ctx.source).remembered.clone()
             }
             ObjRef::TriggeredCards => ctx.trig.map(|t| t.cards.clone()).unwrap_or_default(),
+            ObjRef::Paid(kind) => ctx
+                .paid
+                .iter()
+                .filter(|p| p.kind == kind)
+                .map(|p| p.card)
+                .collect(),
             // Nach Verlassen des Battlefields zählt das alte Objekt (LKI).
             _ => ctx
                 .trig
@@ -649,6 +725,43 @@ impl GameState {
             Expr::YourStartingLife => self.rules.starting_life,
             Expr::CardsInYourHand => self.player(ctx.controller).hand.len() as i32,
             Expr::ObjProp { objs, prop } => self.eval_obj_prop(*objs, *prop, ctx),
+            Expr::TriggerAmount => ctx.trig.and_then(|t| t.amount).unwrap_or(0),
+            Expr::LifeGainedThisTurn => self.player(ctx.controller).life_gained_this_turn,
+            Expr::LifeLostThisTurn => self.player(ctx.controller).life_lost_this_turn,
+            Expr::OppsLifeLostThisTurn => self
+                .opponents(ctx.controller)
+                .iter()
+                .map(|p| self.player(*p).life_lost_this_turn)
+                .sum(),
+            Expr::DrewThisTurn => self.player(ctx.controller).cards_drawn_this_turn as i32,
+            Expr::AttackersDeclared => {
+                let mut seen: Vec<CardId> = Vec::new();
+                for (p, c) in &self.this_turn.attackers {
+                    if *p == ctx.controller && !seen.contains(c) {
+                        seen.push(*c);
+                    }
+                }
+                seen.len() as i32
+            }
+            Expr::ThisTurnCast(spec) => self
+                .this_turn
+                .cast
+                .iter()
+                .filter(|c| self.card_matches(**c, spec, ctx.source, ctx.controller))
+                .count() as i32,
+            Expr::ThisTurnEntered { to, from, spec } => {
+                self.entered_this_turn(*to, *from, spec, ctx.source, ctx.controller)
+            }
+            Expr::Morbid(yes, no) => {
+                let died = self.entered_this_turn(
+                    Zone::Graveyard,
+                    Some(Zone::Battlefield),
+                    &MORBID_SPEC.with(Clone::clone),
+                    ctx.source,
+                    ctx.controller,
+                ) > 0;
+                self.eval(if died { yes } else { no }, ctx)
+            }
             Expr::Domain => {
                 let mut n = 0;
                 for t in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
@@ -693,6 +806,27 @@ impl GameState {
                 }
             }
         }
+    }
+
+    /// Java `CardUtil.getThisTurnEntered`: Zonenwechsel dieses Zuges nach `to`
+    /// (optional aus `from`), gefiltert auf das Objekt vor dem Wechsel.
+    pub(crate) fn entered_this_turn(
+        &self,
+        to: Zone,
+        from: Option<Zone>,
+        spec: &ValidSpec,
+        source: CardId,
+        controller: PlayerId,
+    ) -> i32 {
+        self.this_turn
+            .moves
+            .iter()
+            .filter(|(old, _, f, t)| {
+                *t == to
+                    && from.is_none_or(|z| *f == Some(z))
+                    && self.card_matches(*old, spec, source, controller)
+            })
+            .count() as i32
     }
 
     fn card_types_in_graveyard(&self, p: PlayerId) -> usize {

@@ -67,6 +67,16 @@ CompiledAbility {
   `CardPower`, `CardToughness`, `CardCounters.<Typ>`, `YourLifeTotal`,
   `YourStartingLife`, `CardsInYourHand`, `Domain`, jeweils mit einer Rechenoperation
   `/Plus.N`, `/Minus.N`, `/Times.N`, `/Twice`, `/HalfUp` … (wie Java `doXMath`).
+- Ereignis- und Zugwerte: `TriggerCount$DamageAmount`/`LifeAmount` (Menge des
+  auslösenden Ereignisses, `TriggerInfo::amount`); bezahlte Kostenobjekte
+  `Sacrificed$…`, `Discarded$…`, `Exiled$…` (LKI, `StackItem::paid`);
+  Zugstatistik (`GameState::this_turn`, zu Zugbeginn geleert):
+  `Count$LifeYouGainedThisTurn`, `LifeYouLostThisTurn`, `LifeOppsLostThisTurn`,
+  `YouDrewThisTurn`, `AttackersDeclared`, `ThisTurnCast_<Filter>`,
+  `ThisTurnEntered_<Ziel>[_from_<Herkunft>]_<Filter>` (Filter auf das Objekt vor dem
+  Wechsel) und `Morbid.<ja>.<nein>`.
+- Zusatzkosten von Zaubern (`A:SP$ … | Cost$ 1 R Sac<1/Creature>`): die Nicht-Mana-Teile
+  müssen zum Wirken zahlbar sein und werden nach dem Mana bezahlt (Java `Cost.sort`).
 - Bedingungen: Statics/Trigger `IsPresent$`/`PresentCompare$`/`PresentZone$`/
   `PresentPlayer$`, `CheckSVar$`/`SVarCompare$`, `Condition$` (PlayerTurn, Threshold, …),
   `PlayerTurn$`, `OpponentTurn$`; Effekte `ConditionPresent$`, `ConditionCheckSVar$` …

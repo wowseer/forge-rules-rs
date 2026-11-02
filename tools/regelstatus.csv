@@ -57,7 +57,7 @@ Cost;Mana cost;ja;spells::x_spell;inkl. Hybrid, Phyrexian, {2/W}, X; Snow-Bezahl
 Cost;Add mana;teilweise;spells::manual_mana_payment_and_cancel;Mana-Fähigkeiten mit Produced$ (fest, Any, Combo Farbe)
 Cost;{T};ja;spells::activated_ability_with_tap_cost_uses_stack_and_sickness;
 Cost;{Q};ja;spells::untap_symbol_cost;
-Cost;Sac;ja;spells::sacrifice_self_cost;Sac<1/CARDNAME> und Sac<n/Typ>
+Cost;Sac;ja;spells::sacrifice_self_cost, sacrifice_unless::spell_additional_sacrifice_cost_is_required_and_remembered;Sac<1/CARDNAME> und Sac<n/Typ>, auch als Zusatzkosten von Zaubern (CR 601.2f/h); bezahlte Objekte für Sacrificed$…
 Cost;Discard;teilweise;;Discard<n/Typ>; Hand/Random fehlen
 Cost;PayLife;ja;spells::phyrexian_mana_with_life;
 Cost;PayShards;n/a;;Adventure-Modus
@@ -223,10 +223,10 @@ Trigger;Blocks;teilweise;triggers::blocks_attacker_blocked_and_unblocked_trigger
 Trigger;AttackerBlocked;teilweise;triggers::blocks_attacker_blocked_and_unblocked_triggers;ValidCard, ValidBlocker/Amount
 Trigger;AttackerUnblocked;teilweise;triggers::blocks_attacker_blocked_and_unblocked_triggers;ValidCard, ValidDefender
 Trigger;Drawn;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidCard, ValidPlayer, Number; FirstCardInDrawStep, ForReveal fehlen
-Trigger;LifeGained;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidPlayer; FirstTime, ValidSource, LifeAmount fehlen
+Trigger;LifeGained;teilweise;triggers::drawn_number_life_gained_and_taps_triggers, triggers::trigger_count_damage_and_life_amount;ValidPlayer, TriggerCount$LifeAmount; FirstTime, ValidSource, LifeAmount-Vergleich fehlen
 Trigger;Taps;teilweise;triggers::drawn_number_life_gained_and_taps_triggers;ValidCard, ValidPlayer; ValidCause, Attacker, FirstTime fehlen
 Effect (ApiType);Surveil;teilweise;library_regen_animate::surveil_puts_chosen_cards_into_graveyard;Amount, Defined; Trigger Surveil fehlt
-Trigger;DamageDoneOnce;teilweise;triggers::damage_done_once_triggers_once_per_recipient;einmal je Empfänger bei gleichzeitigem Schaden (Kampf, DealDamage, DamageAll); ValidTarget, ValidSource, CombatDamage, DamageAmount; FirstTime fehlt
+Trigger;DamageDoneOnce;teilweise;triggers::damage_done_once_triggers_once_per_recipient, triggers::trigger_count_damage_and_life_amount;einmal je Empfänger bei gleichzeitigem Schaden (Kampf, DealDamage, DamageAll); ValidTarget, ValidSource, CombatDamage, DamageAmount, TriggerCount$DamageAmount; FirstTime fehlt
 Replacement Effect;DamageDone;teilweise;replacements::damage_doubling_replacement, replacements::prevent_combat_damage_to_self_but_not_noncombat, replacements::prevention_shield_next_n_damage_this_turn_after_doubling;Prevent, Mengenänderung (ReplaceCount$DamageAmount), ValidTarget/ValidSource/IsCombat; Reihenfolge vereinfacht (erst Änderung, dann Verhinderung), andere ReplaceWith-Formen fehlen
 Effect (ApiType);PreventDamage;teilweise;replacements::prevention_shield_next_n_damage_this_turn_after_doubling;nächste N Schaden in diesem Zug (Karten, Spieler); DividedAsYouChoose, ShieldEffectTarget fehlen
 Effect (ApiType);GainControl;teilweise;control::threaten_until_end_of_turn_untaps_and_grants_haste, control::permanent_control_change, control::control_ends_when_source_leaves_battlefield;Kontrolleffekte nach Zeitstempel (Layer 2), LoseControl EOT/UntilTheEndOfYourNextTurn/LeavesPlay/LoseControl, Untap, AddKWs, NewController; AllValid, RememberControlled, LoseControl Untap fehlen
@@ -241,3 +241,4 @@ Trigger;AttackerBlockedByCreature;teilweise;triggers::attacker_blocked_by_creatu
 Effect (ApiType);Fight;teilweise;mass_discard_counter::fight_uses_parent_target_and_put_counter_all;Kämpfer aus Zielen/Defined wie Java, CR 701.14b; Optional fehlt
 Effect (ApiType);PutCounterAll;teilweise;mass_discard_counter::fight_uses_parent_target_and_put_counter_all;ValidCards, CounterType, CounterNum; Ersatzeffekte für Marken fehlen
 Cost;Exile;teilweise;keywords_misc::exile_from_graveyard_cost_activates_from_graveyard;nur ExileFromGrave<1/CARDNAME>
+Effect (ApiType);SetState;teilweise;multiface::transform_keeps_object_damage_and_counters;Mode$ Transform (CR 701.28/712.18: gleiches Objekt, neuer Zeitstempel), Optional, ChangeZone Transformed$; TurnFaceUp, Flip, Meld, Trigger Transformed fehlen

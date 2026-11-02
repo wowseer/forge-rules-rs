@@ -240,3 +240,91 @@ fn repeat_each_card_remembers_each_card_in_turn() {
     assert_eq!(d.g().card(bear).damage, 1);
     assert_eq!(count(d.g(), "Goblin Piker", Zone::Graveyard), 1);
 }
+
+fn eval_svar(g: &forge_engine::GameState, src: forge_engine::CardId, svars: &str) -> i32 {
+    use forge_engine::expr::{EvalCtx, Expr};
+    let script = forge_script::CardScript::parse(
+        &format!("Name:Probe\nManaCost:1\nTypes:Enchantment\n{svars}"),
+        &forge_types::TypeRegistry::default(),
+    )
+    .unwrap();
+    let e = Expr::parse_value(script.main(), "X").expect("Ausdruck kompiliert");
+    g.eval(
+        &e,
+        &EvalCtx {
+            source: src,
+            controller: P1,
+            x: 0,
+            targets: &[],
+            trig: None,
+            paid: &[],
+        },
+    )
+}
+
+#[test]
+fn this_turn_statistics() {
+    // Java AbilityUtils.xCount: LifeYouGainedThisTurn, LifeOppsLostThisTurn,
+    // YouDrewThisTurn, ThisTurnCast_, ThisTurnEntered_, AttackersDeclared
+    let (db, mut g) = game_at(Step::Main1, 10);
+    let src = put(&db, &mut g, "Plains", P1, Zone::Battlefield);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 2);
+    put_n(&db, &mut g, "Plains", P1, Zone::Battlefield, 1);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let salve = put(&db, &mut g, "Healing Salve", P1, Zone::Hand);
+    let bear = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(bolt, &[Target::Card(bear)]);
+    d.pass_all();
+    d.cast(salve, &[Target::Player(P1)]);
+    d.pass_all();
+    let g = d.g();
+    assert_eq!(eval_svar(g, src, "SVar:X:Count$LifeYouGainedThisTurn\n"), 3);
+    assert_eq!(eval_svar(g, src, "SVar:X:Count$LifeOppsLostThisTurn\n"), 0);
+    assert_eq!(
+        eval_svar(g, src, "SVar:X:Count$ThisTurnCast_Instant.YouCtrl\n"),
+        2
+    );
+    assert_eq!(
+        eval_svar(g, src, "SVar:X:Count$ThisTurnCast_Card.OppCtrl\n"),
+        0
+    );
+    assert_eq!(
+        eval_svar(
+            g,
+            src,
+            "SVar:X:Count$ThisTurnEntered_Graveyard_from_Battlefield_Creature/Times.2\n"
+        ),
+        2
+    );
+    assert_eq!(
+        eval_svar(
+            g,
+            src,
+            "SVar:X:Count$ThisTurnEntered_Graveyard_Card.YouOwn\n"
+        ),
+        2,
+        "beide Spontanzauber"
+    );
+    assert_eq!(eval_svar(g, src, "SVar:X:Count$YouDrewThisTurn\n"), 0);
+    assert_eq!(eval_svar(g, src, "SVar:X:Count$AttackersDeclared\n"), 0);
+}
+
+#[test]
+fn morbid_counts_creature_deaths_this_turn_only() {
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 3);
+    let m1 = put(&db, &mut g, "Morbid Shock Lite", P1, Zone::Hand);
+    let m2 = put(&db, &mut g, "Morbid Shock Lite", P1, Zone::Hand);
+    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
+    let bear = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
+    let mut d = Driver::new(g);
+    d.cast(m1, &[T2]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 19, "ohne Morbid 1");
+    d.cast(bolt, &[Target::Card(bear)]);
+    d.pass_all();
+    d.cast(m2, &[T2]);
+    d.pass_all();
+    assert_eq!(d.g().player(P2).life, 15, "mit Morbid 4");
+}

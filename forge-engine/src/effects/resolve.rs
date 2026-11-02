@@ -19,6 +19,8 @@ pub struct ResolveCtx {
     pub x: u32,
     /// Bei ausgelösten Fähigkeiten: Wissen zum Auslösezeitpunkt.
     pub trig: Option<crate::triggers::TriggerInfo>,
+    /// Als Kosten bezahlte Objekte.
+    pub paid: Vec<crate::state::Paid>,
 }
 
 impl ResolveCtx {
@@ -34,6 +36,7 @@ impl ResolveCtx {
             x: self.x,
             targets,
             trig: self.trig.as_ref(),
+            paid: &self.paid,
         }
     }
 }
@@ -1311,6 +1314,7 @@ impl GameState {
             controller: item.controller,
             x: item.x,
             trig,
+            paid: item.paid.clone(),
         };
 
         // CR 608.2b: Ziele erneut prüfen.
