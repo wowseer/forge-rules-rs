@@ -1056,9 +1056,7 @@ impl GameState {
                     note(PaidKind::Discarded, source);
                 }
                 CostPart::RemoveCounter { amount, kind } => {
-                    let o = self.card_mut(source);
-                    let left = o.counter(kind).saturating_sub(*amount);
-                    o.counters.insert(kind.clone(), left);
+                    self.remove_counters(source, kind, *amount);
                 }
                 CostPart::Sacrifice { amount, valid } => {
                     let options: Vec<CardId> = self

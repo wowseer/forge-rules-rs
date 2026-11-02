@@ -159,6 +159,8 @@ pub struct CardObj {
     pub activations: Vec<(usize, u32)>,
     /// Nutzungen von `MayPlay`-Erlaubnissen dieser Quelle (Static-Index, Zug).
     pub may_play_uses: Vec<(usize, u32)>,
+    /// CR 701.37b: ist monströs (durch Monstrosity).
+    pub monstrous: bool,
     /// Kopie eines anderen Objekts (CR 707): `def`/`face`/`base_pt` sind dann die
     /// kopierten Werte; hier die eigenen Werte und die Änderungen der Kopie.
     pub copy: Option<Box<CopyInfo>>,

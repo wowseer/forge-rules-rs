@@ -80,6 +80,16 @@ pub enum Prop {
     RememberedPlayerCtrl,
     /// Die Quelle (Aura/Ausrüstung) ist an dieses Objekt angelegt.
     AttachedBySource,
+    /// `counters_GE1_P1P1`: Anzahl Marken einer Art (Java `CardProperty` „counters“)
+    Counters {
+        kind: String,
+        op: crate::expr::CmpOp,
+        value: i32,
+    },
+    /// `HasCounters`: mindestens eine Marke irgendeiner Art
+    HasCounters,
+    /// `IsMonstrous`/`monstrous` (CR 701.37b)
+    Monstrous,
     /// `powerGE4`, `toughnessLT2`, `cmcLE3` (Manawert)
     Stat {
         stat: Stat,
@@ -163,6 +173,20 @@ fn is_type_word(w: &str) -> bool {
     }
 }
 
+/// Vergleichsoperator in Filtern (`GE`, `LT` …).
+fn cmp_op(s: &str) -> Option<crate::expr::CmpOp> {
+    use crate::expr::CmpOp;
+    Some(match s {
+        "LT" => CmpOp::Lt,
+        "LE" => CmpOp::Le,
+        "EQ" => CmpOp::Eq,
+        "GE" => CmpOp::Ge,
+        "GT" => CmpOp::Gt,
+        "NE" => CmpOp::Ne,
+        _ => return None,
+    })
+}
+
 fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     if let Some(rest) = p.strip_prefix('!') {
         return Ok(Prop::Not(Box::new(parse_prop(rest)?)));
@@ -200,6 +224,31 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     if p == "OppOwn" {
         return Ok(Prop::OppOwn);
     }
+    if p == "HasCounters" {
+        return Ok(Prop::HasCounters);
+    }
+    match p {
+        "IsMonstrous" | "monstrous" => return Ok(Prop::Monstrous),
+        "nonMonstrous" | "IsNotMonstrous" => return Ok(Prop::Not(Box::new(Prop::Monstrous))),
+        _ => {}
+    }
+    if let Some(rest) = p.strip_prefix("counters_") {
+        let mut it = rest.splitn(2, '_');
+        let (cmp, kind) = (it.next().unwrap_or(""), it.next().unwrap_or(""));
+        if cmp.len() > 2
+            && !kind.is_empty()
+            && !kind.contains('_')
+            && let Some(op) = cmp_op(&cmp[..2])
+            && let Ok(value) = cmp[2..].parse::<i32>()
+        {
+            return Ok(Prop::Counters {
+                kind: kind.to_ascii_uppercase(),
+                op,
+                value,
+            });
+        }
+        return Err(ValidError::Unsupported(p.to_string()));
+    }
     let colors = |s: &str| Color::from_name(s);
     Ok(match p {
         "YouCtrl" => Prop::YouCtrl,
@@ -227,15 +276,7 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
                 if let Some(rest) = p.strip_prefix(prefix)
                     && rest.len() > 2
                 {
-                    let op = match &rest[..2] {
-                        "LT" => Some(crate::expr::CmpOp::Lt),
-                        "LE" => Some(crate::expr::CmpOp::Le),
-                        "EQ" => Some(crate::expr::CmpOp::Eq),
-                        "GE" => Some(crate::expr::CmpOp::Ge),
-                        "GT" => Some(crate::expr::CmpOp::Gt),
-                        "NE" => Some(crate::expr::CmpOp::Ne),
-                        _ => None,
-                    };
+                    let op = cmp_op(&rest[..2]);
                     if let (Some(op), Ok(value)) = (op, rest[2..].parse::<i32>()) {
                         return Ok(Prop::Stat { stat, op, value });
                     }

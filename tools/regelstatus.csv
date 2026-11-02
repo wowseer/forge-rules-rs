@@ -70,7 +70,7 @@ Effect (ApiType);Pump;teilweise;spells::draw_gain_lose_life_and_pump;NumAtt/NumD
 Effect (ApiType);Mana;teilweise;spells::manual_mana_payment_and_cancel;
 Effect (ApiType);Tap;teilweise;;Grundform
 Effect (ApiType);Untap;teilweise;;Grundform
-Effect (ApiType);PutCounter;teilweise;sba::cr_704_5q_plus_and_minus_counters_annihilate;Grundform
+Effect (ApiType);PutCounter;teilweise;sba::cr_704_5q_plus_and_minus_counters_annihilate, counters_keywords::adapt_only_without_p1p1_counters, counters_keywords::monstrosity_once_and_filter, counters_keywords::bolster_picks_least_toughness_with_choice_on_tie, counters_keywords::support_up_to_n_targets_one_counter_each;Grundform; Adapt (CR 701.46), Monstrosity (CR 701.37), Bolster (CR 701.39), Support (CR 701.41); CounterTypes$, DividedAsYouChoose, Trigger BecomeMonstrous fehlen
 Effect (ApiType);Abandon;n/a;;Archenemy
 Effect (ApiType);SetInMotion;n/a;;Archenemy
 Effect (ApiType);AdvanceCrank;n/a;;Unstable
@@ -269,3 +269,4 @@ Mana Rule;Convoke payment;teilweise;cost_helpers::convoke_taps_creatures_for_col
 Keyword;Delve;ja;cost_helpers::delve_exiles_graveyard_cards_for_generic;CR 702.66a: exilierte Friedhofskarten zahlen je {1}, nur generisch
 Keyword;Improvise;ja;cost_helpers::improvise_taps_artifacts_for_generic_only;CR 702.126a: getappte Artefakte zahlen je {1}, nur generisch
 Keyword;Affinity;ja;cost_helpers::affinity_reduces_cost_per_artifact;CR 702.41a: {1} weniger je bleibender Karte des Typs unter eigener Kontrolle (Kostensenkung CR 601.2f)
+Effect (ApiType);RemoveCounter;teilweise;counters_keywords::counters_filter_grants_flying_and_remove_counter_all, counters_keywords::remove_counter_any_chooses_kind_per_counter, counters_keywords::remove_all_counters_needs_has_counters_target;CounterType fest/Any/All, CounterNum Zahl/Ausdruck/All, UpTo, Optional, Ziel/Defined; Choices$, RememberRemoved/RememberAmount, Spieler-Marken, Trigger CounterRemoved fehlen

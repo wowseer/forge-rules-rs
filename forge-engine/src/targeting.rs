@@ -87,6 +87,13 @@ impl GameState {
                 self.card(source).remembered_players.contains(&c.controller)
             }
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
+            Prop::Monstrous => c.monstrous,
+            Prop::HasCounters => c.counters.values().any(|n| *n > 0),
+            Prop::Counters { kind, op, value } => crate::expr::Compare {
+                op: *op,
+                rhs: crate::expr::Expr::Const(*value),
+            }
+            .holds(c.counter(kind) as i32, *value),
             Prop::Stat { stat, op, value } => {
                 let v = match stat {
                     crate::valid::Stat::Power => ch.power,

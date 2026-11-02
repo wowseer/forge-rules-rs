@@ -362,11 +362,130 @@ impl GameState {
                 what,
                 counter,
                 amount,
+                mode,
             } => {
+                use crate::effects::CounterMode;
                 let n = self.amount(amount, ctx, targets).max(0) as u32;
+                let cards = if *mode == CounterMode::Bolster {
+                    // CR 701.39a: bei Gleichstand wählt der Spieler
+                    let mine: Vec<CardId> = self
+                        .battlefield_of(ctx.controller)
+                        .filter(|&c| {
+                            self.chars(c)
+                                .types
+                                .has_core(forge_types::CoreType::Creature)
+                        })
+                        .collect();
+                    let least = mine.iter().filter_map(|&c| self.chars(c).toughness).min();
+                    let options: Vec<CardId> = mine
+                        .into_iter()
+                        .filter(|&c| self.chars(c).toughness == least)
+                        .collect();
+                    if options.len() > 1 {
+                        match ch.ask(Decision::ChooseCards {
+                            player: ctx.controller,
+                            reason: crate::decision::CardChoiceReason::Choose,
+                            options: options.clone(),
+                            min: 1,
+                            max: 1,
+                        })? {
+                            Choice::Cards(v) if v.len() == 1 && options.contains(&v[0]) => v,
+                            _ => options[..1].to_vec(),
+                        }
+                    } else {
+                        options
+                    }
+                } else {
+                    let ts = self.resolve_defined(*what, targets, ctx);
+                    self.cards_of(&ts)
+                };
+                for c in cards {
+                    match mode {
+                        CounterMode::Adapt if self.card(c).counter("P1P1") > 0 => continue,
+                        CounterMode::Monstrosity if self.card(c).monstrous => continue,
+                        _ => {}
+                    }
+                    self.add_counters(c, counter, n);
+                    if *mode == CounterMode::Monstrosity {
+                        self.card_mut(c).monstrous = true;
+                    }
+                }
+            }
+            Effect::RemoveCounter {
+                what,
+                kind,
+                amount,
+                up_to,
+                optional,
+            } => {
+                use crate::effects::CounterKind;
+                if *optional
+                    && !matches!(
+                        ch.ask(Decision::Confirm {
+                            player: ctx.controller,
+                            prompt: "Marken entfernen?".into(),
+                        })?,
+                        Choice::Yes
+                    )
+                {
+                    return Ok(());
+                }
+                let n = amount
+                    .as_ref()
+                    .map(|a| self.amount(a, ctx, targets).max(0) as u32);
                 let ts = self.resolve_defined(*what, targets, ctx);
                 for c in self.cards_of(&ts) {
-                    self.add_counters(c, counter, n);
+                    if self.card(c).zone.is_none() {
+                        continue;
+                    }
+                    match kind {
+                        CounterKind::All => {
+                            let kinds: Vec<String> =
+                                self.card(c).counters.keys().cloned().collect();
+                            for k in kinds {
+                                self.remove_counters(c, &k, u32::MAX);
+                            }
+                        }
+                        CounterKind::Named(k) => {
+                            let mut m = n.unwrap_or(u32::MAX).min(self.card(c).counter(k));
+                            if *up_to && m > 0 {
+                                m = match ch.ask(Decision::ChooseX {
+                                    player: ctx.controller,
+                                    max: m,
+                                })? {
+                                    Choice::Number(x) => x.min(m),
+                                    _ => m,
+                                };
+                            }
+                            self.remove_counters(c, k, m);
+                        }
+                        CounterKind::Any => {
+                            // Java `removeAnyType`: je Marke die Art wählen
+                            for _ in 0..n.unwrap_or(u32::MAX) {
+                                let options: Vec<String> = self
+                                    .card(c)
+                                    .counters
+                                    .iter()
+                                    .filter(|(_, v)| **v > 0)
+                                    .map(|(k, _)| k.clone())
+                                    .collect();
+                                let k = match options.len() {
+                                    0 => break,
+                                    1 => options[0].clone(),
+                                    _ => match ch.ask(Decision::ChooseType {
+                                        player: ctx.controller,
+                                        options: options.clone(),
+                                    })? {
+                                        Choice::Number(i) if (i as usize) < options.len() => {
+                                            options[i as usize].clone()
+                                        }
+                                        _ => options[0].clone(),
+                                    },
+                                };
+                                self.remove_counters(c, &k, 1);
+                            }
+                        }
+                    }
                 }
             }
             Effect::Token {

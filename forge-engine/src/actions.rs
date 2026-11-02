@@ -47,6 +47,7 @@ impl GameState {
             loyalty_used_turn: None,
             activations: Vec::new(),
             may_play_uses: Vec::new(),
+            monstrous: false,
             prevent_next: 0,
             copy: None,
         });
@@ -156,6 +157,7 @@ impl GameState {
             loyalty_used_turn: None,
             activations: Vec::new(),
             may_play_uses: Vec::new(),
+            monstrous: false,
             prevent_next: 0,
             copy: None,
         });
@@ -595,6 +597,19 @@ impl GameState {
             .entry(kind.to_string())
             .or_insert(0) += n;
         self.fire_counters_added(c, kind, before, n);
+    }
+
+    /// Entfernt bis zu `n` Marken der Art; liefert die Zahl entfernter Marken.
+    pub fn remove_counters(&mut self, c: CardId, kind: &str, n: u32) -> u32 {
+        let o = self.card_mut(c);
+        let have = o.counter(kind);
+        let k = have.min(n);
+        if have - k == 0 {
+            o.counters.remove(kind);
+        } else {
+            o.counters.insert(kind.to_string(), have - k);
+        }
+        k
     }
 
     /// Trigger `CounterAdded` je einzelner Marke (Java `Card.addCounter`).

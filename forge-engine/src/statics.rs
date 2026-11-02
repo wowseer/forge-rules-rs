@@ -211,8 +211,7 @@ fn compile_cost_adjust(
     }
     let valid_card =
         ValidSpec::parse(p.get("ValidCard").unwrap_or("Card")).map_err(CompileError::Valid)?;
-    let amount = Expr::parse_value(face, p.get("Amount").unwrap_or("1"))
-        .map_err(|_| err("Amount", p.get("Amount").unwrap_or("")))?;
+    let amount = Expr::parse_value(face, p.get("Amount").unwrap_or("1"))?;
     let activator = p
         .get("Activator")
         .map(ValidSpec::parse)

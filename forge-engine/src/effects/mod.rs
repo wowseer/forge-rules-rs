@@ -129,6 +129,16 @@ pub enum Effect {
         what: Defined,
         counter: String,
         amount: Amount,
+        mode: CounterMode,
+    },
+    /// Marken entfernen (Java `CountersRemoveEffect`, CR 122.8).
+    RemoveCounter {
+        what: Defined,
+        kind: CounterKind,
+        /// `None` = alle Marken der Art (`CounterNum$ All`)
+        amount: Option<Amount>,
+        up_to: bool,
+        optional: bool,
     },
     /// Bekannte Karten (Ziel/Defined) aus `origin` nach `destination` (CR 400.7).
     ChangeZone {
@@ -573,6 +583,29 @@ impl CompiledAbility {
     }
 }
 
+/// Markenart für `RemoveCounter`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CounterKind {
+    Named(String),
+    /// `Any`: je Marke wählt der Spieler die Art
+    Any,
+    /// `All`: alle Marken aller Arten
+    All,
+}
+
+/// Schlüsselwort-Aktionen, die Java als Varianten von `PutCounter` skriptet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CounterMode {
+    #[default]
+    Normal,
+    /// CR 701.46a: nur, wenn keine +1/+1-Marken darauf liegen
+    Adapt,
+    /// CR 701.37a: nur, wenn nicht monströs; danach monströs
+    Monstrosity,
+    /// CR 701.39a: Kreatur mit der geringsten Widerstandskraft unter den eigenen
+    Bolster,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompileError {
     UnsupportedApi(String),
@@ -1005,11 +1038,41 @@ pub fn compile(face: &CardFace, ab: &ScriptAbility) -> Result<CompiledAbility, C
     compile_depth(face, ab, 0)
 }
 
+/// Java `CountersPutEffect.buildSpellAbility`: Adapt/Bolster/Monstrosity/Support
+/// sind Kurzformen von `PutCounter` mit +1/+1-Marken.
+fn expand_counter_keywords(face: &CardFace, ab: &ScriptAbility) -> Option<ScriptAbility> {
+    if ab.api != "PutCounter" {
+        return None;
+    }
+    let p = &ab.params;
+    let mut out = ab.clone();
+    if let Some(n) = p.get("Adapt").or(p.get("Monstrosity")).or(p.get("Bolster")) {
+        out.params.insert("CounterType", "P1P1");
+        out.params.insert("CounterNum", n);
+    } else {
+        let n = p.get("Support")?;
+        out.params.insert("TargetMin", "0");
+        out.params.insert("TargetMax", n);
+        out.params.insert("CounterType", "P1P1");
+        out.params.insert("CounterNum", "1");
+        // CR 701.41a: „other“ nur bei bleibenden Karten
+        let valid = if face.types.is_permanent() {
+            "Creature.Other"
+        } else {
+            "Creature"
+        };
+        out.params.insert("ValidTgts", valid);
+    }
+    Some(out)
+}
+
 fn compile_depth(
     face: &CardFace,
     ab: &ScriptAbility,
     depth: usize,
 ) -> Result<CompiledAbility, CompileError> {
+    let expanded = expand_counter_keywords(face, ab);
+    let ab = expanded.as_ref().unwrap_or(ab);
     let mut c = Ctx {
         face,
         ab,
@@ -1127,10 +1190,48 @@ fn compile_depth(
         "Tap" => Effect::Tap {
             what: c.defined(Defined::Targeted)?,
         },
+        "RemoveCounter" => {
+            let kind = match c.get("CounterType").ok_or(CompileError::MissingParam {
+                api: api.into(),
+                key: "CounterType",
+            })? {
+                "Any" => CounterKind::Any,
+                "All" => CounterKind::All,
+                k => CounterKind::Named(k.to_ascii_uppercase()),
+            };
+            let amount = match c.get("CounterNum") {
+                Some("All") => None,
+                Some(v) => Some(c.amount_value("CounterNum", v)?),
+                None => Some(Amount::Fixed(1)),
+            };
+            let up_to = c
+                .get("UpTo")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let optional = c
+                .get("Optional")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            Effect::RemoveCounter {
+                what: c.defined(Defined::SelfCard)?,
+                kind,
+                amount,
+                up_to,
+                optional,
+            }
+        }
         "Untap" => Effect::Untap {
             what: c.defined(Defined::Targeted)?,
         },
         "PutCounter" => {
+            let mode = if c.get("Adapt").is_some() {
+                CounterMode::Adapt
+            } else if c.get("Monstrosity").is_some() {
+                CounterMode::Monstrosity
+            } else if c.get("Bolster").is_some() {
+                CounterMode::Bolster
+            } else {
+                c.get("Support");
+                CounterMode::Normal
+            };
             let what = c.defined(Defined::SelfCard)?;
             let counter = c.get("CounterType").ok_or(CompileError::MissingParam {
                 api: api.into(),
@@ -1141,6 +1242,7 @@ fn compile_depth(
                 what,
                 counter: counter.to_string(),
                 amount,
+                mode,
             }
         }
         "ChangeZone" | "ChangeZoneAll" => compile_change_zone(&mut c, api)?,
