@@ -53,6 +53,8 @@ impl GameState {
             cast_from: None,
             kicked: 0,
             skip_next_untap: false,
+            exiled_with: None,
+            exiled_until: None,
             prevent_next: 0,
             copy: None,
         });
@@ -179,6 +181,12 @@ impl GameState {
             } else {
                 None
             },
+            exiled_with: if to == Zone::Exile {
+                self.effect_source
+            } else {
+                None
+            },
+            exiled_until: None,
             skip_next_untap: false,
             kicked: if from == Some(Zone::Stack) && to == Zone::Battlefield {
                 old.kicked
@@ -254,7 +262,45 @@ impl GameState {
                 self.fire_counters_added(new_id, k, 0, *v);
             }
         }
+        if from == Some(Zone::Battlefield) {
+            self.host_left_play(id);
+        }
         new_id
+    }
+
+    /// CR 610.3: Die Quelle `host` hat das Battlefield verlassen – „bis … das
+    /// Spielfeld verlässt“ endet: exilierte Karten kehren zurück, Effektobjekte enden.
+    fn host_left_play(&mut self, host: CardId) {
+        let returning: Vec<(CardId, Zone)> = self
+            .exile
+            .iter()
+            .filter_map(|c| {
+                let o = self.card(*c);
+                o.exiled_until
+                    .filter(|(h, _)| *h == host)
+                    .map(|(_, z)| (*c, z))
+            })
+            .collect();
+        let ending: Vec<CardId> = self
+            .command
+            .iter()
+            .copied()
+            .filter(|c| {
+                self.card(*c).effect.is_some_and(|e| {
+                    e.duration == crate::state::EffectDuration::UntilHostLeavesPlay
+                        && e.host == Some(host)
+                })
+            })
+            .collect();
+        for c in ending {
+            self.cease_to_exist(c);
+        }
+        let prev = self.effect_source.take();
+        for (c, zone) in returning {
+            // unter Kontrolle des Besitzers (CR 610.3c, 110.2)
+            self.move_card(c, zone, true);
+        }
+        self.effect_source = prev;
     }
 
     /// CR 121: Karte ziehen. Leere Bibliothek → Markierung für CR 704.5b.

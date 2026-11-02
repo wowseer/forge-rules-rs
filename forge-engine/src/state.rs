@@ -161,6 +161,11 @@ pub struct CardObj {
     pub may_play_uses: Vec<(usize, u32)>,
     /// CR 701.37b: ist monströs (durch Monstrosity).
     pub monstrous: bool,
+    /// Von welchem Objekt ins Exil geschickt (Java `exiledWith`).
+    pub exiled_with: Option<CardId>,
+    /// `UntilHostLeavesPlay`: kehrt in diese Zone zurück, wenn die Quelle das
+    /// Battlefield verlässt (CR 610.3).
+    pub exiled_until: Option<(CardId, Zone)>,
     /// Enttappt im nächsten Enttappsegment seines Controllers nicht (einmalig).
     pub skip_next_untap: bool,
     /// CR 702.33: bezahlte Kicker-Kosten (Bit 0 = erste, Bit 1 = zweite);
@@ -228,12 +233,16 @@ pub enum EffectDuration {
     UntilYourNextTurn,
     /// bis zum Ende deines nächsten Zuges
     UntilTheEndOfYourNextTurn,
+    /// solange die Quelle (`EffectInfo::host`) im Spiel ist
+    UntilHostLeavesPlay,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EffectInfo {
     pub duration: EffectDuration,
     pub created_turn: u32,
+    /// Quelle für `UntilHostLeavesPlay`
+    pub host: Option<CardId>,
 }
 
 impl CardObj {
@@ -554,6 +563,8 @@ pub struct GameState {
     /// mit Verschachtelungstiefe; `None` = jeder Wechsel ein eigenes Ereignis.
     pub zone_batch: Option<Vec<ZoneMove>>,
     pub zone_batch_depth: u32,
+    /// Quelle des gerade aufgelösten Effekts (für „exiled with“, CR 406.6/610.3)
+    pub effect_source: Option<CardId>,
     /// Kontrolleffekte in Zeitstempelreihenfolge (jüngster zuletzt).
     pub control_effects: Vec<ControlEffect>,
     /// Ziele der Elternfähigkeit während des Auflösens (`Defined$ ParentTarget`).
@@ -1192,6 +1203,7 @@ impl GameState {
             parent_targets: Vec::new(),
             zone_batch: None,
             zone_batch_depth: 0,
+            effect_source: None,
             damage_batch: None,
             log: Vec::new(),
             this_turn: TurnHistory::default(),

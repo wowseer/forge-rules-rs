@@ -110,6 +110,12 @@ impl GameState {
                 .and_then(|t| t.target)
                 .into_iter()
                 .collect(),
+            Defined::ExiledWith => self
+                .exile
+                .iter()
+                .filter(|c| self.card(**c).exiled_with == Some(ctx.source))
+                .map(|c| Target::Card(*c))
+                .collect(),
             Defined::Enchanted => self
                 .card(ctx.source)
                 .attached_to
@@ -253,7 +259,9 @@ impl GameState {
     ) -> Res<()> {
         // Zonenwechsel eines Effekts gelten als ein Ereignis (ChangesZoneAll).
         self.begin_zone_batch();
+        let prev = self.effect_source.replace(ctx.source);
         let r = self.apply_effect_inner(eff, targets, ctx, ch);
+        self.effect_source = prev;
         self.end_zone_batch();
         r
     }
@@ -1515,6 +1523,7 @@ impl GameState {
                 o.effect = Some(crate::state::EffectInfo {
                     duration: *duration,
                     created_turn: turn,
+                    host: Some(ctx.source),
                 });
             }
             Effect::AuraSpell => {}
@@ -2159,7 +2168,20 @@ impl GameState {
         controller: PlayerId,
     ) -> CardId {
         let ctrl = place.gain_control.then_some(controller);
+        let origin = self.card(c).zone;
+        let host = self.effect_source;
+        if place.until_host_leaves
+            && host.is_none_or(|h| self.card(h).zone != Some(Zone::Battlefield))
+        {
+            // CR 610.3c: Quelle schon weg → nichts geschieht
+            return c;
+        }
         let new = self.move_card_as(c, to, !place.library_bottom, ctrl);
+        if place.until_host_leaves
+            && let (Some(h), Some(o)) = (host, origin)
+        {
+            self.card_mut(new).exiled_until = Some((h, o));
+        }
         if self.card(new).zone == Some(Zone::Battlefield) && place.tapped {
             self.card_mut(new).tapped = true;
         }

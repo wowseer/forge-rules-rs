@@ -148,7 +148,7 @@ Offen (82): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | AnimateAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Typen/P/T/Keywords/Farben wie Animate, Zielspieler/Defined | ability/effects/AnimateAllEffect.java |
 | Attach | 🟡 teilweise | `auras_equipment::equip_sorcery_speed_own_creature_and_moves` | Object (Standard Self) an Ziel anlegen | ability/effects/AttachEffect.java |
 | AssembleContraption | ⚪ n/a |  | Unstable | ability/effects/AssembleContraptionEffect.java |
-| ChangeZone | 🟡 teilweise | `change_zone::search_library_tapped_then_shuffle` | Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1 | ability/effects/ChangeZoneEffect.java |
+| ChangeZone | 🟡 teilweise | `change_zone::search_library_tapped_then_shuffle, until_leaves::banisher_priest_exiles_until_it_leaves` | Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1 | ability/effects/ChangeZoneEffect.java |
 | ChangeZoneAll | 🟡 teilweise | `change_zone::change_zone_all_bounces_everything` | ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger) | ability/effects/ChangeZoneAllEffect.java |
 | ChaosEnsues | ⚪ n/a |  | Planechase | ability/effects/ChaosEnsuesEffect.java |
 | Charm | 🟡 teilweise | `tokens_charm::charm_choose_two_resolve_in_printed_order` | CharmNum/MinCharmNum, CanRepeatModes, nur Modi mit legalen Zielen, Druckreihenfolge, bei Triggern beim Stapeln | ability/effects/CharmEffect.java |

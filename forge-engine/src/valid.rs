@@ -92,6 +92,8 @@ pub enum Prop {
     HasCounters,
     /// `IsMonstrous`/`monstrous` (CR 701.37b)
     Monstrous,
+    /// `ExiledWithSource`: von der Quelle ins Exil geschickt (Java `exiledWith`)
+    ExiledWithSource,
     /// `kicked` / `kicked 1` / `kicked 2` (CR 702.33d)
     Kicked(Option<u8>),
     /// `wasCast[From<Zone>|FromYourHand]` (Java `CardProperty` „wasCast“)
@@ -283,6 +285,9 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
         if let Some(c) = Color::from_name(col) {
             return Ok(Prop::Color(c));
         }
+    }
+    if p == "ExiledWithSource" {
+        return Ok(Prop::ExiledWithSource);
     }
     match p {
         "kicked" => return Ok(Prop::Kicked(None)),

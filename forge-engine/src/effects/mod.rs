@@ -63,6 +63,8 @@ pub enum Defined {
     RememberedLki,
     /// Von der Quelle gewählte Karten in ihrem aktuellen Zustand (`ChosenCard`).
     ChosenCard,
+    /// Von der Quelle exilierte Karten (`ExiledWith`, `ExiledWithSource`).
+    ExiledWith,
     /// Objekt, an dem die Quelle (Aura/Ausrüstung) hängt (`Enchanted`, `Equipped`).
     Enchanted,
     /// Dessen Controller (`EnchantedController`, `EquippedController`).
@@ -598,6 +600,8 @@ pub struct ZonePlacement {
     pub transformed: bool,
     /// `RememberChanged$ True`: die Quelle merkt sich die bewegten Objekte (neue Objekte).
     pub remember: bool,
+    /// `Duration$ UntilHostLeavesPlay`: zurück, wenn die Quelle das Battlefield verlässt
+    pub until_host_leaves: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -833,6 +837,7 @@ impl<'a> Ctx<'a> {
                 "Remembered" | "Player.IsRemembered" | "RememberedCard" => Defined::Remembered,
                 "ChosenCard" => Defined::ChosenCard,
                 "Enchanted" | "Equipped" | "AttachedTo" => Defined::Enchanted,
+                "ExiledWith" | "ExiledWithSource" => Defined::ExiledWith,
                 "EnchantedController" | "EquippedController" => Defined::EnchantedController,
                 "RememberedLKI" => Defined::RememberedLki,
                 other => return Err(self.unsupported(key, other)),
@@ -913,6 +918,11 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         remember: c
             .get("RememberChanged")
             .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+        until_host_leaves: match c.get("Duration") {
+            None => false,
+            Some("UntilHostLeavesPlay") => true,
+            Some(v) => return Err(c.unsupported("Duration", v)),
+        },
     };
     // reine Text-/Hinweisparameter
     for k in [
@@ -1059,6 +1069,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         Some("Permanent") => EffectDuration::Permanent,
         Some("UntilYourNextTurn") => EffectDuration::UntilYourNextTurn,
         Some("UntilTheEndOfYourNextTurn") => EffectDuration::UntilTheEndOfYourNextTurn,
+        Some("UntilHostLeavesPlay") => EffectDuration::UntilHostLeavesPlay,
         Some(v) => return Err(c.unsupported("Duration", v)),
     };
     let remember = match c.ab.params.get("RememberObjects") {
