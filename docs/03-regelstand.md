@@ -16,7 +16,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Trigger | 137 | 0 | 22 | 11 |
 | Replacement Effect | 35 | 0 | 4 | 5 |
 | Static Ability | 90 | 1 | 7 | 0 |
-| Effect (ApiType) | 188 | 3 | 52 | 16 |
+| Effect (ApiType) | 188 | 3 | 53 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 15 | 1 | 3 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **77** | **117** | **81** |
+| **Summe** | **789** | **77** | **118** | **81** |
 
 ## Keyword
 
@@ -155,6 +155,7 @@ Offen (82): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | ChooseCard | 🟡 teilweise | `effects_objects::choose_card_then_destroy_all_non_chosen` | Choices, ChoiceZone, DefinedCards, Amount, MinAmount, Mandatory, ControlledByPlayer Chooser, TargetControls, AtRandom, RememberChosen, ForgetChosen | ability/effects/ChooseCardEffect.java |
 | ChooseColor | 🟡 teilweise | `effects_objects::choose_color_as_it_enters_for_mana_and_filter` | eine Farbe | ability/effects/ChooseColorEffect.java |
 | ChooseSector | ⚪ n/a |  | Unstable | ability/effects/ChooseSectorEffect.java |
+| ChooseSource | 🟡 teilweise | `choose_source::circle_prevents_next_damage_from_chosen_red_source_once` | Quellen auf dem Battlefield, dem Stapel und in der Befehlszone, Choices-Filter (inkl. <Farbe>Source, Emblem), RememberChosen | ability/effects/ChooseSourceEffect.java |
 | ChooseType | 🟡 teilweise | `effects_objects::choose_creature_type_as_it_enters` | Type Creature/Basic/Land/Card, InvalidTypes, ValidTypes | ability/effects/ChooseTypeEffect.java |
 | Cleanup | 🟡 teilweise | `sacrifice_unless::condition_defined_remembered_and_cleanup` | ClearRemembered (übrige Clear…-Flags ohne Wirkung, da der Zustand nicht existiert) | ability/effects/CleanUpEffect.java |
 | Clone | 🟡 teilweise | `copies::clone_enters_as_copy_with_etb_and_reverts_when_leaving` | kopierbare Werte (CR 707.2/707.3) mit Änderungen in Layer 1 (AddTypes, AddKeywords, Set P/T, NonLegendary, SetColor, SetCreatureTypes) | ability/effects/CloneEffect.java |
@@ -214,7 +215,7 @@ Offen (82): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Untap | 🟡 teilweise |  | Grundform | ability/effects/UntapEffect.java |
 | UntapAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Zielspieler/Defined | ability/effects/UntapAllEffect.java |
 
-Offen (133): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ChooseSource, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, ControlSpell, ControlPlayer, Detain, DayTime, Debuff, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipCoin, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Goad, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, Protection, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
+Offen (132): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Amass, Assimilate, AssignGroup, Balance, BecomeMonarch, BecomesBlocked, BidLife, Blight, Block, Bond, Branch, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ChooseNumber, ChoosePlayer, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, ControlSpell, ControlPlayer, Detain, DayTime, Debuff, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipCoin, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Goad, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, NameCard, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, Protection, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, Reveal, RevealHand, ReverseTurnOrder, RingTemptsYou, RollDice, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
 
 ## Cost
 

@@ -24,6 +24,8 @@ pub enum CardBase {
     Core(CoreType),
     /// Untertyp oder Supertyp-Wort wie `Legendary`, `Basic`.
     Word(String),
+    /// Emblem (CR 114): Effektobjekt, dessen Name mit „Emblem“ beginnt (Java `isEmblem`).
+    Emblem,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -151,6 +153,7 @@ fn card_base(s: &str) -> CardBase {
     match s {
         "Card" => CardBase::Card,
         "Permanent" => CardBase::Permanent,
+        "Emblem" => CardBase::Emblem,
         other => match CoreType::from_name(other) {
             Some(c) => CardBase::Core(c),
             None => CardBase::Word(other.to_string()),
@@ -271,6 +274,15 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     if p == "HasCounters" {
         return Ok(Prop::HasCounters);
+    }
+    // `RedSource`, `ChosenColorSource`: Quelle der Farbe (Objekte sind ihre eigene Quelle)
+    if let Some(col) = p.strip_suffix("Source") {
+        if col == "ChosenColor" {
+            return Ok(Prop::ChosenColor);
+        }
+        if let Some(c) = Color::from_name(col) {
+            return Ok(Prop::Color(c));
+        }
     }
     match p {
         "kicked" => return Ok(Prop::Kicked(None)),
@@ -440,6 +452,10 @@ impl ValidSpec {
                 },
                 "You" => Alternative::Player {
                     base: PlayerBase::You,
+                    props,
+                },
+                "Emblem" => Alternative::Card {
+                    base: CardBase::Emblem,
                     props,
                 },
                 b if is_type_word(b) => Alternative::Card {

@@ -22,6 +22,7 @@ impl GameState {
     ) -> bool {
         match base {
             CardBase::Card => true,
+            CardBase::Emblem => self.card(id).effect.is_some() && ch.name.starts_with("Emblem"),
             CardBase::Permanent => {
                 self.card(id).zone == Some(Zone::Battlefield) && ch.types.is_permanent()
             }

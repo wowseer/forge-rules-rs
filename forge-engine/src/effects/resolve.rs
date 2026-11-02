@@ -442,6 +442,41 @@ impl GameState {
                     }
                 }
             }
+            Effect::ChooseSource { choices, remember } => {
+                let mut options: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .chain(self.command.iter())
+                    .copied()
+                    .collect();
+                for item in &self.stack {
+                    if !options.contains(&item.source) {
+                        options.push(item.source);
+                    }
+                }
+                options.retain(|c| {
+                    self.card(*c).zone.is_some()
+                        && self.card_matches(*c, choices, ctx.source, ctx.controller)
+                });
+                if options.is_empty() {
+                    return Ok(());
+                }
+                let chosen = match ch.ask(Decision::ChooseCards {
+                    player: ctx.controller,
+                    reason: crate::decision::CardChoiceReason::Choose,
+                    options: options.clone(),
+                    min: 1,
+                    max: 1,
+                })? {
+                    Choice::Cards(v) => v.into_iter().find(|c| options.contains(c)),
+                    _ => None,
+                }
+                .unwrap_or(options[0]);
+                self.card_mut(ctx.source).chosen_cards = vec![chosen];
+                if *remember {
+                    self.card_mut(ctx.source).remembered.push(chosen);
+                }
+            }
             Effect::GenericChoice {
                 who,
                 choices,
@@ -1469,7 +1504,12 @@ impl GameState {
                     None => Vec::new(),
                 };
                 let turn = self.turn;
+                // Java EffectEffect: Wahl der Quelle (Karte/Farbe/Typ) übernehmen
+                let host = self.card(ctx.source).clone();
                 let o = self.card_mut(id);
+                o.chosen_cards = host.chosen_cards;
+                o.chosen_color = host.chosen_color;
+                o.chosen_type = host.chosen_type;
                 o.remembered = Self::cards_of_any(&objs);
                 o.remembered_players = Self::players_of(&objs);
                 o.effect = Some(crate::state::EffectInfo {

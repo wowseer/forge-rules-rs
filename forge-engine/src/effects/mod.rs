@@ -138,6 +138,12 @@ pub enum Effect {
         amount: Amount,
         mode: CounterMode,
     },
+    /// Eine Quelle wählen (Java `ChooseSourceEffect`): bleibende Karten, Objekte auf
+    /// dem Stapel und in der Befehlszone; Ergebnis in `chosen_cards` der Quelle.
+    ChooseSource {
+        choices: ValidSpec,
+        remember: bool,
+    },
     /// Jeder Spieler aus `who` wählt eine der Unterfähigkeiten (Java `ChooseGenericEffect`).
     GenericChoice {
         who: Defined,
@@ -2048,6 +2054,16 @@ fn compile_depth(
                 power,
                 toughness,
             }
+        }
+        "ChooseSource" => {
+            for k in ["AILogic", "ChoiceTitle"] {
+                c.get(k);
+            }
+            let choices = ValidSpec::parse(c.get("Choices").unwrap_or("Card,Emblem"))?;
+            let remember = c
+                .get("RememberChosen")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            Effect::ChooseSource { choices, remember }
         }
         "GenericChoice" => {
             for k in ["ShowChoice", "ChoicePrompt", "AILogic", "ChoiceTitle"] {

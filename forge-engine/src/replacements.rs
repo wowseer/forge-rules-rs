@@ -337,6 +337,10 @@ pub enum DamageAction {
     /// Ausdruck steht `Count$xPaid` für die ursprüngliche Menge
     /// (`ReplaceCount$DamageAmount`).
     Modify(Expr),
+    /// Verhindern, danach verlässt das Effektobjekt selbst die Befehlszone
+    /// (`ReplaceWith$` → `ChangeZone | Defined$ Self | Origin$ Command | Destination$ Exile`):
+    /// „das nächste Mal“.
+    PreventOnce,
 }
 
 /// `R:Event$ DamageDone` (Java `ReplaceDamage`).
@@ -423,6 +427,33 @@ pub fn compile_damage_replacement(
             .iter()
             .any(|x| x.eq_ignore_ascii_case(k))
         });
+        let exile_self = ab.api == "ChangeZone"
+            && ap.get("Defined") == Some("Self")
+            && ap.get("Origin") == Some("Command")
+            && ap.get("Destination") == Some("Exile")
+            && ap.keys().all(|k| {
+                [
+                    "DB",
+                    "Defined",
+                    "Origin",
+                    "Destination",
+                    "StackDescription",
+                    "SpellDescription",
+                ]
+                .iter()
+                .any(|x| x.eq_ignore_ascii_case(k))
+            });
+        if exile_self && prevention {
+            return Ok(DamageReplacement {
+                valid_target,
+                valid_source,
+                combat,
+                active_zones,
+                conditions,
+                action: DamageAction::PreventOnce,
+                prevention,
+            });
+        }
         if ab.api != "ReplaceEffect" || ap.get("VarName") != Some("DamageAmount") || !only_known {
             return Err(err("ReplaceWith", sv));
         }
@@ -511,6 +542,7 @@ impl GameState {
             .collect();
         hosts.sort();
         let mut amount = amount as i32;
+        let mut used_up: Vec<CardId> = Vec::new();
         for prevention_pass in [false, true] {
             for (_, host) in &hosts {
                 let h = self.card(*host);
@@ -548,8 +580,15 @@ impl GameState {
                     if !self.check_conditions(&r.conditions, &ctx) {
                         continue;
                     }
+                    if used_up.contains(host) {
+                        continue;
+                    }
                     amount = match &r.action {
                         DamageAction::Prevent => 0,
+                        DamageAction::PreventOnce => {
+                            used_up.push(*host);
+                            0
+                        }
                         DamageAction::Modify(e) => self.eval(e, &ctx),
                     };
                 }
@@ -565,6 +604,12 @@ impl GameState {
             let used = (*shield).min(amount.max(0) as u32);
             *shield -= used;
             amount -= used as i32;
+        }
+        // „das nächste Mal“: verbrauchte Effektobjekte verlassen die Befehlszone
+        for h in used_up {
+            if self.card(h).zone == Some(Zone::Command) {
+                self.move_card(h, Zone::Exile, true);
+            }
         }
         amount.max(0) as u32
     }
