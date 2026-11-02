@@ -29,6 +29,14 @@ pub enum Keyword {
     Devoid,
     /// CR 702.73: jeder Kreaturtyp (CDA, alle Zonen; in der Filterprüfung umgesetzt)
     Changeling,
+    /// CR 702.51: Kreaturen tappen, um Mana zu bezahlen
+    Convoke,
+    /// CR 702.126: Artefakte tappen, um generisches Mana zu bezahlen
+    Improvise,
+    /// CR 702.66: Karten aus dem Friedhof exilieren, um generisches Mana zu bezahlen
+    Delve,
+    /// CR 702.41: kostet {1} weniger je bleibender Karte des Typs (`Affinity:Artifact`)
+    Affinity(String),
     /// Nicht (oder noch nicht) typisiertes Keyword, Originaltext.
     Other(String),
 }
@@ -53,6 +61,14 @@ impl Keyword {
             "Shroud" => Keyword::Shroud,
             "Devoid" => Keyword::Devoid,
             "Changeling" => Keyword::Changeling,
+            "Convoke" => Keyword::Convoke,
+            "Improvise" => Keyword::Improvise,
+            "Delve" => Keyword::Delve,
+            t if t.starts_with("Affinity:")
+                && crate::valid::ValidSpec::parse(&t["Affinity:".len()..]).is_ok() =>
+            {
+                Keyword::Affinity(t["Affinity:".len()..].to_string())
+            }
             other => Keyword::Other(other.to_string()),
         }
     }

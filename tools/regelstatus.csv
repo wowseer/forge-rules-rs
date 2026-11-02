@@ -264,3 +264,8 @@ Effect (ApiType);SacrificeAll;teilweise;mass_effects::sacrifice_all_hits_every_p
 Effect (ApiType);Investigate;teilweise;mass_effects::investigate_creates_clue_that_draws;Clue-Token (CR 701.36), Num, Defined; Optional, RememberInvestigatingPlayers fehlen
 Effect (ApiType);Fog;ja;mass_effects::fog_prevents_combat_damage_only;CR 615: aller Kampfschaden dieses Zuges verhindert, anderer Schaden nicht
 Effect (ApiType);Proliferate;teilweise;mass_effects::proliferate_adds_one_of_each_kind_to_chosen;CR 701.27: beliebige bleibende Karten mit Marken und Spieler mit Giftmarken, je Art +1, Amount; Energie/Erfahrung der Spieler, RememberPut fehlen
+Keyword;Convoke;ja;cost_helpers::convoke_taps_creatures_for_colored_and_generic_mana, cost_helpers::convoke_green_creature_cannot_pay_red;CR 702.51a: getappte Kreatur zahlt {1} oder ein Symbol ihrer Farbe (auch Hybrid), vor dem Mana
+Mana Rule;Convoke payment;teilweise;cost_helpers::convoke_taps_creatures_for_colored_and_generic_mana;Zuordnung Kreatur→Symbol automatisch (wenigfarbige zuerst); X-Anteil nicht per Convoke zahlbar, Farbwahl des Spielers fehlt
+Keyword;Delve;ja;cost_helpers::delve_exiles_graveyard_cards_for_generic;CR 702.66a: exilierte Friedhofskarten zahlen je {1}, nur generisch
+Keyword;Improvise;ja;cost_helpers::improvise_taps_artifacts_for_generic_only;CR 702.126a: getappte Artefakte zahlen je {1}, nur generisch
+Keyword;Affinity;ja;cost_helpers::affinity_reduces_cost_per_artifact;CR 702.41a: {1} weniger je bleibender Karte des Typs unter eigener Kontrolle (Kostensenkung CR 601.2f)

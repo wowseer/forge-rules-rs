@@ -186,6 +186,12 @@ pub enum CardChoiceReason {
     ReturnCost,
     /// `ChooseCard`: Karten für einen Effekt wählen
     Choose,
+    /// CR 702.51: Kreaturen für Convoke tappen
+    Convoke,
+    /// CR 702.126: Artefakte für Improvise tappen
+    Improvise,
+    /// CR 702.66: Karten aus dem Friedhof für Delve exilieren
+    Delve,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -177,6 +177,14 @@ impl Controller for SimpleAi {
                 reason: CardChoiceReason::Search,
                 ..
             } => Choice::Cards(options[..*max as usize].to_vec()),
+            // Kostenhilfen voll nutzen (die Engine begrenzt `max` auf den Nutzen).
+            Decision::ChooseCards {
+                options,
+                max,
+                reason:
+                    CardChoiceReason::Convoke | CardChoiceReason::Improvise | CardChoiceReason::Delve,
+                ..
+            } => Choice::Cards(options[..(*max as usize).min(options.len())].to_vec()),
             Decision::ChooseCards {
                 options,
                 min,

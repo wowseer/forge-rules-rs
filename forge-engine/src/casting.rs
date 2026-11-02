@@ -420,7 +420,156 @@ impl GameState {
             .map(|m| m.shards.iter().filter(|s| s.phyrexian).count() as u32)
             .unwrap_or(0);
         let payable_with_life = phy.min((self.player(p).life.max(0) as u32) / 2);
-        mv.saturating_sub(payable_with_life) <= self.potential_mana(p)
+        mv.saturating_sub(payable_with_life + self.keyword_helper_potential(p, c))
+            <= self.potential_mana(p)
+    }
+
+    /// Obergrenze dessen, was Convoke/Improvise/Delve von `c` beitragen können.
+    fn keyword_helper_potential(&self, p: PlayerId, c: CardId) -> u32 {
+        let ch = self.chars(c);
+        let mut n = 0;
+        if ch.has(&Keyword::Convoke) || ch.has(&Keyword::Improvise) {
+            n += self
+                .battlefield_of(p)
+                .filter(|&x| {
+                    let xc = self.chars(x);
+                    !self.card(x).tapped
+                        && ((ch.has(&Keyword::Convoke)
+                            && xc.types.has_core(forge_types::CoreType::Creature))
+                            || (ch.has(&Keyword::Improvise)
+                                && xc.types.has_core(forge_types::CoreType::Artifact)))
+                })
+                .count() as u32;
+        }
+        if ch.has(&Keyword::Delve) {
+            n += self.player(p).graveyard.len() as u32;
+        }
+        n
+    }
+
+    /// CR 702.66 / 702.51 / 702.126: Delve, Convoke und Improvise senken die zu
+    /// zahlenden Manakosten, indem Karten exiliert bzw. getappt werden.
+    fn pay_with_keyword_helpers(
+        &mut self,
+        p: PlayerId,
+        spell: CardId,
+        cost: &mut ManaCost,
+        ch: &mut Choices,
+    ) -> Res<()> {
+        let chars = self.chars(spell);
+        // Delve: nur generisches Mana (CR 702.66a)
+        if chars.has(&Keyword::Delve) && cost.generic > 0 {
+            let options: Vec<CardId> = self
+                .player(p)
+                .graveyard
+                .iter()
+                .copied()
+                .filter(|&c| c != spell)
+                .collect();
+            if !options.is_empty() {
+                let max = cost.generic.min(options.len() as u32);
+                let chosen = match ch.ask(Decision::ChooseCards {
+                    player: p,
+                    reason: CardChoiceReason::Delve,
+                    options,
+                    min: 0,
+                    max,
+                })? {
+                    Choice::Cards(c) => c,
+                    _ => Vec::new(),
+                };
+                for c in chosen.into_iter().take(max as usize) {
+                    if self.card(c).zone == Some(Zone::Graveyard) {
+                        self.move_card(c, Zone::Exile, true);
+                        cost.generic -= 1;
+                    }
+                }
+            }
+        }
+        // Convoke: generisch oder ein Symbol in der Farbe der Kreatur (CR 702.51a)
+        if chars.has(&Keyword::Convoke) {
+            let options: Vec<CardId> = self
+                .battlefield_of(p)
+                .filter(|&c| {
+                    !self.card(c).tapped
+                        && self
+                            .chars(c)
+                            .types
+                            .has_core(forge_types::CoreType::Creature)
+                })
+                .collect();
+            let colored = cost
+                .shards
+                .iter()
+                .filter(|s| !s.x && !s.colors.is_colorless())
+                .count() as u32;
+            let useful = cost.generic + colored;
+            if !options.is_empty() && useful > 0 {
+                let max = useful.min(options.len() as u32);
+                let mut chosen = match ch.ask(Decision::ChooseCards {
+                    player: p,
+                    reason: CardChoiceReason::Convoke,
+                    options,
+                    min: 0,
+                    max,
+                })? {
+                    Choice::Cards(c) => c,
+                    _ => Vec::new(),
+                };
+                // Wenigfarbige zuerst, damit seltene Farben ihr Symbol finden.
+                chosen.sort_by_key(|&c| self.chars(c).colors.iter().count());
+                for c in chosen.into_iter().take(max as usize) {
+                    let colors = self.chars(c).colors;
+                    let shard = cost
+                        .shards
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, s)| !s.x && colors.iter().any(|col| s.colors.contains(col)))
+                        .min_by_key(|(_, s)| s.colors.iter().count())
+                        .map(|(i, _)| i);
+                    if let Some(i) = shard {
+                        cost.shards.remove(i);
+                    } else if cost.generic > 0 {
+                        cost.generic -= 1;
+                    } else {
+                        continue;
+                    }
+                    self.tap(c);
+                }
+            }
+        }
+        // Improvise: nur generisches Mana (CR 702.126a)
+        if chars.has(&Keyword::Improvise) && cost.generic > 0 {
+            let options: Vec<CardId> = self
+                .battlefield_of(p)
+                .filter(|&c| {
+                    !self.card(c).tapped
+                        && self
+                            .chars(c)
+                            .types
+                            .has_core(forge_types::CoreType::Artifact)
+                })
+                .collect();
+            if !options.is_empty() {
+                let max = cost.generic.min(options.len() as u32);
+                let chosen = match ch.ask(Decision::ChooseCards {
+                    player: p,
+                    reason: CardChoiceReason::Improvise,
+                    options,
+                    min: 0,
+                    max,
+                })? {
+                    Choice::Cards(c) => c,
+                    _ => Vec::new(),
+                };
+                for c in chosen.into_iter().take(max as usize) {
+                    if self.tap(c) {
+                        cost.generic -= 1;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// `ActivationLimit$`/`GameActivationLimit$` noch nicht erreicht?
@@ -720,8 +869,9 @@ impl GameState {
             None => Vec::new(),
         };
         // 601.2f: Kostenänderungen (zuerst Erhöhungen, dann Senkungen)
-        let mana_cost = self.adjusted_spell_cost(p, on_stack, &mana_cost);
-        // 601.2g–h
+        let mut mana_cost = self.adjusted_spell_cost(p, on_stack, &mana_cost);
+        // 601.2g–h (Convoke/Improvise/Delve vor dem Mana, Java `CostAdjustment.adjust`)
+        self.pay_with_keyword_helpers(p, on_stack, &mut mana_cost, ch)?;
         self.pay_mana_cost(p, &mana_cost, x, None, ch)?;
         // Zusatzkosten nach dem Mana (Java `Cost.sort`: Mana vor Zonenwechseln).
         let mut nonmana = spell_ab
@@ -1291,6 +1441,17 @@ impl GameState {
                 } else {
                     raise += n;
                 }
+            }
+        }
+        // CR 702.41: Affinity for … (Java: ReduceCost-Static auf dem Zauber selbst)
+        for k in &self.chars(spell).keywords {
+            if let Keyword::Affinity(spec) = k
+                && let Ok(v) = crate::valid::ValidSpec::parse(spec)
+            {
+                reduce += self
+                    .battlefield_of(caster)
+                    .filter(|&c| self.card_matches(c, &v, spell, caster))
+                    .count() as i32;
             }
         }
         let mut cost = base.clone();
