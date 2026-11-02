@@ -456,6 +456,13 @@ pub enum Effect {
         random: bool,
         remember: bool,
     },
+    /// Schutz bis Zugende verleihen (Java `ProtectEffect`); `choose`: der
+    /// Controller wählt eine Farbe (`Gains$ Choice | Choices$ AnyColor`).
+    Protection {
+        what: Defined,
+        fixed: Vec<Keyword>,
+        choose: bool,
+    },
     /// Würfeln (CR 706): Summe von `amount` Würfeln mit `sides` Seiten + `modifier`;
     /// je Ergebnisbereich eine Unterfähigkeit, Ergebnis optional als Laufzeitwert.
     RollDice {
@@ -1761,6 +1768,34 @@ fn compile_depth(
                 choices: ValidSpec::parse(c.get("Choices").unwrap_or("Player"))?,
                 random: flag(&mut c, "Random"),
                 remember: flag(&mut c, "RememberChosen"),
+            }
+        }
+        "Protection" => {
+            let what = c.defined(Defined::SelfCard)?;
+            let gains = c.get("Gains").unwrap_or("");
+            let (fixed, choose) = if gains == "Choice" {
+                match c.get("Choices") {
+                    Some("AnyColor") => (Vec::new(), true),
+                    v => return Err(c.unsupported("Choices", v.unwrap_or("fehlt"))),
+                }
+            } else {
+                let mut kws = Vec::new();
+                for g in gains.split(',').map(str::trim) {
+                    let kw = match forge_types::Color::from_name(g) {
+                        Some(_) => Keyword::parse(&format!("Protection from {g}")),
+                        None => Keyword::parse(&format!("Protection:{g}")),
+                    };
+                    if !kw.is_supported() {
+                        return Err(c.unsupported("Gains", gains));
+                    }
+                    kws.push(kw);
+                }
+                (kws, false)
+            };
+            Effect::Protection {
+                what,
+                fixed,
+                choose,
             }
         }
         "RollDice" => {

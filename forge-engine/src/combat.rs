@@ -251,6 +251,10 @@ impl GameState {
 
     /// Kann `blocker` `attacker` blocken (Einzelprüfung)? CR 702.9b Flying.
     pub fn can_block(&self, blocker: CardId, attacker: CardId) -> bool {
+        // CR 702.16e: nicht von Kreaturen mit der Eigenschaft blockbar
+        if self.protected_from(attacker, blocker) {
+            return false;
+        }
         if self.has_keyword(attacker, &Keyword::Flying)
             && !self.has_keyword(blocker, &Keyword::Flying)
             && !self.has_keyword(blocker, &Keyword::Reach)

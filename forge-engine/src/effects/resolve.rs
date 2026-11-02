@@ -1483,6 +1483,36 @@ impl GameState {
                     }
                 }
             }
+            Effect::Protection {
+                what,
+                fixed,
+                choose,
+            } => {
+                let mut kws = fixed.clone();
+                if *choose {
+                    let options: Vec<forge_types::Color> = forge_types::Color::ALL.to_vec();
+                    let col = match ch.ask(Decision::ChooseColor {
+                        player: ctx.controller,
+                        options: options.clone(),
+                    })? {
+                        Choice::Color(c) if options.contains(&c) => c,
+                        _ => options[0],
+                    };
+                    kws.push(crate::keyword::Keyword::Protection(
+                        crate::keyword::ProtectionFrom::Color(col),
+                    ));
+                }
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let timestamp = self.timestamp();
+                    self.effects.push(ContinuousEffect {
+                        affected: c,
+                        keywords: kws.clone(),
+                        duration: Duration::UntilEndOfTurn,
+                        timestamp,
+                        ..Default::default()
+                    });
+                }
+            }
             Effect::RollDice {
                 sides,
                 amount,

@@ -534,6 +534,12 @@ impl GameState {
         if combat && self.this_turn.prevent_combat_damage {
             return 0;
         }
+        // CR 702.16c: Schaden von Quellen mit der Eigenschaft wird verhindert
+        if let Target::Card(c) = target
+            && self.protected_from(c, source)
+        {
+            return 0;
+        }
         let mut hosts: Vec<(u64, CardId)> = self
             .live_cards()
             .map(|id| self.card(id))

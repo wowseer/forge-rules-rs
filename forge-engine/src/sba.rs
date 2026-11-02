@@ -296,6 +296,7 @@ impl GameState {
                 // 704.5m: Aura an nichts oder an illegalem Objekt → Friedhof
                 let legal = c.attached_to.is_some_and(|t| {
                     target_ok(t)
+                        && !self.protected_from(t, id) // CR 702.16d
                         && c.compiled()
                             .enchant
                             .as_ref()
@@ -307,7 +308,11 @@ impl GameState {
             } else if let Some(t) = c.attached_to {
                 // 704.5n: Ausrüstung an Nicht-Kreatur/weg → lösen; 704.5p: andere → lösen
                 let is_equipment = ch.types.has_subtype("Equipment");
-                if !is_equipment || !target_ok(t) || !self.is_creature(t) {
+                if !is_equipment
+                    || !target_ok(t)
+                    || !self.is_creature(t)
+                    || self.protected_from(t, id)
+                {
                     unattach.push(id);
                 }
             }

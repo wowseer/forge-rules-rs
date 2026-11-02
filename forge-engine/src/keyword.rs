@@ -39,6 +39,8 @@ pub enum Keyword {
     Affinity(String),
     /// CR 702.33: `Kicker:<Kosten>[:<zweite Kosten>]` (Originaltext der Kosten)
     Kicker(Vec<String>),
+    /// CR 702.16: Protection
+    Protection(ProtectionFrom),
     /// `HIDDEN CARDNAME can't block.` (meist bis Zugende verliehen)
     CantBlock,
     /// `HIDDEN CARDNAME can't attack.`
@@ -50,6 +52,18 @@ pub enum Keyword {
     NoUntapNext,
     /// Nicht (oder noch nicht) typisiertes Keyword, Originaltext.
     Other(String),
+}
+
+/// Wovor ein Objekt geschützt ist (CR 702.16a).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ProtectionFrom {
+    Color(forge_types::Color),
+    /// „from each color“ / „from all colors“
+    AllColors,
+    /// „from everything“ (CR 702.16j)
+    Everything,
+    /// `Protection:<Filter>[:<Text>]` – Filter auf die Quelle (Text des Filters)
+    Valid(String),
 }
 
 impl Keyword {
@@ -81,6 +95,28 @@ impl Keyword {
             "Convoke" => Keyword::Convoke,
             "Improvise" => Keyword::Improvise,
             "Delve" => Keyword::Delve,
+            t if t.starts_with("Protection from ") => {
+                let what = &t["Protection from ".len()..];
+                match what {
+                    "everything" => Keyword::Protection(ProtectionFrom::Everything),
+                    "each color" | "all colors" => Keyword::Protection(ProtectionFrom::AllColors),
+                    c => match forge_types::Color::from_name(c) {
+                        Some(col) => Keyword::Protection(ProtectionFrom::Color(col)),
+                        None => Keyword::Other(t.to_string()),
+                    },
+                }
+            }
+            t if t.starts_with("Protection:") => {
+                let spec = t["Protection:".len()..].split(':').next().unwrap_or("");
+                if !spec.contains("Chosen")
+                    && !spec.contains("UID")
+                    && crate::valid::ValidSpec::parse(spec).is_ok_and(|v| !v.allows_players())
+                {
+                    Keyword::Protection(ProtectionFrom::Valid(spec.to_string()))
+                } else {
+                    Keyword::Other(t.to_string())
+                }
+            }
             t if t.starts_with("Kicker:")
                 && t["Kicker:".len()..]
                     .split(':')

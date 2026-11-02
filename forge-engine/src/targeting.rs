@@ -9,6 +9,9 @@ use crate::valid::{Alternative, CardBase, PlayerBase, Prop, ValidSpec};
 use crate::zone::Zone;
 
 thread_local! {
+    /// Geparste Protection-Filter (Text → Filter).
+    static PROT_SPECS: std::cell::RefCell<std::collections::HashMap<String, ValidSpec>> =
+        Default::default();
     /// Angenommenes X für Filtervariablen während Wirkbarkeitsprüfungen.
     static ASSUMED_X: std::cell::Cell<Option<u32>> = const { std::cell::Cell::new(None) };
 }
@@ -211,6 +214,39 @@ impl GameState {
         )
     }
 
+    /// CR 702.16: Ist `card` vor der Quelle `source` geschützt?
+    pub fn protected_from(&self, card: CardId, source: CardId) -> bool {
+        use crate::keyword::ProtectionFrom;
+        let ch = self.chars(card);
+        let prots: Vec<&ProtectionFrom> = ch
+            .keywords
+            .iter()
+            .filter_map(|k| match k {
+                Keyword::Protection(p) => Some(p),
+                _ => None,
+            })
+            .collect();
+        if prots.is_empty() || card == source {
+            return false;
+        }
+        let src = self.chars(source);
+        let ctrl = self.card(card).controller;
+        prots.iter().any(|p| match p {
+            ProtectionFrom::Color(c) => src.colors.contains(*c),
+            ProtectionFrom::AllColors => !src.colors.is_colorless(),
+            ProtectionFrom::Everything => true,
+            ProtectionFrom::Valid(spec) => PROT_SPECS.with(|m| {
+                let mut m = m.borrow_mut();
+                let v = m.entry(spec.clone()).or_insert_with(|| {
+                    ValidSpec::parse(spec).unwrap_or(ValidSpec {
+                        alternatives: vec![],
+                    })
+                });
+                self.card_matches_with(source, &src, v, card, ctrl)
+            }),
+        })
+    }
+
     /// Prüft `f` mit angenommenem X (Wirkbarkeit vor der Wahl von X, CR 601.2b).
     pub(crate) fn with_assumed_x<T>(&self, x: u32, f: impl FnOnce() -> T) -> T {
         let prev = ASSUMED_X.with(|a| a.replace(Some(x)));
@@ -325,6 +361,10 @@ impl GameState {
                 }
                 // Fluchsicherheit/Verhüllung wirken nur auf bleibende Karten (CR 702.11a, 702.18a).
                 if zone == Zone::Battlefield {
+                    // CR 702.16b: nicht Ziel von Quellen mit der Eigenschaft
+                    if self.protected_from(c, source) {
+                        return false;
+                    }
                     if self.has_keyword(c, &Keyword::Shroud) {
                         return false;
                     }
