@@ -224,6 +224,7 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Curse Aura Lite\nManaCost:B\nTypes:Enchantment Aura\nK:Enchant:Creature\nT:Mode$ Phase | Phase$ Upkeep | ValidPlayer$ Player.EnchantedController | TriggerZones$ Battlefield | Execute$ TrigLose | TriggerDescription$ x\nSVar:TrigLose:DB$ LoseLife | Defined$ TriggeredPlayer | LifeAmount$ 1\nOracle:\n",
     "Name:Zenith Lite\nManaCost:X G\nTypes:Sorcery\nA:SP$ ChangeZone | Origin$ Library | Destination$ Battlefield | ChangeType$ Creature.cmcLEX | ChangeNum$ 1 | SpellDescription$ x\nSVar:X:Count$xPaid\nOracle:\n",
     "Name:Decay Lite\nManaCost:X B\nTypes:Sorcery\nA:SP$ Destroy | ValidTgts$ Creature.cmcLEX | SpellDescription$ x\nSVar:X:Count$xPaid\nOracle:\n",
+    "Name:Cleric Wizard Lite\nManaCost:1 W U\nTypes:Creature Human Cleric Wizard\nPT:2/2\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",

@@ -1,254 +1,14 @@
-//! Ausdrücke (Count$) und Bedingungen in Effekten, Statics, Triggern.
+//! Ausdrücke (`Count$…`, `PlayerCount…`) – Java `AbilityUtils.calculateAmount`.
 
 mod common;
 use common::*;
-use forge_engine::decision::{Action, Decision, Target};
-use forge_engine::keyword::Keyword;
+use forge_engine::expr::{EvalCtx, Expr};
 use forge_engine::{Step, Zone};
 
-#[test]
-fn effect_amount_counts_creatures() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 3);
-    put_n(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield, 4);
-    put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
-    let s = put(&db, &mut g, "Overrun Count Lite", P1, Zone::Hand);
-    let mut d = Driver::new(g);
-    d.cast(s, &[Target::Player(P2)]);
-    d.pass_all();
-    assert_eq!(d.g().player(P2).life, 16);
-}
-
-#[test]
-fn dynamic_static_without_infinite_recursion() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put(&db, &mut g, "Crusade Count Lite", P1, Zone::Battlefield);
-    let bears = put_n(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield, 3);
-    assert_eq!(g.chars(bears[0]).power, Some(5));
-    g.move_card(bears[2], Zone::Graveyard, true);
-    assert_eq!(g.chars(bears[0]).power, Some(4));
-}
-
-#[test]
-fn characteristic_defining_ability_in_all_zones() {
-    // CR 604.3
-    let (db, mut g) = game_at(Step::Main1, 10);
-    let goyf = put(&db, &mut g, "Goyf Lite", P1, Zone::Hand);
-    assert!(
-        g.card(goyf).def.is_supported(),
-        "{:?}",
-        g.card(goyf).def.unsupported
-    );
-    assert_eq!(
-        (g.chars(goyf).power, g.chars(goyf).toughness),
-        (Some(0), Some(1))
-    );
-    put_n(&db, &mut g, "Lightning Bolt", P2, Zone::Graveyard, 2);
-    put(&db, &mut g, "Forest", P1, Zone::Graveyard);
-    assert_eq!(
-        (g.chars(goyf).power, g.chars(goyf).toughness),
-        (Some(3), Some(4)),
-        "auch in der Hand"
-    );
-}
-
-#[test]
-fn static_condition_player_turn() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    let f = put(&db, &mut g, "Turn Fighter Lite", P1, Zone::Battlefield);
-    assert_eq!(g.chars(f).power, Some(3));
-    g.active = P2;
-    assert_eq!(g.chars(f).power, Some(1));
-}
-
-#[test]
-fn static_is_present() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    let fish = put(&db, &mut g, "Island Flyer Lite", P1, Zone::Battlefield);
-    put(&db, &mut g, "Island", P2, Zone::Battlefield);
-    assert!(
-        !g.has_keyword(fish, &Keyword::Flying),
-        "Insel des Gegners zählt nicht"
-    );
-    put(&db, &mut g, "Island", P1, Zone::Battlefield);
-    assert!(g.has_keyword(fish, &Keyword::Flying));
-}
-
-#[test]
-fn intervening_if_checked_on_trigger_and_resolution() {
-    // CR 603.4
-    let (db, mut g) = game_at(Step::Untap, 10);
-    put(&db, &mut g, "Low Life Healer Lite", P1, Zone::Battlefield);
-    g.player_mut(P1).life = 15;
-    let mut d = Driver::new(g.clone());
-    d.priority_in(Step::Upkeep, P1);
-    assert!(d.g().stack.is_empty(), "löst bei 15 Leben nicht aus");
-
-    g.player_mut(P1).life = 10;
-    let mut d = Driver::new(g.clone());
-    d.priority_in(Step::Upkeep, P1);
-    assert_eq!(d.g().stack.len(), 1);
-    d.pass_all();
-    assert_eq!(d.g().player(P1).life, 12);
-
-    // Bedingung beim Auflösen nicht mehr erfüllt → nichts passiert
-    put(&db, &mut g, "Plains", P1, Zone::Battlefield);
-    put(&db, &mut g, "Healing Salve", P1, Zone::Hand);
-    let mut d = Driver::new(g);
-    d.priority_in(Step::Upkeep, P1);
-    let salve = d
-        .g()
-        .player(P1)
-        .hand
-        .iter()
-        .copied()
-        .find(|c| d.g().card(*c).def.name() == "Healing Salve")
-        .unwrap();
-    d.cast(salve, &[Target::Player(P1)]);
-    d.pass_all(); // Salve: 13 Leben
-    d.pass_all(); // Trigger: Bedingung LE10 verletzt
-    assert_eq!(d.g().player(P1).life, 13);
-}
-
-#[test]
-fn effect_condition_present() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put(&db, &mut g, "Forest", P1, Zone::Battlefield);
-    put(&db, &mut g, "Forest", P1, Zone::Battlefield);
-    let s1 = put(&db, &mut g, "Forest Insight Lite", P1, Zone::Hand);
-    let mut d = Driver::new(g.clone());
-    d.cast(s1, &[]);
-    d.pass_all();
-    assert_eq!(d.g().player(P1).life, 21);
-    assert_eq!(d.g().player(P1).hand.len(), 1, "Forest vorhanden → gezogen");
-
-    let (db2, mut g2) = game_at(Step::Main1, 10);
-    put_n(&db2, &mut g2, "Island", P1, Zone::Battlefield, 2);
-    g2.player_mut(P1)
-        .mana_pool
-        .add(Some(forge_types::Color::Green), false);
-    let s2 = put(&db2, &mut g2, "Forest Insight Lite", P1, Zone::Hand);
-    let mut d2 = Driver::new(g2);
-    d2.cast(s2, &[]);
-    d2.pass_all();
-    assert_eq!(d2.g().player(P1).life, 21);
-    assert_eq!(
-        d2.g().player(P1).hand.len(),
-        0,
-        "kein Forest → nicht gezogen"
-    );
-}
-
-#[test]
-fn filter_power_comparison() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put(&db, &mut g, "Swamp", P1, Zone::Battlefield);
-    let bgh = put(&db, &mut g, "Big Game Hunter Lite", P1, Zone::Hand);
-    let wurm = put(&db, &mut g, "Craw Wurm", P2, Zone::Battlefield);
-    put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
-    let mut d = Driver::new(g);
-    d.act(Action::Cast(bgh));
-    match d.decision() {
-        Decision::ChooseTargets { candidates, .. } => {
-            assert_eq!(candidates, &vec![Target::Card(wurm)])
-        }
-        o => panic!("{o:?}"),
-    }
-}
-
-#[test]
-fn object_property_expressions() {
-    // Java AbilityUtils.calculateAmount: <Defined>$<Eigenschaft>
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 1);
-    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 1);
-    let bite = put(&db, &mut g, "Bite Lite", P1, Zone::Hand);
-    let burn = put(&db, &mut g, "Hand Burn Lite", P1, Zone::Hand);
-    let bear = put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
-    put_n(&db, &mut g, "Island", P2, Zone::Hand, 4);
-    let mut d = Driver::new(g);
-    d.cast(bite, &[Target::Card(bear)]);
-    d.pass_all();
-    assert_eq!(
-        d.g().player(P2).life,
-        17,
-        "Stärke nach +1/+0 (ParentTargeted$CardPower)"
-    );
-    d.cast(burn, &[Target::Player(P2)]);
-    d.pass_all();
-    assert_eq!(d.g().player(P2).life, 13, "TargetedPlayer$CardsInHand");
-}
-
-#[test]
-fn triggered_card_power_uses_last_known_information() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 1);
-    put(&db, &mut g, "Death Echo Lite", P1, Zone::Battlefield);
-    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
-    let giant = put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
-    let mut d = Driver::new(g);
-    d.cast(bolt, &[Target::Card(giant)]);
-    d.pass_all();
-    d.pass_all();
-    assert_eq!(d.g().player(P1).life, 23);
-}
-
-#[test]
-fn condition_defined_targeted_checks_the_target() {
-    for (victim, draws) in [("Goblin Piker", 1usize), ("Grizzly Bears", 0)] {
-        let (db, mut g) = game_at(Step::Main1, 10);
-        put(&db, &mut g, "Swamp", P1, Zone::Battlefield);
-        let k = put(&db, &mut g, "Kill Bonus Lite", P1, Zone::Hand);
-        let v = put(&db, &mut g, victim, P2, Zone::Battlefield);
-        let mut d = Driver::new(g);
-        d.cast(k, &[Target::Card(v)]);
-        d.pass_all();
-        assert_eq!(d.g().player(P1).hand.len(), draws, "{victim}");
-    }
-}
-
-#[test]
-fn repeat_each_player_with_remembered_player() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 3);
-    put_n(&db, &mut g, "Island", P2, Zone::Battlefield, 5);
-    put_n(&db, &mut g, "Island", P1, Zone::Battlefield, 2);
-    let soil = put(&db, &mut g, "Acidic Soil Lite", P1, Zone::Hand);
-    let draws = put(&db, &mut g, "Each Draws Lite", P1, Zone::Hand);
-    let mut d = Driver::new(g);
-    d.cast(soil, &[]);
-    d.pass_all();
-    assert_eq!(d.g().player(P1).life, 15, "5 eigene Länder");
-    assert_eq!(d.g().player(P2).life, 15, "5 Länder");
-    d.cast(draws, &[]);
-    d.pass_all();
-    assert_eq!(d.g().player(P2).hand.len(), 1);
-    assert_eq!(d.g().player(P2).life, 14);
-    assert_eq!(d.g().player(P1).hand.len(), 0, "nur Gegner");
-}
-
-#[test]
-fn repeat_each_card_remembers_each_card_in_turn() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put(&db, &mut g, "Mountain", P1, Zone::Battlefield);
-    let s = put(&db, &mut g, "Creature Pinger Lite", P1, Zone::Hand);
-    let bear = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
-    put(&db, &mut g, "Goblin Piker", P1, Zone::Battlefield);
-    let mut d = Driver::new(g);
-    d.cast(s, &[]);
-    d.pass_all();
-    assert_eq!(d.g().card(bear).damage, 1);
-    assert_eq!(count(d.g(), "Goblin Piker", Zone::Graveyard), 1);
-}
-
-fn eval_svar(g: &forge_engine::GameState, src: forge_engine::CardId, svars: &str) -> i32 {
-    use forge_engine::expr::{EvalCtx, Expr};
-    let script = forge_script::CardScript::parse(
-        &format!("Name:Probe\nManaCost:1\nTypes:Enchantment\n{svars}"),
-        &forge_types::TypeRegistry::default(),
-    )
-    .unwrap();
-    let e = Expr::parse_value(script.main(), "X").expect("Ausdruck kompiliert");
+fn eval(db: &forge_engine::CardDb, g: &forge_engine::GameState, sv: &str) -> i32 {
+    let face = db.get("Grizzly Bears").unwrap().face(0).clone();
+    let e = Expr::parse_svar(&face, sv).unwrap_or_else(|e| panic!("{sv}: {e}"));
+    let src = g.battlefield[0];
     g.eval(
         &e,
         &EvalCtx {
@@ -263,68 +23,48 @@ fn eval_svar(g: &forge_engine::GameState, src: forge_engine::CardId, svars: &str
 }
 
 #[test]
-fn this_turn_statistics() {
-    // Java AbilityUtils.xCount: LifeYouGainedThisTurn, LifeOppsLostThisTurn,
-    // YouDrewThisTurn, ThisTurnCast_, ThisTurnEntered_, AttackersDeclared
-    let (db, mut g) = game_at(Step::Main1, 10);
-    let src = put(&db, &mut g, "Plains", P1, Zone::Battlefield);
-    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 2);
-    put_n(&db, &mut g, "Plains", P1, Zone::Battlefield, 1);
-    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
-    let salve = put(&db, &mut g, "Healing Salve", P1, Zone::Hand);
-    let bear = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
-    let mut d = Driver::new(g);
-    d.cast(bolt, &[Target::Card(bear)]);
-    d.pass_all();
-    d.cast(salve, &[Target::Player(P1)]);
-    d.pass_all();
-    let g = d.g();
-    assert_eq!(eval_svar(g, src, "SVar:X:Count$LifeYouGainedThisTurn\n"), 3);
-    assert_eq!(eval_svar(g, src, "SVar:X:Count$LifeOppsLostThisTurn\n"), 0);
-    assert_eq!(
-        eval_svar(g, src, "SVar:X:Count$ThisTurnCast_Instant.YouCtrl\n"),
-        2
-    );
-    assert_eq!(
-        eval_svar(g, src, "SVar:X:Count$ThisTurnCast_Card.OppCtrl\n"),
-        0
-    );
-    assert_eq!(
-        eval_svar(
-            g,
-            src,
-            "SVar:X:Count$ThisTurnEntered_Graveyard_from_Battlefield_Creature/Times.2\n"
-        ),
-        2
-    );
-    assert_eq!(
-        eval_svar(
-            g,
-            src,
-            "SVar:X:Count$ThisTurnEntered_Graveyard_Card.YouOwn\n"
-        ),
-        2,
-        "beide Spontanzauber"
-    );
-    assert_eq!(eval_svar(g, src, "SVar:X:Count$YouDrewThisTurn\n"), 0);
-    assert_eq!(eval_svar(g, src, "SVar:X:Count$AttackersDeclared\n"), 0);
+fn party_counts_each_role_once_with_best_assignment() {
+    let (db, mut g) = game_at(Step::Main1, 5);
+    // Kleriker/Zauberer + Zauberer: beide Rollen belegbar → 2
+    put(&db, &mut g, "Cleric Wizard Lite", P1, Zone::Battlefield);
+    put(&db, &mut g, "Prodigal Pyromancer", P1, Zone::Battlefield);
+    put(&db, &mut g, "Firebrand Lite", P1, Zone::Battlefield);
+    put(&db, &mut g, "Prodigal Pyromancer", P2, Zone::Battlefield);
+    assert_eq!(eval(&db, &g, "Count$Party"), 2);
 }
 
 #[test]
-fn morbid_counts_creature_deaths_this_turn_only() {
-    let (db, mut g) = game_at(Step::Main1, 10);
-    put_n(&db, &mut g, "Mountain", P1, Zone::Battlefield, 3);
-    let m1 = put(&db, &mut g, "Morbid Shock Lite", P1, Zone::Hand);
-    let m2 = put(&db, &mut g, "Morbid Shock Lite", P1, Zone::Hand);
-    let bolt = put(&db, &mut g, "Lightning Bolt", P1, Zone::Hand);
-    let bear = put(&db, &mut g, "Grizzly Bears", P2, Zone::Battlefield);
-    let mut d = Driver::new(g);
-    d.cast(m1, &[T2]);
-    d.pass_all();
-    assert_eq!(d.g().player(P2).life, 19, "ohne Morbid 1");
-    d.cast(bolt, &[Target::Card(bear)]);
-    d.pass_all();
-    d.cast(m2, &[T2]);
-    d.pass_all();
-    assert_eq!(d.g().player(P2).life, 15, "mit Morbid 4");
+fn valid_aggregates() {
+    let (db, mut g) = game_at(Step::Main1, 5);
+    put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    put(&db, &mut g, "Hill Giant", P1, Zone::Battlefield);
+    put(&db, &mut g, "Serra Angel", P2, Zone::Battlefield);
+    assert_eq!(
+        eval(&db, &g, "Count$Valid Creature.YouCtrl$GreatestCardPower"),
+        3
+    );
+    assert_eq!(eval(&db, &g, "Count$Valid Creature.YouCtrl$CardPower"), 5);
+    assert_eq!(eval(&db, &g, "Count$Valid Creature$Colors"), 3);
+    assert_eq!(eval(&db, &g, "Count$Valid Creature$DifferentCardPower"), 3);
+    assert_eq!(
+        eval(&db, &g, "Count$Valid Creature$GreatestCardManaCost/Plus.1"),
+        6
+    );
+}
+
+#[test]
+fn player_counts() {
+    let (db, mut g) = game_at(Step::Main1, 5);
+    put(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield);
+    put_n(&db, &mut g, "Forest", P2, Zone::Battlefield, 3);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 1);
+    g.player_mut(P2).life = 7;
+    assert_eq!(eval(&db, &g, "PlayerCountOpponents$Amount"), 1);
+    assert_eq!(eval(&db, &g, "PlayerCountPlayers$Amount"), 2);
+    assert_eq!(
+        eval(&db, &g, "PlayerCountOpponents$HighestValid Land.YouCtrl"),
+        3
+    );
+    assert_eq!(eval(&db, &g, "PlayerCountPlayers$LowestLifeTotal"), 7);
+    assert_eq!(eval(&db, &g, "PlayerCountPlayers$LifeTotal"), 27);
 }

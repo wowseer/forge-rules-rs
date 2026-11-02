@@ -14,7 +14,12 @@ thread_local! {
 }
 
 impl GameState {
-    fn card_base_matches(&self, id: CardId, ch: &Characteristics, base: &CardBase) -> bool {
+    pub(crate) fn card_base_matches(
+        &self,
+        id: CardId,
+        ch: &Characteristics,
+        base: &CardBase,
+    ) -> bool {
         match base {
             CardBase::Card => true,
             CardBase::Permanent => {

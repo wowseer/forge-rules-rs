@@ -82,7 +82,114 @@ pub enum Expr {
     },
     /// `Count$Morbid.<ja>.<nein>`: starb in diesem Zug eine Kreatur?
     Morbid(Box<Expr>, Box<Expr>),
+    /// `Count$Valid <Filter>$<Aggregat>`: Wert über die passenden Karten.
+    ValidAgg {
+        zones: Vec<Zone>,
+        spec: ValidSpec,
+        agg: Agg,
+    },
+    /// `PlayerCount<Gruppe>$…` (Java `playerXCount`)
+    PlayerCount {
+        group: PlayerGroup,
+        prop: PlayerAgg,
+    },
+    /// `Count$Party` (CR 700.8): Kleriker, Schurke, Krieger, Zauberer – je höchstens einer.
+    Party,
+    /// `Count$RememberedSize`: gemerkte Objekte (Karten und Spieler) der Quelle.
+    RememberedSize,
     Math(Box<Expr>, MathOp, Box<Expr>),
+}
+
+/// Aggregat über Karten (`$GreatestCardPower`, `$Colors` …).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Agg {
+    SumPower,
+    SumToughness,
+    SumManaValue,
+    GreatestPower,
+    GreatestToughness,
+    GreatestManaValue,
+    /// Anzahl verschiedener Farben insgesamt
+    Colors,
+    DifferentPower,
+    DifferentManaValue,
+    DifferentNames,
+    /// Anzahl verschiedener Kartentypen insgesamt
+    CardTypes,
+}
+
+impl Agg {
+    fn parse(s: &str) -> Option<Agg> {
+        Some(match s {
+            "CardPower" => Agg::SumPower,
+            "CardToughness" => Agg::SumToughness,
+            "CardManaCost" => Agg::SumManaValue,
+            "GreatestCardPower" => Agg::GreatestPower,
+            "GreatestCardToughness" => Agg::GreatestToughness,
+            "GreatestCardManaCost" => Agg::GreatestManaValue,
+            "Colors" => Agg::Colors,
+            "DifferentCardPower" => Agg::DifferentPower,
+            "DifferentCardManaCost" => Agg::DifferentManaValue,
+            "DifferentCardNames" => Agg::DifferentNames,
+            "CardTypes" => Agg::CardTypes,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlayerGroup {
+    /// alle Spieler im Spiel
+    Players,
+    Opponents,
+}
+
+/// Was über die Spieler einer Gruppe berechnet wird.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PlayerAgg {
+    Amount,
+    Sum(PlayerQty),
+    Highest(PlayerQty),
+    Lowest(PlayerQty),
+}
+
+/// Spielerbezogene Größe (Java `playerXProperty`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PlayerQty {
+    /// Passende Karten in Zonen aus Sicht des Spielers (`YouCtrl` = er).
+    Valid {
+        zones: Vec<Zone>,
+        spec: ValidSpec,
+    },
+    LifeTotal,
+    CardsInHand,
+    CardsInGraveyard,
+}
+
+impl PlayerQty {
+    fn parse(s: &str) -> Option<PlayerQty> {
+        Some(match s {
+            "LifeTotal" => PlayerQty::LifeTotal,
+            "CardsInHand" => PlayerQty::CardsInHand,
+            "CardsInGraveyard" => PlayerQty::CardsInGraveyard,
+            _ => {
+                let rest = s.strip_prefix("Valid")?;
+                let (zone_part, spec) = rest.split_once(' ')?;
+                let zones = if zone_part.is_empty() {
+                    vec![Zone::Battlefield]
+                } else {
+                    zone_part
+                        .split(',')
+                        .map(Zone::parse)
+                        .collect::<Option<Vec<_>>>()?
+                };
+                PlayerQty::Valid {
+                    zones,
+                    spec: ValidSpec::parse(spec).ok()?,
+                }
+            }
+        })
+    }
 }
 
 /// Objekte eines `<Objekte>$…`-Ausdrucks.
@@ -303,6 +410,28 @@ impl Expr {
                 (Expr::parse_count(main).ok_or_else(|| bad("Count", sv))?, op)
             }
         } else if let Some((head, rest)) = sv.split_once('$')
+            && let Some(group) = head.strip_prefix("PlayerCount")
+        {
+            let group = match group {
+                "Players" | "" => PlayerGroup::Players,
+                "Opponents" | "Other" => PlayerGroup::Opponents,
+                _ => return Err(bad("SVar", sv)),
+            };
+            let (main, op) = match rest.split_once('/') {
+                Some((m, o)) => (m, Some(o)),
+                None => (rest, None),
+            };
+            let prop = if main == "Amount" {
+                PlayerAgg::Amount
+            } else if let Some(q) = main.strip_prefix("Highest") {
+                PlayerAgg::Highest(PlayerQty::parse(q).ok_or_else(|| bad("SVar", sv))?)
+            } else if let Some(q) = main.strip_prefix("Lowest") {
+                PlayerAgg::Lowest(PlayerQty::parse(q).ok_or_else(|| bad("SVar", sv))?)
+            } else {
+                PlayerAgg::Sum(PlayerQty::parse(main).ok_or_else(|| bad("SVar", sv))?)
+            };
+            (Expr::PlayerCount { group, prop }, op)
+        } else if let Some((head, rest)) = sv.split_once('$')
             && let Some(objs) = ObjRef::parse(head)
         {
             let (main, op) = match rest.split_once('/') {
@@ -350,6 +479,13 @@ impl Expr {
                     .map(Zone::parse)
                     .collect::<Option<Vec<_>>>()?
             };
+            if let Some((spec, agg)) = spec.split_once('$') {
+                return Some(Expr::ValidAgg {
+                    zones,
+                    spec: ValidSpec::parse(spec).ok()?,
+                    agg: Agg::parse(agg)?,
+                });
+            }
             return Some(Expr::CountValid {
                 zones,
                 spec: ValidSpec::parse(spec).ok()?,
@@ -387,6 +523,8 @@ impl Expr {
             "LifeOppsLostThisTurn" => Expr::OppsLifeLostThisTurn,
             "YouDrewThisTurn" => Expr::DrewThisTurn,
             "AttackersDeclared" => Expr::AttackersDeclared,
+            "Party" => Expr::Party,
+            "RememberedSize" => Expr::RememberedSize,
             _ => return None,
         })
     }
@@ -606,6 +744,59 @@ impl Drop for DepthGuard {
 }
 
 impl GameState {
+    /// Aggregat über Karten (`Count$Valid …$<Agg>`, Java `CardLists`-Hilfen).
+    pub(crate) fn aggregate(&self, cards: &[CardId], agg: Agg) -> i32 {
+        let chs: Vec<_> = cards.iter().map(|c| self.chars(*c)).collect();
+        let mv = |c: &crate::state::Characteristics| {
+            c.mana_cost.as_ref().map_or(0, |m| m.mana_value() as i32)
+        };
+        let distinct = |mut v: Vec<i64>| {
+            v.sort();
+            v.dedup();
+            v.len() as i32
+        };
+        match agg {
+            Agg::SumPower => chs.iter().map(|c| c.power.unwrap_or(0)).sum(),
+            Agg::SumToughness => chs.iter().map(|c| c.toughness.unwrap_or(0)).sum(),
+            Agg::SumManaValue => chs.iter().map(mv).sum(),
+            Agg::GreatestPower => chs.iter().filter_map(|c| c.power).max().unwrap_or(0),
+            Agg::GreatestToughness => chs.iter().filter_map(|c| c.toughness).max().unwrap_or(0),
+            Agg::GreatestManaValue => chs.iter().map(mv).max().unwrap_or(0),
+            Agg::Colors => chs
+                .iter()
+                .fold(forge_types::ColorSet::COLORLESS, |a, c| a.union(c.colors))
+                .iter()
+                .count() as i32,
+            Agg::DifferentPower => {
+                distinct(chs.iter().filter_map(|c| c.power.map(i64::from)).collect())
+            }
+            Agg::DifferentManaValue => distinct(chs.iter().map(|c| i64::from(mv(c))).collect()),
+            Agg::DifferentNames => {
+                let mut v: Vec<&str> = chs.iter().map(|c| c.name.as_str()).collect();
+                v.sort();
+                v.dedup();
+                v.len() as i32
+            }
+            Agg::CardTypes => {
+                use forge_types::CoreType::*;
+                [
+                    Artifact,
+                    Battle,
+                    Creature,
+                    Enchantment,
+                    Instant,
+                    Kindred,
+                    Land,
+                    Planeswalker,
+                    Sorcery,
+                ]
+                .iter()
+                .filter(|t| chs.iter().any(|c| c.types.has_core(**t)))
+                .count() as i32
+            }
+        }
+    }
+
     pub(crate) fn cards_in_zones(&self, zones: &[Zone], players: &[PlayerId]) -> Vec<CardId> {
         let mut v = Vec::new();
         for z in zones {
@@ -725,6 +916,93 @@ impl GameState {
                     .into_iter()
                     .filter(|c| self.card_matches(*c, spec, ctx.source, ctx.controller))
                     .count() as i32
+            }
+            Expr::ValidAgg { zones, spec, agg } => {
+                let all = self.players_from(self.active);
+                let cards: Vec<CardId> = self
+                    .cards_in_zones(zones, &all)
+                    .into_iter()
+                    .filter(|c| self.card_matches(*c, spec, ctx.source, ctx.controller))
+                    .collect();
+                self.aggregate(&cards, *agg)
+            }
+            Expr::PlayerCount { group, prop } => {
+                let players: Vec<PlayerId> = match group {
+                    PlayerGroup::Players => self
+                        .players_from(self.active)
+                        .into_iter()
+                        .filter(|p| self.player(*p).is_in_game())
+                        .collect(),
+                    PlayerGroup::Opponents => self.opponents(ctx.controller),
+                };
+                let qty = |p: PlayerId, q: &PlayerQty| -> i32 {
+                    match q {
+                        PlayerQty::LifeTotal => self.player(p).life,
+                        PlayerQty::CardsInHand => self.player(p).hand.len() as i32,
+                        PlayerQty::CardsInGraveyard => self.player(p).graveyard.len() as i32,
+                        PlayerQty::Valid { zones, spec } => {
+                            let all = self.players_from(self.active);
+                            self.cards_in_zones(zones, &all)
+                                .into_iter()
+                                .filter(|c| self.card_matches(*c, spec, ctx.source, p))
+                                .count() as i32
+                        }
+                    }
+                };
+                match prop {
+                    PlayerAgg::Amount => players.len() as i32,
+                    PlayerAgg::Sum(q) => players.iter().map(|p| qty(*p, q)).sum(),
+                    PlayerAgg::Highest(q) => {
+                        players.iter().map(|p| qty(*p, q)).max().unwrap_or(0).max(0)
+                    }
+                    PlayerAgg::Lowest(q) => players.iter().map(|p| qty(*p, q)).min().unwrap_or(0),
+                }
+            }
+            Expr::Party => {
+                // Bipartite Zuordnung: höchstens 4 Rollen, Rücksetzsuche genügt.
+                let roles = ["Cleric", "Rogue", "Warrior", "Wizard"];
+                let fits: Vec<Vec<usize>> = self
+                    .battlefield_of(ctx.controller)
+                    .filter(|c| {
+                        self.chars(*c)
+                            .types
+                            .has_core(forge_types::CoreType::Creature)
+                    })
+                    .map(|c| {
+                        (0..4)
+                            .filter(|i| {
+                                self.card_base_matches(
+                                    c,
+                                    &self.chars(c),
+                                    &crate::valid::CardBase::Word(roles[*i].to_string()),
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .filter(|v| !v.is_empty())
+                    .collect();
+                fn best(i: usize, fits: &[Vec<usize>], used: &mut [bool; 4]) -> i32 {
+                    if i == fits.len() {
+                        return 0;
+                    }
+                    let mut b = best(i + 1, fits, used);
+                    for &r in &fits[i] {
+                        if !used[r] {
+                            used[r] = true;
+                            b = b.max(1 + best(i + 1, fits, used));
+                            used[r] = false;
+                        }
+                        if b == 4 {
+                            break;
+                        }
+                    }
+                    b
+                }
+                best(0, &fits, &mut [false; 4])
+            }
+            Expr::RememberedSize => {
+                let s = self.card(ctx.source);
+                (s.remembered.len() + s.remembered_players.len()) as i32
             }
             Expr::CardPower => self.chars(ctx.source).power.unwrap_or(0),
             Expr::CardToughness => self.chars(ctx.source).toughness.unwrap_or(0),
