@@ -217,6 +217,8 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Silence Lite\nManaCost:W\nTypes:Enchantment\nS:Mode$ CantBeCast | ValidCard$ Card | Caster$ Opponent | Description$ x\nOracle:\n",
     "Name:Rule Lite\nManaCost:2 W\nTypes:Enchantment\nS:Mode$ CantBeCast | ValidCard$ Card | Caster$ Player | NumLimitEachTurn$ 1 | Description$ x\nOracle:\n",
     "Name:Pithing Lite\nManaCost:1\nTypes:Artifact\nS:Mode$ CantBeActivated | ValidCard$ Card | ValidSA$ Activated.!ManaAbility | Activator$ Opponent | Description$ x\nOracle:\n",
+    "Name:Uncounterable Lite\nManaCost:1 G\nTypes:Creature Bear\nPT:2/2\nR:Event$ Counter | ValidCard$ Card.Self | ValidSA$ Spell | Layer$ CantHappen | Description$ x\nOracle:\n",
+    "Name:Prowler Lite\nManaCost:G\nTypes:Enchantment\nR:Event$ Counter | ValidSA$ Spell.Creature+YouCtrl | Layer$ CantHappen | ActiveZones$ Battlefield | Description$ x\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",

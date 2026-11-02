@@ -212,7 +212,96 @@ pub fn compile_untap_replacement(
     })
 }
 
+/// `R:Event$ Counter | Layer$ CantHappen`: „kann nicht neutralisiert werden“
+/// (CR 101.2, Java `ReplaceCounter`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CantCounterReplacement {
+    pub valid_card: Option<ValidSpec>,
+    /// `ValidSA$ Spell[.…]` als Kartenfilter auf den Zauber
+    pub valid_spell: ValidSpec,
+    pub active_zones: Option<Vec<Zone>>,
+    pub conditions: Vec<Condition>,
+}
+
+pub fn compile_cant_counter_replacement(
+    face: &CardFace,
+    r: &ScriptReplacement,
+) -> Result<CantCounterReplacement, CompileError> {
+    let p = &r.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: "Replacement Counter".into(),
+        key: k.into(),
+        value: v.into(),
+    };
+    if p.get("Layer") != Some("CantHappen") || p.has("ReplaceWith") {
+        return Err(err("Layer", p.get("Layer").unwrap_or("fehlt")));
+    }
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend(["ValidCard", "ValidSA", "ActiveZones"]);
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    let sa = p.get("ValidSA").unwrap_or("Spell");
+    let spec: Vec<String> = sa
+        .split(',')
+        .map(|a| {
+            let a = a.trim();
+            match a.split_once('.') {
+                Some(("Spell", rest)) => Ok(format!("Card.{rest}")),
+                None if a == "Spell" => Ok("Card".to_string()),
+                _ => Err(err("ValidSA", sa)),
+            }
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(CantCounterReplacement {
+        valid_card: p
+            .get("ValidCard")
+            .map(ValidSpec::parse)
+            .transpose()
+            .map_err(CompileError::Valid)?,
+        valid_spell: ValidSpec::parse(&spec.join(",")).map_err(CompileError::Valid)?,
+        active_zones: match p.get("ActiveZones") {
+            Some(z) => Some(zones(z).ok_or_else(|| err("ActiveZones", z))?),
+            None => None,
+        },
+        conditions,
+    })
+}
+
 impl GameState {
+    /// CR 101.2: Kann der Zauber `spell` (auf dem Stapel) nicht neutralisiert werden?
+    pub fn cant_be_countered(&self, spell: CardId) -> bool {
+        if self.card(spell).zone != Some(Zone::Stack) {
+            return false;
+        }
+        self.live_cards().chain(std::iter::once(spell)).any(|hid| {
+            let h = self.card(hid);
+            let Some(hz) = h.zone else { return false };
+            h.compiled().cant_counter.iter().any(|r| {
+                r.active_zones.as_ref().is_none_or(|z| z.contains(&hz))
+                    && r.valid_card
+                        .as_ref()
+                        .is_none_or(|v| self.card_matches(spell, v, hid, h.controller))
+                    && self.card_matches(spell, &r.valid_spell, hid, h.controller)
+                    && self.check_conditions(
+                        &r.conditions,
+                        &EvalCtx {
+                            source: hid,
+                            controller: h.controller,
+                            x: 0,
+                            targets: &[],
+                            trig: None,
+                            paid: &[],
+                        },
+                    )
+            })
+        })
+    }
+
     /// CR 502.3 / 614: Wird `c` im Enttappsegment von `ap` am Enttappen gehindert?
     pub fn untap_prevented(&self, c: CardId, ap: crate::ids::PlayerId) -> bool {
         self.live_cards().any(|hid| {

@@ -998,7 +998,9 @@ impl GameState {
             Effect::Counter { triggered_sa: true } => {
                 // CR 701.5a: Zauber → Friedhof, Fähigkeit → entfernt
                 let id = ctx.trig.as_ref().and_then(|t| t.stack_item);
-                if let Some(pos) = self.stack.iter().position(|s| Some(s.id) == id) {
+                if let Some(pos) = self.stack.iter().position(|s| Some(s.id) == id)
+                    && !matches!(self.stack[pos].kind, StackKind::Spell { card } if self.cant_be_countered(card))
+                {
                     let item = self.stack.remove(pos);
                     if let StackKind::Spell { card } = item.kind {
                         self.move_card(card, Zone::Graveyard, true);
@@ -1017,6 +1019,9 @@ impl GameState {
                     else {
                         continue;
                     };
+                    if self.cant_be_countered(card) {
+                        continue;
+                    }
                     // CR 701.5a: vom Stapel in den Friedhof des Besitzers
                     self.stack.remove(pos);
                     self.move_card(card, Zone::Graveyard, true);

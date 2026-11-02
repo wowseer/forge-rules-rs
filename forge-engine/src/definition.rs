@@ -35,6 +35,8 @@ pub struct CompiledFace {
     pub final_chapter: Option<u32>,
     /// `R:Event$ Untap` (enttappt nicht).
     pub untap_replacements: Vec<Arc<crate::replacements::UntapReplacement>>,
+    /// „kann nicht neutralisiert werden“ (`R:Event$ Counter | Layer$ CantHappen`)
+    pub cant_counter: Vec<Arc<crate::replacements::CantCounterReplacement>>,
     /// `K:ETBReplacement:Other:<SVar>[:Optional]`: beim Ankommen auszuführen
     /// (Wahl von Typ/Farb usw.); `true` = optional.
     pub etb_other: Vec<(Arc<CompiledAbility>, bool)>,
@@ -124,6 +126,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         enchant: None,
         final_chapter: None,
         untap_replacements: Vec::new(),
+        cant_counter: Vec::new(),
         etb_other: Vec::new(),
     };
     let mut equip: Vec<Arc<CompiledAbility>> = Vec::new();
@@ -317,6 +320,13 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         if r.mode == "Untap" {
             match crate::replacements::compile_untap_replacement(face, r) {
                 Ok(c) => out.untap_replacements.push(Arc::new(c)),
+                Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
+            }
+            continue;
+        }
+        if r.mode == "Counter" {
+            match crate::replacements::compile_cant_counter_replacement(face, r) {
+                Ok(c) => out.cant_counter.push(Arc::new(c)),
                 Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
             }
             continue;

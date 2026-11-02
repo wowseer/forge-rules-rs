@@ -979,6 +979,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         enchant: None,
         final_chapter: None,
         untap_replacements: Vec::new(),
+        cant_counter: Vec::new(),
         etb_other: Vec::new(),
     };
     let svar = |n: &str| {

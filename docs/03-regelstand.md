@@ -14,7 +14,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 |---|---:|---:|---:|---:|
 | Keyword | 198 | 20 | 7 | 4 |
 | Trigger | 137 | 0 | 22 | 11 |
-| Replacement Effect | 35 | 0 | 3 | 5 |
+| Replacement Effect | 35 | 0 | 4 | 5 |
 | Static Ability | 90 | 1 | 7 | 0 |
 | Effect (ApiType) | 188 | 3 | 51 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 1 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **77** | **114** | **81** |
+| **Summe** | **789** | **77** | **115** | **81** |
 
 ## Keyword
 
@@ -111,6 +111,7 @@ Offen (115): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Alw
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | AssembleContraption | ⚪ n/a |  | Unstable | replacement/ReplaceAssembleContraption.java |
+| Counter | 🟡 teilweise | `cant_counter::self_uncounterable_spell_resolves, cant_counter::static_protects_only_own_creature_spells` | Layer CantHappen: „kann nicht neutralisiert werden“ (ValidCard, ValidSA Spell[.Filter], ActiveZones, Bedingungen) | replacement/ReplaceCounter.java |
 | DamageDone | 🟡 teilweise | `replacements::damage_doubling_replacement, replacements::prevent_combat_damage_to_self_but_not_noncombat, replacements::prevention_shield_next_n_damage_this_turn_after_doubling` | Prevent, Mengenänderung (ReplaceCount$DamageAmount), ValidTarget/ValidSource/IsCombat | replacement/ReplaceDamage.java |
 | Moved | 🟡 teilweise | `replacements::rest_in_peace_redirects_to_exile_and_no_dies_trigger` | Umleitung (ChangeZone ReplacedCard), getappt ins Spiel inkl. Bedingung, etbCounter | replacement/ReplaceMoved.java |
 | PlanarDiceResult | ⚪ n/a |  | Planechase | replacement/ReplacePlanarDiceResult.java |
@@ -119,7 +120,7 @@ Offen (115): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Alw
 | SetInMotion | ⚪ n/a |  | Archenemy | replacement/ReplaceSetInMotion.java |
 | Untap | 🟡 teilweise | `turn_structure::doesnt_untap_during_your_untap_step` | „enttappt nicht während deines Enttappsegments“ (ValidStepTurnToController$ You, Layer$ CantHappen, Bedingungen, auch aus Effektobjekten) | replacement/ReplaceUntap.java |
 
-Offen (32): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Cascade, Connive, Counter, CopySpell, CreateToken, DealtDamage, DeclareBlocker, Destroy, Draw, DrawCards, Explore, GainLife, GameLoss, GameWin, Learn, LifeReduced, LoseMana, Mill, PayLife, ProduceMana, Proliferate, RemoveCounter, RollDice, Scry, Tap, Transform, TurnFaceUp
+Offen (31): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Cascade, Connive, CopySpell, CreateToken, DealtDamage, DeclareBlocker, Destroy, Draw, DrawCards, Explore, GainLife, GameLoss, GameWin, Learn, LifeReduced, LoseMana, Mill, PayLife, ProduceMana, Proliferate, RemoveCounter, RollDice, Scry, Tap, Transform, TurnFaceUp
 
 ## Static Ability
 
