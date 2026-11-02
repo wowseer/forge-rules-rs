@@ -171,6 +171,25 @@ CompiledAbility {
   `CompiledStatic::Player`: `SetMaxHandSize$ n|Unlimited`, `RaiseMaxHandSize$`,
   `AddKeyword$ Hexproof|Shroud`.
 
+- `Play`: `Defined$`/Ziel oder `Valid$`+`ValidZone$` (Standard Hand), `ValidSA$`
+  (`Spell` = jeder Zauberspruch), `Amount$ n|All`, `Optional$`, `WithoutManaCost$`
+  (sonst normal bezahlt; Abbruch stellt den Zustand wieder her), `Controller$`,
+  `ReplaceGraveyard$ Exile` (`CardObj::exile_from_stack`), `RememberPlayed$`.
+- `CopySpellAbility`: Ziel-Zauber (`TargetType$ Spell`) oder `Defined$ TriggeredSpellAbility`
+  (SpellCast-Trigger tragen ihr Stapelobjekt), `Amount$`, `Controller$`, `MayChooseTarget$`.
+  Zauberkopien sind Token-Objekte in der Stapelzone.
+- `DigUntil`: `Valid$`, `Amount$`, `MaxRevealed$`, `FoundDestination$`/`RevealedDestination$`
+  mit `…LibraryPosition$ 0|-1`, `RevealRandomOrder$`, `Shuffle$`, `Remember…`, `Tapped$`, `GainControl$`.
+- Statics `CantBeCast` (`Caster$`, `Origin$`, `NumLimitEachTurn$`, `OnlySorcerySpeed$`) und
+  `CantBeActivated` (`Activator$`, `ValidSA$ Activated[.!ManaAbility|.Loyalty]`, `AffectedZone$`).
+- `R:Event$ Counter | Layer$ CantHappen` → `CompiledFace::cant_counter`.
+- Auren: `K:Enchant:<Filter>:<Beschreibung>`, `Defined$ Enchanted|Equipped|EnchantedController`,
+  `AffectedDefined$ AttachedBy Self`, Static `GainControl$ You` (Layer 2, gegen
+  `GainControl`-Effekte per Zeitstempel), Filter `Player.EnchantedController`,
+  `enchanted`/`equipped`.
+- Wichtig: Ohne Angabe meint nur `Defined$` die Ziele der Fähigkeit; andere Spieler-/
+  Kartenschlüssel (`Controller$`, `TokenOwner$`, `Object$` …) haben ihren eigenen Standard.
+
 ## Token und modale Fähigkeiten
 
 - `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,

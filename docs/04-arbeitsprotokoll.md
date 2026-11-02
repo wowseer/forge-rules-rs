@@ -5,6 +5,49 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-02 – Sitzung 8: Play, Kopien, DigUntil, Verbote, Auren
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Effekt `Play` (Karten während der Auflösung wirken/spielen) | ✅ |
+| Effekt `CopySpellAbility` (Ziel-Zauber, auslösender Zauber) | ✅ |
+| Effekt `DigUntil` | ✅ |
+| Statics `CantBeCast`, `CantBeActivated` | ✅ |
+| „Kann nicht neutralisiert werden“ (`R:Event$ Counter`) | ✅ |
+| Auren: `Enchant:<Filter>:<Text>`, `Defined$ Enchanted`, statische Kontrolle, `EnchantedController`, `enchanted`/`equipped` | ✅ |
+| Tests | alle grün (44 Testbinaries), Lasttest ~27 s |
+| Unterstützte Karten im Zielpool | 42,8 % → **44,3 %** |
+
+### Entscheidungen und Fehlerbehebungen
+
+- `defined_key` nahm bei vorhandenem `ValidTgts$` für **jeden** Schlüssel „Targeted“ als
+  Standard (z. B. `TokenOwner$`, `Object$`, `Controller$`) – jetzt nur noch für `Defined$`.
+- Statische Kontrolle wird in den SBA-Durchläufen neu berechnet (`apply_static_control`);
+  Kontrolleffekte haben dafür einen Zeitstempel. Kontrolländerungen zählen wie eine SBA,
+  damit der sichtbare Zustand vor der nächsten Entscheidung aktuell ist (der atomare Schritt
+  endet sonst erst nach der Entscheidung).
+- `Play` mit Bezahlung: Bricht der Spieler ab, wird der Zustand vor dem Wirken
+  wiederhergestellt (CR 728) statt den ganzen Schritt abzubrechen.
+- Zauberkopien sind Token-Objekte in der Stapelzone; SBA 704.5d entfernt sie danach.
+- `K:Enchant:<Filter>:<Beschreibung>` wurde nicht zerlegt – 156 Auren waren dadurch
+  fälschlich „nicht unterstützt“.
+
+### Bekannte Lücken
+
+- `Enchant:Player` (Flüche, 46), `Player.EnchantedBy`, Fähigkeiten kopieren,
+  `Play | CopyCard$`, Imprint (`ImprintFound$`).
+- Filter mit Variablen (`cmcLEX`/`cmcEQX`, 177 Karten zusammen) weiterhin offen.
+
+### Nächste Schritte
+
+1. Filter mit X-Variablen über einen gebundenen Auswertungskontext (größter Einzelblock).
+2. `GenericChoice` (99), Filter `Emblem` (103), `ExiledWithSource` (91), `kicked` (82).
+3. Flüche (`Enchant:Player`), `ChoosePlayer` (80), `RollDice` (82).
+
+---
+
 ## 2026-11-02 – Sitzung 7: Massen-Effekte, Kostenhilfen, Marken, Spieler-Statics
 
 ### Ergebnis
