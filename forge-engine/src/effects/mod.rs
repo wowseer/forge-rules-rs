@@ -63,6 +63,10 @@ pub enum Defined {
     RememberedLki,
     /// Von der Quelle gewählte Karten in ihrem aktuellen Zustand (`ChosenCard`).
     ChosenCard,
+    /// Objekt, an dem die Quelle (Aura/Ausrüstung) hängt (`Enchanted`, `Equipped`).
+    Enchanted,
+    /// Dessen Controller (`EnchantedController`, `EquippedController`).
+    EnchantedController,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -811,6 +815,8 @@ impl<'a> Ctx<'a> {
                 // Gemerkte Karten und Spieler (Java `getDefinedObjects("Remembered")`).
                 "Remembered" | "Player.IsRemembered" | "RememberedCard" => Defined::Remembered,
                 "ChosenCard" => Defined::ChosenCard,
+                "Enchanted" | "Equipped" | "AttachedTo" => Defined::Enchanted,
+                "EnchantedController" | "EquippedController" => Defined::EnchantedController,
                 "RememberedLKI" => Defined::RememberedLki,
                 other => return Err(self.unsupported(key, other)),
             }),

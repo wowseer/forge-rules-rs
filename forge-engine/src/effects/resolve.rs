@@ -110,6 +110,20 @@ impl GameState {
                 .and_then(|t| t.target)
                 .into_iter()
                 .collect(),
+            Defined::Enchanted => self
+                .card(ctx.source)
+                .attached_to
+                .filter(|c| self.card(*c).zone.is_some())
+                .map(Target::Card)
+                .into_iter()
+                .collect(),
+            Defined::EnchantedController => self
+                .card(ctx.source)
+                .attached_to
+                .filter(|c| self.card(*c).zone.is_some())
+                .map(|c| Target::Player(self.card(c).controller))
+                .into_iter()
+                .collect(),
             Defined::ChosenCard => self
                 .card(ctx.source)
                 .chosen_cards
@@ -1178,7 +1192,9 @@ impl GameState {
                 };
                 let source_controller = self.card(ctx.source).controller;
                 for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let timestamp = self.timestamp();
                     self.control_effects.push(crate::state::ControlEffect {
+                        timestamp,
                         card: c,
                         controller: new,
                         source: ctx.source,

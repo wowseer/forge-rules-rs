@@ -233,7 +233,7 @@ impl GameState {
                 }
                 self.effects
                     .retain(|e| e.duration != Duration::UntilEndOfTurn);
-                self.expire_control_effects(true);
+                let _ = self.expire_control_effects(true);
                 // „ThisTurn“-verzögerte Trigger enden (Java clearThisTurnDelayedTrigger).
                 let turn = self.turn;
                 self.delayed_triggers

@@ -398,16 +398,19 @@ impl GameState {
     /// Setzt den Controller von `c` aus Kontrolleffekten neu (CR 613.1b, jüngster
     /// gewinnt). Ein Kontrollwechsel macht „krank“ (CR 302.6) und entfernt aus
     /// dem Kampf (CR 506.4).
-    pub fn apply_control(&mut self, c: CardId) {
-        let new = self
+    pub fn apply_control(&mut self, c: CardId) -> bool {
+        let effects = self
             .control_effects
             .iter()
-            .rev()
-            .find(|e| e.card == c)
-            .map(|e| e.controller)
+            .filter(|e| e.card == c)
+            .map(|e| (e.timestamp, e.controller));
+        let new = effects
+            .chain(self.static_control_grants(c))
+            .max_by_key(|(ts, _)| *ts)
+            .map(|(_, p)| p)
             .unwrap_or(self.card(c).base_controller);
         if self.card(c).controller == new {
-            return;
+            return false;
         }
         let o = self.card_mut(c);
         o.controller = new;
@@ -416,12 +419,71 @@ impl GameState {
             cb.attackers.retain(|a| a.card != c);
             cb.blocks.retain(|(b, a)| *b != c && *a != c);
         }
+        true
+    }
+
+    /// Statische Kontrolle (`GainControl$ You`) über `c`: (Zeitstempel der Quelle, Controller).
+    fn static_control_grants(&self, c: CardId) -> Vec<(u64, PlayerId)> {
+        let mut v = Vec::new();
+        for &sid in self.battlefield.iter().chain(self.command.iter()) {
+            let s = self.card(sid);
+            let Some(zone) = s.zone else { continue };
+            for cs in &s.compiled().statics {
+                let crate::statics::CompiledStatic::Continuous(st) = cs.as_ref() else {
+                    continue;
+                };
+                if !st.gain_control
+                    || !st.effect_zones.contains(&zone)
+                    || (st.affects_self_only && c != sid)
+                    || (st.affects_attached && s.attached_to != Some(c))
+                    || st
+                        .affected
+                        .as_ref()
+                        .is_some_and(|a| !self.card_matches(c, a, sid, s.controller))
+                {
+                    continue;
+                }
+                let ctx = crate::expr::EvalCtx {
+                    source: sid,
+                    controller: s.controller,
+                    x: 0,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                if self.check_conditions(&st.conditions, &ctx) {
+                    v.push((s.timestamp, s.controller));
+                }
+            }
+        }
+        v
+    }
+
+    /// Statische Kontrolle neu auswerten (in den SBA-Durchläufen): betroffene
+    /// Objekte und solche mit abweichendem Controller.
+    pub fn apply_static_control(&mut self) -> bool {
+        let mut changed = false;
+        let any_static = self.battlefield.iter().chain(self.command.iter()).any(|&sid| {
+            self.card(sid).compiled().statics.iter().any(|cs| {
+                matches!(cs.as_ref(), crate::statics::CompiledStatic::Continuous(st) if st.gain_control)
+            })
+        });
+        let cards: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .copied()
+            .filter(|&c| any_static || self.card(c).controller != self.card(c).base_controller)
+            .collect();
+        for c in cards {
+            changed |= self.apply_control(c);
+        }
+        changed
     }
 
     /// Beendet abgelaufene Kontrolleffekte (CR 611.2b) und setzt Controller neu.
-    pub fn expire_control_effects(&mut self, at_cleanup: bool) {
+    pub fn expire_control_effects(&mut self, at_cleanup: bool) -> bool {
         if self.control_effects.is_empty() {
-            return;
+            return false;
         }
         let (turn, active) = (self.turn, self.active);
         let before = self.control_effects.clone();
@@ -442,18 +504,20 @@ impl GameState {
             })
             .collect();
         if keep.iter().all(|k| *k) {
-            return;
+            return false;
         }
         let mut i = 0;
         self.control_effects.retain(|_| {
             i += 1;
             keep[i - 1]
         });
+        let mut changed = false;
         for (e, k) in before.iter().zip(&keep) {
             if !k && self.card(e.card).zone == Some(Zone::Battlefield) {
-                self.apply_control(e.card);
+                changed |= self.apply_control(e.card);
             }
         }
+        changed
     }
 
     /// Bündelt Zonenwechsel (Java `CardZoneTable`) bis zum passenden

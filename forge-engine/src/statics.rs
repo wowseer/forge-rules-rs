@@ -48,6 +48,9 @@ pub struct ContinuousStatic {
     pub conditions: Vec<Condition>,
     /// `MayPlay$ True`: betroffene Karten dürfen gespielt werden (CR 601.2a, 305.1).
     pub may_play: Option<MayPlay>,
+    /// Layer 2: `GainControl$ You` – der Controller der Quelle kontrolliert die
+    /// betroffenen Objekte (CR 613.1b).
+    pub gain_control: bool,
     pub description: String,
 }
 
@@ -691,12 +694,19 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         None
     };
 
+    used.push("GainControl");
+    let gain_control = match p.get("GainControl") {
+        None => false,
+        Some("You") => true,
+        Some(v) => return Err(err("GainControl", v)),
+    };
     for (k, v) in p.iter() {
         if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
             return Err(err(k, v));
         }
     }
     Ok(CompiledStatic::Continuous(ContinuousStatic {
+        gain_control,
         affected,
         affects_self_only,
         affects_attached,

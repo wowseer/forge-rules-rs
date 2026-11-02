@@ -132,6 +132,8 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
     let mut equip: Vec<Arc<CompiledAbility>> = Vec::new();
     for k in &face.keywords {
         if let Some(spec) = k.strip_prefix("Enchant:") {
+            // `Enchant:<Filter>[:<Beschreibung>]`
+            let spec = spec.split_once(':').map_or(spec, |(v, _)| v);
             match crate::valid::ValidSpec::parse(spec) {
                 Ok(v) if !v.allows_players() => out.enchant = Some(v),
                 _ => unsupported.push(format!("Keyword: {k}")),

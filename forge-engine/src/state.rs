@@ -288,6 +288,8 @@ pub struct TurnHistory {
 /// Kontrollwechsel (Layer 2, CR 613.1b) durch `GainControl`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ControlEffect {
+    /// Zeitstempel (CR 613.7) zum Vergleich mit statischer Kontrolle
+    pub timestamp: u64,
     pub card: CardId,
     pub controller: PlayerId,
     pub source: CardId,

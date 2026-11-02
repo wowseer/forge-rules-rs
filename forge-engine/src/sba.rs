@@ -18,7 +18,9 @@ impl GameState {
     pub fn check_state_based_actions(&mut self, ch: &mut Choices) -> Res<bool> {
         let mut any = self.run_pending_etb(ch)?;
         // Kontrolleffekte „solange …“ enden sofort (CR 611.2b), vor den SBAs geprüft.
-        self.expire_control_effects(false);
+        any |= self.expire_control_effects(false);
+        // Statische Kontrolle (Layer 2); eine Änderung beendet den Schritt wie eine SBA.
+        any |= self.apply_static_control();
         loop {
             if self.winner.is_some() {
                 return Ok(any);
