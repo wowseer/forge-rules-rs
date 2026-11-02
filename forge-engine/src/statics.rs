@@ -111,6 +111,30 @@ pub enum CompiledStatic {
     CostAdjust(CostAdjust),
     /// Alternativkosten für den Zauber selbst (`AlternativeCost | ValidSA$ Spell.Self`, CR 118.9).
     AlternativeCost(AltCost),
+    /// `Continuous` mit `Affected$ You|Player|Opponent`: wirkt auf Spieler.
+    Player(PlayerStatic),
+}
+
+/// Maximale Handgröße (CR 402.2, 514.1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HandSize {
+    Unlimited,
+    Set(Expr),
+}
+
+/// Fortlaufender Effekt auf Spieler (Java `StaticAbilityContinuous`, `affectedPlayers`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlayerStatic {
+    pub affected: ValidSpec,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
+    /// `SetMaxHandSize$`
+    pub set_max_hand: Option<HandSize>,
+    /// `RaiseMaxHandSize$` (auch negativ)
+    pub raise_max_hand: Option<Expr>,
+    /// `AddKeyword$ Hexproof|Shroud` (CR 702.11d, 702.18d)
+    pub hexproof: bool,
+    pub shroud: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,6 +204,69 @@ fn compile_alt_cost(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStatic,
         effect_zones: ALL.to_vec(),
         conditions,
         description: p.get("Description").unwrap_or("").to_string(),
+    }))
+}
+
+fn compile_player_static(
+    face: &CardFace,
+    s: &ScriptStatic,
+    affected: ValidSpec,
+) -> Result<CompiledStatic, CompileError> {
+    let p = &s.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: format!("Static {}", s.mode),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend([
+        "Affected",
+        "EffectZone",
+        "SetMaxHandSize",
+        "RaiseMaxHandSize",
+        "AddKeyword",
+    ]);
+    let effect_zones = match p.get("EffectZone") {
+        Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+        None => vec![Zone::Battlefield],
+    };
+    let set_max_hand = match p.get("SetMaxHandSize") {
+        None => None,
+        Some("Unlimited") => Some(HandSize::Unlimited),
+        Some(v) => Some(HandSize::Set(Expr::parse_value(face, v)?)),
+    };
+    let raise_max_hand = p
+        .get("RaiseMaxHandSize")
+        .map(|v| Expr::parse_value(face, v))
+        .transpose()?;
+    let (mut hexproof, mut shroud) = (false, false);
+    if let Some(k) = p.get("AddKeyword") {
+        for kw in Keyword::parse_list(k) {
+            match kw {
+                Keyword::Hexproof => hexproof = true,
+                Keyword::Shroud => shroud = true,
+                other => return Err(err("AddKeyword", &format!("{other:?}"))),
+            }
+        }
+    }
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    if set_max_hand.is_none() && raise_max_hand.is_none() && !hexproof && !shroud {
+        return Err(err("Affected", p.get("Affected").unwrap_or("")));
+    }
+    Ok(CompiledStatic::Player(PlayerStatic {
+        affected,
+        effect_zones,
+        conditions,
+        set_max_hand,
+        raise_max_hand,
+        hexproof,
+        shroud,
     }))
 }
 
@@ -268,6 +355,7 @@ impl CompiledStatic {
             CompiledStatic::Combat(c) => &mut c.effect_zones,
             CompiledStatic::CostAdjust(c) => &mut c.effect_zones,
             CompiledStatic::AlternativeCost(c) => &mut c.effect_zones,
+            CompiledStatic::Player(c) => &mut c.effect_zones,
         }
     }
 }
@@ -391,8 +479,13 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
             });
         }
     };
-    if affected.as_ref().is_some_and(|a| a.allows_players()) {
-        return Err(err("Affected", p.get("Affected").unwrap_or("")));
+    if let Some(a) = &affected
+        && a.allows_players()
+    {
+        if a.allows_cards() {
+            return Err(err("Affected", p.get("Affected").unwrap_or("")));
+        }
+        return compile_player_static(face, s, a.clone());
     }
     let affected_zones = match get("AffectedZone") {
         Some(z) => zones(z).ok_or_else(|| err("AffectedZone", z))?,
@@ -571,7 +664,8 @@ mod tests {
             st("S:Mode$ Continuous | Affected$ Creature | IsPresent2$ Card.Self | AddPower$ 1")
                 .is_err()
         );
-        assert!(st("S:Mode$ Continuous | Affected$ You | AddKeyword$ Hexproof").is_err());
+        assert!(st("S:Mode$ Continuous | Affected$ You | AddKeyword$ Hexproof").is_ok());
+        assert!(st("S:Mode$ Continuous | Affected$ You | AddKeyword$ Flying").is_err());
         assert!(st("S:Mode$ CantBlockBy | ValidAttacker$ Creature").is_ok());
         assert!(st("S:Mode$ CantRegenerate | ValidCard$ Creature").is_err());
     }

@@ -48,7 +48,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Flash | ✅ ja | `spells::flash_allows_instant_speed_casting` |  | keyword/Keyword.java (SimpleKeyword) |
 | Flying | ✅ ja | `combat::flying_needs_flying_or_reach_to_block` |  | keyword/Keyword.java (SimpleKeyword) |
 | Haste | ✅ ja | `combat::summoning_sickness_haste_defender` |  | keyword/Keyword.java (SimpleKeyword) |
-| Hexproof | 🟡 teilweise | `spells::hexproof_only_blocks_opponents` | „Hexproof from …“ fehlt | keyword/Keyword.java (Hexproof) |
+| Hexproof | 🟡 teilweise | `spells::hexproof_only_blocks_opponents, player_statics::player_hexproof_only_against_opponents` | auch Spieler (CR 702.11d) | keyword/Keyword.java (Hexproof) |
 | Hidden agenda | ⚪ n/a |  | Conspiracy-Draft | keyword/Keyword.java (SimpleKeyword) |
 | Improvise | ✅ ja | `cost_helpers::improvise_taps_artifacts_for_generic_only` | CR 702.126a: getappte Artefakte zahlen je {1}, nur generisch | keyword/Keyword.java (SimpleKeyword) |
 | Indestructible | ✅ ja | `spells::destroy_respects_indestructible` |  | keyword/Keyword.java (SimpleKeyword) |
@@ -125,7 +125,7 @@ Offen (32): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Casca
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
-| Continuous | 🟡 teilweise | `layers::affected_set_determined_after_type_change, spells::may_play_exiled_card_this_turn_as_land_drop, spells::may_play_without_mana_cost_with_limit` | Affected/AffectedDefined Self, Zonen (inkl. All), AddType, SetColor, AddKeyword, Set/AddPower/Toughness inkl. Count$-Ausdrücke, CDAs (7a), Bedingungen (IsPresent, CheckSVar, Condition) | staticability/StaticAbility.java |
+| Continuous | 🟡 teilweise | `layers::affected_set_determined_after_type_change, spells::may_play_exiled_card_this_turn_as_land_drop, spells::may_play_without_mana_cost_with_limit, player_statics::no_maximum_hand_size, player_statics::opponent_hand_size_reduced_but_not_own, player_statics::player_hexproof_only_against_opponents` | Affected/AffectedDefined Self, Zonen (inkl. All), AddType, SetColor, AddKeyword, Set/AddPower/Toughness inkl. Count$-Ausdrücke, CDAs (7a), Bedingungen (IsPresent, CheckSVar, Condition) | staticability/StaticAbility.java |
 | AlternativeCost | 🟡 teilweise | `spells::alternative_cost_instead_of_mana_cost` | ValidSA$ Spell.Self mit Kosten statt Manakosten (CR 118.9), Bedingungen, Zusatzkosten gelten weiter | staticability/StaticAbilityAlternativeCost.java |
 | CantAttack | 🟡 teilweise | `combat_restrictions::cant_attack` | ValidCard, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlock | ✅ ja | `combat_restrictions::cant_block` |  | staticability/StaticAbilityCantAttackBlock.java |

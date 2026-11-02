@@ -178,7 +178,10 @@ impl GameState {
     ) -> bool {
         match target {
             Target::Player(p) => {
-                self.player(p).is_in_game() && self.player_matches(p, &spec.valid, you)
+                self.player(p).is_in_game()
+                    && self.player_matches(p, &spec.valid, you)
+                    && !self.player_has_shroud(p)
+                    && !(p != you && self.player_has_hexproof(p))
             }
             Target::Card(c) => {
                 let card = self.card(c);

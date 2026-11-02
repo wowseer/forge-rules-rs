@@ -46,6 +46,74 @@ impl GameState {
         v
     }
 
+    /// Wirkende Spieler-Statics, die `p` betreffen: (Quelle, Controller, Static).
+    pub(crate) fn player_statics(
+        &self,
+        p: PlayerId,
+    ) -> Vec<(CardId, PlayerId, &crate::statics::PlayerStatic)> {
+        let mut v = Vec::new();
+        for c in self.battlefield.iter().chain(self.command.iter()) {
+            let o = self.card(*c);
+            let Some(zone) = o.zone else { continue };
+            for s in &o.compiled().statics {
+                if let crate::statics::CompiledStatic::Player(r) = s.as_ref() {
+                    let ctx = crate::expr::EvalCtx {
+                        source: *c,
+                        controller: o.controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                        paid: &[],
+                    };
+                    if r.effect_zones.contains(&zone)
+                        && self.player_matches(p, &r.affected, o.controller)
+                        && self.check_conditions(&r.conditions, &ctx)
+                    {
+                        v.push((*c, o.controller, r));
+                    }
+                }
+            }
+        }
+        v
+    }
+
+    /// Maximale Handgröße von `p` (`None` = keine, CR 402.2); Java: erst
+    /// `SetMaxHandSize`, dann `RaiseMaxHandSize`.
+    pub fn max_hand_size(&self, p: PlayerId) -> Option<u32> {
+        use crate::statics::HandSize;
+        let statics = self.player_statics(p);
+        let ctx = |src: CardId, ctrl: PlayerId| crate::expr::EvalCtx {
+            source: src,
+            controller: ctrl,
+            x: 0,
+            targets: &[],
+            trig: None,
+            paid: &[],
+        };
+        let mut size = self.rules.max_hand_size as i32;
+        for (src, ctrl, s) in &statics {
+            match &s.set_max_hand {
+                Some(HandSize::Unlimited) => return None,
+                Some(HandSize::Set(e)) => size = self.eval(e, &ctx(*src, *ctrl)),
+                None => {}
+            }
+        }
+        for (src, ctrl, s) in &statics {
+            if let Some(e) = &s.raise_max_hand {
+                size += self.eval(e, &ctx(*src, *ctrl));
+            }
+        }
+        Some(size.max(0) as u32)
+    }
+
+    /// Spieler hat Fluchsicherheit/Verhüllung (CR 702.11d, 702.18d).
+    pub fn player_has_hexproof(&self, p: PlayerId) -> bool {
+        self.player_statics(p).iter().any(|(_, _, s)| s.hexproof)
+    }
+    pub fn player_has_shroud(&self, p: PlayerId) -> bool {
+        self.player_statics(p).iter().any(|(_, _, s)| s.shroud)
+    }
+
     fn restricted(&self, kind: crate::statics::RestrictionKind, card: CardId) -> bool {
         self.restrictions(kind)
             .iter()

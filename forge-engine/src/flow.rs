@@ -203,7 +203,7 @@ impl GameState {
             Step::Cleanup => {
                 // CR 514.1: auf Handgröße abwerfen
                 let hand = self.player(ap).hand.clone();
-                let max = self.rules.max_hand_size as usize;
+                let max = self.max_hand_size(ap).map_or(usize::MAX, |m| m as usize);
                 if hand.len() > max {
                     let n = (hand.len() - max) as u32;
                     let chosen = match ch.ask(Decision::ChooseCards {
