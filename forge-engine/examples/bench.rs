@@ -21,7 +21,10 @@ fn main() {
         .iter()
         .map(|n| db.get(n).unwrap().clone())
         .collect();
-    for seed in 0..20u64 {
+    let arg = |i: usize, d: u64| std::env::args().nth(i).and_then(|s| s.parse().ok()).unwrap_or(d);
+    let (from, to) = (arg(1, 0), arg(2, 20));
+    let min_secs: f64 = std::env::var("MIN_SECS").ok().and_then(|s| s.parse().ok()).unwrap_or(0.0);
+    for seed in from..to {
         let mut rng = forge_engine::rng::Rng::new(seed * 7919 + 1);
         let mut deck = || {
             let mut d: Vec<_> = (0..36)
@@ -39,6 +42,9 @@ fn main() {
         let (mut a, mut b) = (SimpleAi::new(seed), SimpleAi::new(seed + 1000));
         let t = Instant::now();
         run_game(&mut e, &mut [&mut a, &mut b], 50_000);
+        if t.elapsed().as_secs_f64() < min_secs {
+            continue;
+        }
         println!(
             "seed {seed:2}: {:6.2}s turns {:3} decisions {:6} cards {:6} ",
             t.elapsed().as_secs_f64(),
