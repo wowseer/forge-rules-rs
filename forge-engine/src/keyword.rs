@@ -37,6 +37,8 @@ pub enum Keyword {
     Delve,
     /// CR 702.41: kostet {1} weniger je bleibender Karte des Typs (`Affinity:Artifact`)
     Affinity(String),
+    /// CR 702.33: `Kicker:<Kosten>[:<zweite Kosten>]` (Originaltext der Kosten)
+    Kicker(Vec<String>),
     /// Nicht (oder noch nicht) typisiertes Keyword, Originaltext.
     Other(String),
 }
@@ -64,6 +66,18 @@ impl Keyword {
             "Convoke" => Keyword::Convoke,
             "Improvise" => Keyword::Improvise,
             "Delve" => Keyword::Delve,
+            t if t.starts_with("Kicker:")
+                && t["Kicker:".len()..]
+                    .split(':')
+                    .all(|c| crate::cost::Cost::parse(c).is_ok()) =>
+            {
+                Keyword::Kicker(
+                    t["Kicker:".len()..]
+                        .split(':')
+                        .map(str::to_string)
+                        .collect(),
+                )
+            }
             t if t.starts_with("Affinity:")
                 && crate::valid::ValidSpec::parse(&t["Affinity:".len()..]).is_ok() =>
             {

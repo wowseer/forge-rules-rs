@@ -90,6 +90,8 @@ pub enum Prop {
     HasCounters,
     /// `IsMonstrous`/`monstrous` (CR 701.37b)
     Monstrous,
+    /// `kicked` / `kicked 1` / `kicked 2` (CR 702.33d)
+    Kicked(Option<u8>),
     /// `wasCast[From<Zone>|FromYourHand]` (Java `CardProperty` „wasCast“)
     WasCast {
         from: Option<crate::zone::Zone>,
@@ -269,6 +271,13 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     if p == "HasCounters" {
         return Ok(Prop::HasCounters);
+    }
+    match p {
+        "kicked" => return Ok(Prop::Kicked(None)),
+        "kicked 1" => return Ok(Prop::Kicked(Some(1))),
+        "kicked 2" => return Ok(Prop::Kicked(Some(2))),
+        "notkicked" | "unkicked" => return Ok(Prop::Not(Box::new(Prop::Kicked(None)))),
+        _ => {}
     }
     if let Some(rest) = p.strip_prefix("wasCast") {
         let from = match rest {

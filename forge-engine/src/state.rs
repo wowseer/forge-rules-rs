@@ -161,6 +161,9 @@ pub struct CardObj {
     pub may_play_uses: Vec<(usize, u32)>,
     /// CR 701.37b: ist monströs (durch Monstrosity).
     pub monstrous: bool,
+    /// CR 702.33: bezahlte Kicker-Kosten (Bit 0 = erste, Bit 1 = zweite);
+    /// wie `cast_from` vom Stapel auf die bleibende Karte übertragen.
+    pub kicked: u8,
     /// Gewirkt aus dieser Zone (auf dem Stapel und als daraus entstandene
     /// bleibende Karte; Java `getCastFrom`).
     pub cast_from: Option<Zone>,

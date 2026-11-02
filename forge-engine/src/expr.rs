@@ -97,6 +97,10 @@ pub enum Expr {
     Party,
     /// `Count$RememberedSize`: gemerkte Objekte (Karten und Spieler) der Quelle.
     RememberedSize,
+    /// `Count$Kicked.<ja>.<nein>`: wurde die Quelle gekickt?
+    Kicked(Box<Expr>, Box<Expr>),
+    /// Wert nur, wenn der Vergleich gilt (sonst 0) – `etbCounter … CheckSVar$`.
+    IfCmp(Box<Expr>, Box<Compare>, Box<Expr>),
     Math(Box<Expr>, MathOp, Box<Expr>),
 }
 
@@ -294,6 +298,8 @@ pub enum Condition {
     Metalcraft(bool),
     Hellbent(bool),
     FatefulHour(bool),
+    /// `Condition$ Kicked`: die Quelle wurde gekickt.
+    Kicked,
     /// Gemerkte Objekte der Quelle filtern und zählen
     /// (`ConditionDefined$ Remembered` + `ConditionPresent$`).
     RememberedPresent {
@@ -404,6 +410,13 @@ impl Expr {
             if let Some(args) = main.strip_prefix("Morbid.") {
                 let (a, b) = args.split_once('.').ok_or_else(|| bad("Count", sv))?;
                 let base = Expr::Morbid(
+                    Box::new(Expr::parse_value(face, a)?),
+                    Box::new(Expr::parse_value(face, b)?),
+                );
+                (base, op)
+            } else if let Some(args) = main.strip_prefix("Kicked.") {
+                let (a, b) = args.split_once('.').ok_or_else(|| bad("Count", sv))?;
+                let base = Expr::Kicked(
                     Box::new(Expr::parse_value(face, a)?),
                     Box::new(Expr::parse_value(face, b)?),
                 );
@@ -672,9 +685,23 @@ pub fn parse_conditions(
         let cmp = Compare::parse(face, params.get(k_svar_cmp).unwrap_or("GE1"))?;
         conds.push(Condition::Value { expr, cmp });
     }
+    // `Condition$` gilt für Statics/Trigger und für Effekte (Java SpellAbilityCondition).
+    used.push("Condition");
+    if let Some(c) = params.get("Condition") {
+        conds.push(match c {
+            "PlayerTurn" => Condition::YourTurn(true),
+            "NotPlayerTurn" => Condition::YourTurn(false),
+            "Threshold" => Condition::Threshold(true),
+            "Delirium" => Condition::Delirium(true),
+            "Metalcraft" => Condition::Metalcraft(true),
+            "Hellbent" => Condition::Hellbent(true),
+            "FatefulHour" => Condition::FatefulHour(true),
+            "Kicked" => Condition::Kicked,
+            other => return Err(bad("Condition", other)),
+        });
+    }
     if style == CondStyle::Requirement {
         used.extend([
-            "Condition",
             "PlayerTurn",
             "OpponentTurn",
             "Threshold",
@@ -683,18 +710,6 @@ pub fn parse_conditions(
             "Hellbent",
             "FatefulHour",
         ]);
-        if let Some(c) = params.get("Condition") {
-            conds.push(match c {
-                "PlayerTurn" => Condition::YourTurn(true),
-                "NotPlayerTurn" => Condition::YourTurn(false),
-                "Threshold" => Condition::Threshold(true),
-                "Delirium" => Condition::Delirium(true),
-                "Metalcraft" => Condition::Metalcraft(true),
-                "Hellbent" => Condition::Hellbent(true),
-                "FatefulHour" => Condition::FatefulHour(true),
-                other => return Err(bad("Condition", other)),
-            });
-        }
         if params.get("PlayerTurn").is_some_and(flag) {
             conds.push(Condition::YourTurn(true));
         }
@@ -1003,6 +1018,20 @@ impl GameState {
                 }
                 best(0, &fits, &mut [false; 4])
             }
+            Expr::Kicked(a, b) => {
+                if self.card(ctx.source).kicked != 0 {
+                    self.eval(a, ctx)
+                } else {
+                    self.eval(b, ctx)
+                }
+            }
+            Expr::IfCmp(check, cmp, v) => {
+                if cmp.holds(self.eval(check, ctx), self.eval(&cmp.rhs, ctx)) {
+                    self.eval(v, ctx)
+                } else {
+                    0
+                }
+            }
             Expr::RememberedSize => {
                 let s = self.card(ctx.source);
                 (s.remembered.len() + s.remembered_players.len()) as i32
@@ -1169,6 +1198,7 @@ impl GameState {
             }
             Condition::Hellbent(b) => self.player(you).hand.is_empty() == *b,
             Condition::FatefulHour(b) => (self.player(you).life <= 5) == *b,
+            Condition::Kicked => self.card(ctx.source).kicked != 0,
             Condition::RememberedPresent {
                 spec,
                 cmp,

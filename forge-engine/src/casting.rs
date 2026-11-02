@@ -997,6 +997,37 @@ impl GameState {
         let id = self.next_stack_id;
         self.next_stack_id += 1;
 
+        // 601.2b: Kicker ankündigen (CR 702.33a); nur anbieten, wenn grob bezahlbar.
+        let mut kicker_parts: Vec<CostPart> = Vec::new();
+        let kickers = self.chars(on_stack).keywords.iter().find_map(|k| match k {
+            Keyword::Kicker(v) => Some(v.clone()),
+            _ => None,
+        });
+        let mut kicked = 0u8;
+        for (i, text) in kickers.unwrap_or_default().iter().enumerate() {
+            let Ok(kc) = Cost::parse(text) else { continue };
+            let extra = kc.mana.as_ref().map_or(0, |m| m.mana_value());
+            if mana_cost.mana_value() + extra > self.potential_mana(p)
+                || !self.can_pay_nonmana(&kc, on_stack, p)
+            {
+                continue;
+            }
+            if matches!(
+                ch.ask(Decision::Confirm {
+                    player: p,
+                    prompt: format!("Kicker {text} bezahlen?"),
+                })?,
+                Choice::Yes
+            ) {
+                kicked |= 1 << i;
+                if let Some(m) = kc.mana {
+                    mana_cost.generic += m.generic;
+                    mana_cost.shards.extend(m.shards);
+                }
+                kicker_parts.extend(kc.parts);
+            }
+        }
+        self.card_mut(on_stack).kicked = kicked;
         // 601.2b: X wählen
         let x = if mana_cost.x_count() > 0 {
             let max = self.potential_mana(p);
@@ -1031,6 +1062,7 @@ impl GameState {
         if let Some(a) = &alt {
             nonmana.parts.extend(a.parts.iter().cloned());
         }
+        nonmana.parts.extend(kicker_parts);
         let paid = if nonmana.parts.is_empty() {
             Vec::new()
         } else {

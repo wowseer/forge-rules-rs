@@ -51,6 +51,7 @@ impl GameState {
             exile_from_stack: false,
             last_x: 0,
             cast_from: None,
+            kicked: 0,
             prevent_next: 0,
             copy: None,
         });
@@ -176,6 +177,11 @@ impl GameState {
                 old.cast_from
             } else {
                 None
+            },
+            kicked: if from == Some(Zone::Stack) && to == Zone::Battlefield {
+                old.kicked
+            } else {
+                0
             },
             prevent_next: 0,
             copy: None,

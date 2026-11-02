@@ -98,6 +98,10 @@ impl GameState {
             }
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
+            Prop::Kicked(which) => match which {
+                None => c.kicked != 0,
+                Some(n) => c.kicked & (1 << (n - 1)) != 0,
+            },
             Prop::WasCast { from } => {
                 c.cast_from.is_some() && from.is_none_or(|z| c.cast_from == Some(z))
             }

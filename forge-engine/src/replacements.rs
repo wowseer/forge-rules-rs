@@ -461,11 +461,23 @@ pub fn parse_etb_counter(face: &CardFace, kw: &str) -> Result<(String, Expr), Co
     if parts.len() < 3 || parts[1].starts_with("EACH") {
         return Err(err());
     }
-    if parts.len() > 3 && parts[3] != "no Condition" {
-        return Err(err());
-    }
     let amount = Expr::parse_value(face, parts[2]).map_err(|_| err())?;
-    Ok((parts[1].to_string(), amount))
+    match parts.get(3).map(|c| c.trim()) {
+        None | Some("no Condition") | Some("no condition") | Some("") => {
+            Ok((parts[1].to_string(), amount))
+        }
+        // `CheckSVar$ X[ | SVarCompare$ LT2]` (Java etbCounter-Bedingung, Standard GE1)
+        Some(c) if c.starts_with("CheckSVar$") => {
+            let pm = forge_script::ParamMap::parse(c);
+            let check = Expr::parse_value(face, pm.get("CheckSVar").unwrap_or(""))?;
+            let cmp = crate::expr::Compare::parse(face, pm.get("SVarCompare").unwrap_or("GE1"))?;
+            Ok((
+                parts[1].to_string(),
+                Expr::IfCmp(Box::new(check), Box::new(cmp), Box::new(amount)),
+            ))
+        }
+        Some(_) => Err(err()),
+    }
 }
 
 /// Was beim Zonenwechsel geändert wird.
