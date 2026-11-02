@@ -54,7 +54,7 @@ Keyword;Hidden agenda;n/a;;Conspiracy-Draft
 Keyword;Space sculptor;n/a;;Unstable
 Keyword;Starting intensity;n/a;;Alchemy
 Cost;Mana cost;ja;spells::x_spell;inkl. Hybrid, Phyrexian, {2/W}, X; Snow-Bezahlung nur aus Pool
-Cost;Add mana;teilweise;spells::manual_mana_payment_and_cancel;Mana-Fähigkeiten mit Produced$ (fest, Any, Combo Farbe)
+Cost;Add mana;teilweise;spells::manual_mana_payment_and_cancel, spells::mana_ability_with_variable_amount;Mana-Fähigkeiten mit Produced$ (fest, Any, Combo Farbe, ChosenColor), Amount$ als Ausdruck
 Cost;{T};ja;spells::activated_ability_with_tap_cost_uses_stack_and_sickness;
 Cost;{Q};ja;spells::untap_symbol_cost;
 Cost;Sac;ja;spells::sacrifice_self_cost, sacrifice_unless::spell_additional_sacrifice_cost_is_required_and_remembered;Sac<1/CARDNAME> und Sac<n/Typ>, auch als Zusatzkosten von Zaubern (CR 601.2f/h); bezahlte Objekte für Sacrificed$…

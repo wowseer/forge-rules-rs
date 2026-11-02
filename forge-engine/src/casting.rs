@@ -126,7 +126,39 @@ impl GameState {
 
     /// Grobe Obergrenze für verfügbares Mana (Pool + Mana-Fähigkeiten).
     fn potential_mana(&self, p: PlayerId) -> u32 {
-        self.player(p).mana_pool.len() as u32 + self.available_mana_abilities(p).len() as u32
+        let from_abilities: u32 = self
+            .available_mana_abilities(p)
+            .into_iter()
+            .map(|(c, i)| {
+                let ab = &self.card(c).compiled().activated[i];
+                match &ab.effect {
+                    crate::effects::Effect::AddMana { produce, amount } => {
+                        let per = match produce {
+                            ManaProduce::Fixed(v) => v.len().max(1) as i32,
+                            _ => 1,
+                        };
+                        let n = match amount {
+                            crate::effects::Amount::Fixed(n) => *n,
+                            crate::effects::Amount::XPaid => 0,
+                            crate::effects::Amount::Expr(e) => self.eval(
+                                e,
+                                &crate::expr::EvalCtx {
+                                    source: c,
+                                    controller: p,
+                                    x: 0,
+                                    targets: &[],
+                                    trig: None,
+                                    paid: &[],
+                                },
+                            ),
+                        };
+                        (per * n).max(0) as u32
+                    }
+                    _ => 1,
+                }
+            })
+            .sum();
+        self.player(p).mana_pool.len() as u32 + from_abilities
     }
 
     /// Sind für jede Fähigkeit der Kette mit Pflichtzielen Ziele vorhanden?
@@ -1134,15 +1166,15 @@ impl GameState {
                 match &ab.effect {
                     crate::effects::Effect::AddMana {
                         produce: ManaProduce::Fixed(v),
-                        amount: 1,
+                        amount: crate::effects::Amount::Fixed(1),
                     } if v.len() == 1 => Some((c, i, v.clone())),
                     crate::effects::Effect::AddMana {
                         produce: ManaProduce::OneOf(cols),
-                        amount: 1,
+                        amount: crate::effects::Amount::Fixed(1),
                     } => Some((c, i, cols.iter().map(|c| Some(*c)).collect())),
                     crate::effects::Effect::AddMana {
                         produce: ManaProduce::ChosenColor,
-                        amount: 1,
+                        amount: crate::effects::Amount::Fixed(1),
                     } => self.card(c).chosen_color.map(|col| (c, i, vec![Some(col)])),
                     _ => None,
                 }

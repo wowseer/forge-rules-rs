@@ -199,7 +199,7 @@ Offen (147): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, Al
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Mana cost | ✅ ja | `spells::x_spell` | inkl. Hybrid, Phyrexian, {2/W}, X | cost/CostPartMana.java |
-| Add mana | 🟡 teilweise | `spells::manual_mana_payment_and_cancel` | Mana-Fähigkeiten mit Produced$ (fest, Any, Combo Farbe) | cost/CostAddMana.java |
+| Add mana | 🟡 teilweise | `spells::manual_mana_payment_and_cancel, spells::mana_ability_with_variable_amount` | Mana-Fähigkeiten mit Produced$ (fest, Any, Combo Farbe, ChosenColor), Amount$ als Ausdruck | cost/CostAddMana.java |
 | {T} | ✅ ja | `spells::activated_ability_with_tap_cost_uses_stack_and_sickness` |  | cost/CostTap.java |
 | {Q} | ✅ ja | `spells::untap_symbol_cost` |  | cost/CostUntap.java |
 | tapXType | ✅ ja | `sacrifice_unless::exile_tap_and_return_cost_parts` | n ungetappte eigene Permanents nach Typ (ohne Einsatzsperre, CR 302.6) | cost/CostTapType.java |

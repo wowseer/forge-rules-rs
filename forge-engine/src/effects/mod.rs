@@ -116,7 +116,8 @@ pub enum Effect {
     },
     AddMana {
         produce: ManaProduce,
-        amount: u32,
+        /// `Amount$` (Zahl oder Ausdruck wie `X`)
+        amount: Amount,
     },
     Tap {
         what: Defined,
@@ -1077,10 +1078,7 @@ fn compile_depth(
             })?;
             let produce =
                 parse_produced(produced).ok_or_else(|| c.unsupported("Produced", produced))?;
-            let amount = match c.get("Amount") {
-                Some(s) => s.parse().map_err(|_| c.unsupported("Amount", s))?,
-                None => 1,
-            };
+            let amount = c.amount("Amount", Some(1))?;
             Effect::AddMana { produce, amount }
         }
         "Tap" => Effect::Tap {

@@ -312,7 +312,8 @@ impl GameState {
                     .chars(ctx.source)
                     .types
                     .has_super(forge_types::Supertype::Snow);
-                for _ in 0..*amount {
+                let n = self.amount(amount, ctx, targets).max(0);
+                for _ in 0..n {
                     match produce {
                         ManaProduce::Fixed(syms) => {
                             for s in syms {

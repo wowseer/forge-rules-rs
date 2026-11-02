@@ -94,7 +94,7 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             target: None,
             effect: Effect::AddMana {
                 produce: ManaProduce::Fixed(vec![Some(c)]),
-                amount: 1,
+                amount: crate::effects::Amount::Fixed(1),
             },
             sub: None,
             description: format!("{{T}}: Add {{{}}}. ({t})", c.symbol()),

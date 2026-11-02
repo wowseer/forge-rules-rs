@@ -420,3 +420,16 @@ fn alternative_cost_instead_of_mana_cost() {
     d.pass_all();
     assert_eq!(d.g().player(P2).life, 20, "Blitz neutralisiert");
 }
+
+#[test]
+fn mana_ability_with_variable_amount() {
+    // Java ManaEffect Amount$ X; grobe Obergrenze in legal_actions berücksichtigt die Menge
+    let (db, mut g) = game_at(Step::Main1, 10);
+    let cradle = put(&db, &mut g, "Cradle Lite", P1, Zone::Battlefield);
+    put_n(&db, &mut g, "Grizzly Bears", P1, Zone::Battlefield, 3);
+    let div = put(&db, &mut g, "Giant Growth", P1, Zone::Hand);
+    let mut d = Driver::new(g);
+    assert!(d.g().legal_actions(P1).contains(&Action::Cast(div)));
+    d.act(Action::Activate(cradle, 0));
+    assert_eq!(d.g().player(P1).mana_pool.len(), 3);
+}
