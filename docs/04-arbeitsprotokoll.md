@@ -5,6 +5,46 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-02 – Sitzung 7: Massen-Effekte, Kostenhilfen, Marken, Spieler-Statics
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| `AnimateAll`, `TapAll`, `UntapAll`, `SacrificeAll`, `Investigate`, `Fog`, `Proliferate` | ✅ (aus Sitzung 6 übernommen, Clippy behoben) |
+| Convoke, Delve, Improvise (CR 702.51/66/126), Affinity (CR 702.41) | ✅ |
+| Marken-Filter `counters_…`, `HasCounters`, `IsMonstrous`; `RemoveCounter` | ✅ |
+| Adapt, Monstrosity, Bolster, Support als `PutCounter`-Varianten | ✅ |
+| Spieler-Statics: maximale Handgröße (Set/Raise/Unlimited), Hexproof/Shroud für Spieler | ✅ |
+| Tests | 267 (alle grün, inkl. Lasttest) |
+| Unterstützte Karten im Zielpool | 39,2 % → **42,8 %** (Pauper 59 %, Modern 46 %) |
+
+### Entscheidungen
+
+- Convoke ordnet Kreaturen automatisch Symbolen zu (wenigfarbige Kreaturen zuerst,
+  Symbole mit wenigen Farben zuerst); keine Farbwahl des Spielers, X nicht per Convoke.
+- Kostenhilfen werden vor dem Mana gefragt (wie Java); `SimpleAi` nutzt sie maximal.
+- Spieler-Statics als eigener `CompiledStatic::Player` statt Erweiterung von
+  `ContinuousStatic` (keine Layer, wirken auf Spieler); Auswertung über
+  `GameState::player_statics`.
+- `ReduceCost`-Ausdrucksfehler werden nicht mehr verschluckt – der Bericht zeigt nun den
+  eigentlichen fehlenden `Count$`-Ausdruck. `examples/why.rs -- "" --all` zählt alle Gründe.
+
+### Bekannte Lücken
+
+- `counters_GEX_…` (Variablen in Filtern) wie `cmcLEX` weiter offen.
+- Trigger `BecomeMonstrous`, `CounterRemoved`; `RemoveCounter` mit `Choices$`/`Remember…`.
+- Ausdrücke `Count$Party`, `…$GreatestCardPower`, `Converge`, `ResolvedThisTurn`,
+  `PlayerCountOpponents$Amount`.
+
+### Nächste Schritte
+
+1. Effekt `Play` (157), `CopySpellAbility` (117), `DigUntil` (117), Static `CantBeCast` (112).
+2. Ersatzeffekt `Counter` (108, Marken verdoppeln), `GenericChoice` (99), Filter `Emblem` (103).
+3. Filter mit X-Variablen (`cmcLEX`/`cmcEQX`, `counters_GEX`) über gebundenen Kontext.
+
+---
+
 ## 2026-11-02 – Sitzung 6: Mehrseitige Karten, Sagas, Kosten, Zugstatistik
 
 ### Ergebnis

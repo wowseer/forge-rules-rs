@@ -157,6 +157,19 @@ CompiledAbility {
   meint immer die Ziele der Elternfähigkeit. Kostenteil `ExileFromGrave<1/CARDNAME>`.
 - Trigger `Sacrificed`, `AttackersDeclared`, `AttackersDeclaredOneTarget`
   (`TriggeredAttackingPlayer`, `TriggeredAttackedTarget`).
+- Kostenhilfen-Keywords `Convoke`, `Improvise`, `Delve` werden beim Wirken nach den
+  Kostenänderungen und vor dem Mana abgefragt (`Decision::ChooseCards` mit
+  `CardChoiceReason::Convoke|Improvise|Delve`, Java `CostAdjustment`); `Affinity:<Filter>`
+  senkt den generischen Anteil in `adjusted_spell_cost`.
+- Filter `counters_<LT|LE|EQ|GE|GT|NE><n>_<Art>` (nur feste Zahlen), `HasCounters`,
+  `IsMonstrous`/`nonMonstrous`.
+- `PutCounter`-Kurzformen `Adapt$ n`, `Monstrosity$ n`, `Bolster$ n`, `Support$ n` werden
+  beim Laden wie in Java (`CountersPutEffect.buildSpellAbility`) zu `CounterType$ P1P1`
+  usw. umgeschrieben; die Sonderregeln trägt `effects::CounterMode`.
+- `RemoveCounter`: `CounterType$ <Art>|Any|All`, `CounterNum$ n|All`, `UpTo$`, `Optional$`.
+- Spieler-Statics (`Mode$ Continuous | Affected$ You|Player|Opponent`) werden zu
+  `CompiledStatic::Player`: `SetMaxHandSize$ n|Unlimited`, `RaiseMaxHandSize$`,
+  `AddKeyword$ Hexproof|Shroud`.
 
 ## Token und modale Fähigkeiten
 
