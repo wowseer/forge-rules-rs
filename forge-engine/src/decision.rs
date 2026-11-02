@@ -163,6 +163,8 @@ pub enum CardChoiceReason {
     Discard,
     /// CR 701.21: Opfern durch einen Effekt (auch `Destroy$`-Variante)
     Sacrifice,
+    /// CR 701.28: optionales Transformieren
+    Transform,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

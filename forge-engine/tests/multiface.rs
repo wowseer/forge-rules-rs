@@ -69,3 +69,30 @@ fn modal_double_faced_front_is_a_spell() {
     assert_eq!(d.g().player(P2).life, 17);
     assert_eq!(count(d.g(), "Valakut Lite", Zone::Graveyard), 1);
 }
+
+#[test]
+fn transform_keeps_object_damage_and_counters() {
+    // CR 712.18: Transformieren erzeugt kein neues Objekt
+    let (db, mut g) = game_at(Step::Main1, 10);
+    put_n(&db, &mut g, "Forest", P1, Zone::Battlefield, 2);
+    let v = put(&db, &mut g, "Villager Lite", P1, Zone::Battlefield);
+    g.add_counters(v, "P1P1", 1);
+    g.card_mut(v).damage = 1;
+    let mut d = Driver::new(g);
+    d.act(Action::Activate(v, 0));
+    d.finish_casting(&[]);
+    d.pass_all();
+    let ch = d.g().chars(v);
+    assert_eq!(ch.name, "Howler Lite");
+    assert_eq!(ch.power, Some(5), "4/4 + Marke");
+    assert!(
+        d.g()
+            .has_keyword(v, &forge_engine::keyword::Keyword::Trample)
+    );
+    assert_eq!(d.g().card(v).damage, 1);
+    assert_eq!(
+        ch.mana_cost.as_ref().unwrap().mana_value(),
+        2,
+        "CR 712.8e: Manawert der Vorderseite"
+    );
+}

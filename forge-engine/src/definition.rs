@@ -276,7 +276,7 @@ impl CardDefinition {
         let mut unsupported = Vec::new();
         if !matches!(
             script.split_mode,
-            SplitMode::None | SplitMode::Adventure | SplitMode::Modal
+            SplitMode::None | SplitMode::Adventure | SplitMode::Modal | SplitMode::DoubleFaced
         ) {
             unsupported.push(format!("mehrseitige Karte ({:?})", script.split_mode));
         }

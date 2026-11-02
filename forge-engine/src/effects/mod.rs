@@ -269,6 +269,11 @@ pub enum Effect {
         what: Defined,
         amount: Amount,
     },
+    /// Transformieren (`SetState | Mode$ Transform`, CR 701.28).
+    Transform {
+        what: Defined,
+        optional: bool,
+    },
     /// Gemerkte Objekte vergessen (`Cleanup`): `ClearRemembered$`.
     Cleanup {
         what: Defined,
@@ -405,6 +410,8 @@ pub struct ZonePlacement {
     pub gain_control: bool,
     /// `LibraryPosition$`: 0 = oben, -1 = unten (nur Bibliothek)
     pub library_bottom: bool,
+    /// `Transformed$ True`: doppelseitige Karte kommt transformiert ins Spiel.
+    pub transformed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -676,6 +683,9 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
             Some("-1") => true,
             Some(v) => return Err(c.unsupported("LibraryPosition", v)),
         },
+        transformed: c
+            .get("Transformed")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
     };
     // reine Text-/Hinweisparameter
     for k in [
@@ -1190,6 +1200,18 @@ fn compile_depth(
             amount: c.amount("Amount", None)?,
             what: c.defined(Defined::Targeted)?,
         },
+        "SetState" => {
+            match c.get("Mode") {
+                Some("Transform") => {}
+                Some(m) => return Err(c.unsupported("Mode", m)),
+                None => return Err(c.unsupported("Mode", "fehlt")),
+            }
+            let optional = c.get("Optional").is_some();
+            Effect::Transform {
+                what: c.defined(Defined::SelfCard)?,
+                optional,
+            }
+        }
         "Cleanup" => {
             let clear_remembered = c.get("ClearRemembered").is_some();
             // Diese Zustände erzeugt die Engine (noch) nicht; Leeren ist daher

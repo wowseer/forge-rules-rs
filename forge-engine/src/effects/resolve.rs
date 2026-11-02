@@ -766,6 +766,25 @@ impl GameState {
                     until_turn,
                 });
             }
+            Effect::Transform { what, optional } => {
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    if *optional
+                        && !matches!(
+                            ch.ask(Decision::ChooseCards {
+                                player: ctx.controller,
+                                reason: crate::decision::CardChoiceReason::Transform,
+                                options: vec![c],
+                                min: 0,
+                                max: 1,
+                            })?,
+                            Choice::Cards(v) if !v.is_empty()
+                        )
+                    {
+                        continue;
+                    }
+                    self.transform(c);
+                }
+            }
             Effect::Cleanup {
                 what,
                 clear_remembered,
@@ -1202,6 +1221,9 @@ impl GameState {
         let new = self.move_card_as(c, to, !place.library_bottom, ctrl);
         if self.card(new).zone == Some(Zone::Battlefield) && place.tapped {
             self.card_mut(new).tapped = true;
+        }
+        if self.card(new).zone == Some(Zone::Battlefield) && place.transformed {
+            self.transform(new);
         }
         new
     }

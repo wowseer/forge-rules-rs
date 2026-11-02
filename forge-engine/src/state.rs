@@ -613,7 +613,15 @@ impl GameState {
             } else {
                 face.color()
             },
-            mana_cost: face.mana_cost.clone(),
+            // CR 712.8e: Manawert der Rückseite = der der Vorderseite (vereinfacht:
+            // die Manakosten der Vorderseite).
+            mana_cost: if c.face == 1
+                && c.def.script.split_mode == forge_script::SplitMode::DoubleFaced
+            {
+                c.def.face(0).mana_cost.clone()
+            } else {
+                face.mana_cost.clone()
+            },
             power: c
                 .base_pt
                 .map(|b| b.0)

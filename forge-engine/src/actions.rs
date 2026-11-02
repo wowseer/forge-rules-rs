@@ -483,6 +483,22 @@ impl GameState {
         true
     }
 
+    /// CR 701.28/712: Transformieren – dasselbe Objekt zeigt die andere Seite
+    /// und erhält einen neuen Zeitstempel. Nur echte doppelseitige Karten.
+    pub fn transform(&mut self, c: CardId) -> bool {
+        let o = self.card(c);
+        if o.def.script.split_mode != forge_script::SplitMode::DoubleFaced
+            || o.def.faces.get(1).is_none_or(Option::is_none)
+        {
+            return false;
+        }
+        let ts = self.timestamp();
+        let o = self.card_mut(c);
+        o.face = 1 - o.face.min(1);
+        o.timestamp = ts;
+        true
+    }
+
     /// CR 701.21: Opfern – vom Battlefield in den Friedhof des Besitzers, ohne
     /// „zerstören“ (Unzerstörbarkeit und Regeneration greifen nicht).
     pub fn sacrifice(&mut self, c: CardId) -> bool {
