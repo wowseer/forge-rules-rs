@@ -433,6 +433,47 @@ impl GameState {
                     }
                 }
             }
+            Effect::GenericChoice {
+                who,
+                choices,
+                at_random,
+                remember_chooser,
+            } => {
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    if !self.player(p).is_in_game() || choices.is_empty() {
+                        continue;
+                    }
+                    let i = if *at_random {
+                        self.rng.below(choices.len() as u64) as usize
+                    } else {
+                        let modes: Vec<(usize, String)> = choices
+                            .iter()
+                            .enumerate()
+                            .map(|(i, a)| (i, a.description.clone()))
+                            .collect();
+                        match ch.ask(Decision::ChooseModes {
+                            player: p,
+                            modes,
+                            min: 1,
+                            max: 1,
+                            can_repeat: false,
+                        })? {
+                            Choice::Modes(v) if v.len() == 1 && v[0] < choices.len() => v[0],
+                            _ => 0,
+                        }
+                    };
+                    if *remember_chooser {
+                        self.card_mut(ctx.source).remembered_players.push(p);
+                    }
+                    self.apply_chain_inherit(&choices[i], targets, ctx, ch)?;
+                    if *remember_chooser {
+                        let rp = &mut self.card_mut(ctx.source).remembered_players;
+                        if let Some(pos) = rp.iter().rposition(|x| *x == p) {
+                            rp.remove(pos);
+                        }
+                    }
+                }
+            }
             Effect::DigUntil {
                 players,
                 valid,

@@ -138,6 +138,14 @@ pub enum Effect {
         amount: Amount,
         mode: CounterMode,
     },
+    /// Jeder Spieler aus `who` wählt eine der Unterfähigkeiten (Java `ChooseGenericEffect`).
+    GenericChoice {
+        who: Defined,
+        choices: Vec<Arc<CompiledAbility>>,
+        at_random: bool,
+        /// `TempRemember$ Chooser`: der Wählende ist während der Auflösung gemerkt
+        remember_chooser: bool,
+    },
     /// Bibliothek aufdecken, bis passende Karten gefunden sind (Java `DigUntilEffect`).
     DigUntil {
         players: Defined,
@@ -2029,6 +2037,43 @@ fn compile_depth(
                 tapped,
                 power,
                 toughness,
+            }
+        }
+        "GenericChoice" => {
+            for k in ["ShowChoice", "ChoicePrompt", "AILogic", "ChoiceTitle"] {
+                c.get(k);
+            }
+            let choices_s = c.get("Choices").ok_or(CompileError::MissingParam {
+                api: api.into(),
+                key: "Choices",
+            })?;
+            let mut choices = Vec::new();
+            for name in choices_s.split(',').map(str::trim) {
+                let sv = face
+                    .svar(name)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+                let sub_ab = ScriptAbility::from_svar(sv)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+                    .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+                let sub = compile_depth(face, &sub_ab, depth + 1)?;
+                if sub.chain().iter().any(|a| a.target.is_some()) {
+                    return Err(c.unsupported("Choices", "mit Zielen"));
+                }
+                choices.push(Arc::new(sub));
+            }
+            let at_random = c
+                .get("AtRandom")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let remember_chooser = match c.get("TempRemember") {
+                None => false,
+                Some("Chooser") => true,
+                Some(v) => return Err(c.unsupported("TempRemember", v)),
+            };
+            Effect::GenericChoice {
+                who: c.defined(Defined::You)?,
+                choices,
+                at_random,
+                remember_chooser,
             }
         }
         "Charm" => {
