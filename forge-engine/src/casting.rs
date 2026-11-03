@@ -1322,6 +1322,13 @@ impl GameState {
             card: source,
             index,
         });
+        let loyalty = self.card(source).compiled().activated[index].planeswalker;
+        self.fire(crate::triggers::TriggerEvent::AbilityCast {
+            source,
+            player: p,
+            loyalty,
+            stack_item: id,
+        });
         self.fire_becomes_target();
         Ok(())
     }

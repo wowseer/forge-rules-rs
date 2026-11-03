@@ -280,8 +280,15 @@ impl GameState {
         // CR 122.6: Marken, mit denen ein Objekt ins Spiel kommt, gelten als
         // daraufgelegt (z. B. Saga-Kapitel I).
         if to == Zone::Battlefield {
+            let player = self.card(new_id).controller;
             for (k, v) in &mods.counters {
                 self.fire_counters_added(new_id, k, 0, *v);
+                self.fire(crate::triggers::TriggerEvent::CounterAddedOnce {
+                    card: new_id,
+                    kind: k.clone(),
+                    amount: *v,
+                    player,
+                });
             }
         }
         if from == Some(Zone::Battlefield) {
@@ -807,6 +814,17 @@ impl GameState {
             .entry(kind.to_string())
             .or_insert(0) += n;
         self.fire_counters_added(c, kind, before, n);
+        // Wer legt die Marken? Controller der Effektquelle, sonst der des Objekts.
+        let player = self
+            .effect_source
+            .map(|s| self.card(s).controller)
+            .unwrap_or(self.card(c).controller);
+        self.fire(crate::triggers::TriggerEvent::CounterAddedOnce {
+            card: c,
+            kind: kind.to_string(),
+            amount: n,
+            player,
+        });
     }
 
     /// Entfernt bis zu `n` Marken der Art; liefert die Zahl entfernter Marken.

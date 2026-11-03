@@ -229,6 +229,11 @@ pub enum Effect {
     ChangeZoneSearch {
         origin: Vec<crate::zone::Zone>,
         optional: bool,
+        /// `DefinedPlayer$`: in wessen Zonen gesucht wird (sonst der Controller);
+        /// gewählt wird vom Controller (`Chooser$ You`).
+        zone_owner: Option<Defined>,
+        /// `Mandatory$ True`: so viele wie möglich wählen
+        mandatory: bool,
         destination: crate::zone::Zone,
         change_type: ValidSpec,
         num: Amount,
@@ -1043,12 +1048,7 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         },
     };
     // reine Text-/Hinweisparameter
-    for k in [
-        "ChangeTypeDesc",
-        "SelectPrompt",
-        "Mandatory",
-        "ShuffleNonMandatory",
-    ] {
+    for k in ["ChangeTypeDesc", "SelectPrompt", "ShuffleNonMandatory"] {
         c.get(k);
     }
     let shuffle_param = c.get("Shuffle").map(|v| v.eq_ignore_ascii_case("true"));
@@ -1072,7 +1072,9 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         .is_some_and(|v| v.eq_ignore_ascii_case("true"))
         || (origin.iter().all(|z| z.is_hidden())
             && !c.ab.params.has("ValidTgts")
-            && !c.ab.params.has("Defined"));
+            && !c.ab.params.has("Defined"))
+        // Suche in den Zonen eines (Ziel-)Spielers
+        || c.ab.params.has("DefinedPlayer");
     let optional = c
         .get("Optional")
         .is_some_and(|v| v.eq_ignore_ascii_case("true"));
@@ -1086,9 +1088,23 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
             c.amount("ChangeNum", Some(1))?
         };
         let shuffle = shuffle_param.unwrap_or(origin.contains(&Zone::Library));
+        let zone_owner = if c.ab.params.has("DefinedPlayer") {
+            match c.get("Chooser") {
+                None | Some("You") => {}
+                Some(v) => return Err(c.unsupported("Chooser", v)),
+            }
+            Some(c.defined_key("DefinedPlayer", Defined::You)?)
+        } else {
+            None
+        };
+        let mandatory = c
+            .get("Mandatory")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true"));
         return Ok(Effect::ChangeZoneSearch {
             origin,
             optional,
+            zone_owner,
+            mandatory,
             destination,
             change_type: ValidSpec::parse(ct)?,
             num,
@@ -1096,6 +1112,7 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
             shuffle,
         });
     }
+    c.get("Mandatory");
     let shuffle = shuffle_param.unwrap_or(false);
     let what = c.defined(Defined::Targeted)?;
     Ok(Effect::ChangeZone {

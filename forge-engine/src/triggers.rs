@@ -141,6 +141,19 @@ pub enum TriggerKind {
         valid_card: Option<ValidSpec>,
         valid_player: Option<ValidSpec>,
     },
+    /// `Mode$ CounterAddedOnce` – Marken wurden (in einem Ereignis) daraufgelegt.
+    CounterAddedOnce {
+        valid_card: Option<ValidSpec>,
+        counter_type: Option<String>,
+        valid_source: Option<ValidSpec>,
+    },
+    /// `Mode$ AbilityCast` – eine aktivierte Fähigkeit wurde aktiviert (CR 602).
+    AbilityCast {
+        valid_card: Option<ValidSpec>,
+        valid_activator: Option<ValidSpec>,
+        /// `ValidSA$ Activated.Loyalty`
+        loyalty_only: bool,
+    },
     /// `Mode$ TapsForMana` – getriggerte Mana-Fähigkeit (CR 605.1b), wird sofort
     /// ohne Stapel ausgeführt (`GameState::tapped_for_mana`).
     TapsForMana {
@@ -361,6 +374,19 @@ pub enum TriggerEvent {
     },
     TurnFaceUp {
         card: CardId,
+    },
+    CounterAddedOnce {
+        card: CardId,
+        kind: String,
+        amount: u32,
+        /// Spieler, der die Marken legt
+        player: PlayerId,
+    },
+    AbilityCast {
+        source: CardId,
+        player: PlayerId,
+        loyalty: bool,
+        stack_item: u32,
     },
     /// `old` ist das geopferte Objekt (LKI), `player` wer geopfert hat.
     Sacrificed {
@@ -629,6 +655,27 @@ pub fn compile_trigger(
         "LifeGained" => TriggerKind::LifeGained {
             valid_player: valid("ValidPlayer", &mut used)?,
         },
+        "CounterAddedOnce" => {
+            used.push("CounterType");
+            TriggerKind::CounterAddedOnce {
+                valid_card: valid("ValidCard", &mut used)?,
+                counter_type: p.get("CounterType").map(str::to_string),
+                valid_source: valid("ValidSource", &mut used)?,
+            }
+        }
+        "AbilityCast" => {
+            used.push("ValidSA");
+            let loyalty_only = match p.get("ValidSA") {
+                None | Some("SpellAbility.!ManaAbility") | Some("Activated") => false,
+                Some("Activated.Loyalty") => true,
+                Some(v) => return Err(unsupported("ValidSA", v)),
+            };
+            TriggerKind::AbilityCast {
+                valid_card: valid("ValidCard", &mut used)?,
+                valid_activator: valid("ValidActivatingPlayer", &mut used)?,
+                loyalty_only,
+            }
+        }
         "TapsForMana" => {
             used.push("Static");
             TriggerKind::TapsForMana {
@@ -1382,6 +1429,64 @@ impl GameState {
                 Some(TriggerInfo {
                     player: Some(*player),
                     amount: Some(*amount as i32),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::CounterAddedOnce {
+                    valid_card,
+                    counter_type,
+                    valid_source,
+                },
+                TriggerEvent::CounterAddedOnce {
+                    card,
+                    kind,
+                    amount,
+                    player,
+                },
+            ) => {
+                if counter_type.as_ref().is_some_and(|t| t != kind)
+                    || !self.opt_card(valid_card, *card, source, controller)
+                    || valid_source
+                        .as_ref()
+                        .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*card),
+                    card_lki: Some(*card),
+                    player: Some(*player),
+                    amount: Some(*amount as i32),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::AbilityCast {
+                    valid_card,
+                    valid_activator,
+                    loyalty_only,
+                },
+                TriggerEvent::AbilityCast {
+                    source: sa_source,
+                    player,
+                    loyalty,
+                    stack_item,
+                },
+            ) => {
+                if (*loyalty_only && !*loyalty)
+                    || !self.opt_card(valid_card, *sa_source, source, controller)
+                    || valid_activator
+                        .as_ref()
+                        .is_some_and(|v| !self.player_matches_src(*player, v, controller, source))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*sa_source),
+                    card_lki: Some(*sa_source),
+                    player: Some(*player),
+                    stack_item: Some(*stack_item),
                     ..Default::default()
                 })
             }

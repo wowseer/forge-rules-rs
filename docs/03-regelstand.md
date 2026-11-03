@@ -13,7 +13,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
 | Keyword | 198 | 34 | 15 | 4 |
-| Trigger | 137 | 0 | 24 | 11 |
+| Trigger | 137 | 0 | 26 | 11 |
 | Replacement Effect | 35 | 0 | 4 | 5 |
 | Static Ability | 90 | 2 | 8 | 0 |
 | Effect (ApiType) | 188 | 5 | 65 | 16 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **94** | **141** | **81** |
+| **Summe** | **789** | **94** | **143** | **81** |
 
 ## Keyword
 
@@ -93,6 +93,7 @@ Offen (149): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, A
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Abandoned | ⚪ n/a |  | Archenemy | trigger/TriggerAbandoned.java |
+| AbilityCast | 🟡 teilweise | `more_triggers::counter_added_once_and_ability_cast` | aktivierte Nicht-Mana-Fähigkeiten, ValidCard, ValidActivatingPlayer, ValidSA Activated.Loyalty | trigger/TriggerSpellAbilityCastOrCopy.java |
 | AttackerBlocked | 🟡 teilweise | `triggers::blocks_attacker_blocked_and_unblocked_triggers` | ValidCard, ValidBlocker/Amount | trigger/TriggerAttackerBlocked.java |
 | AttackerBlockedByCreature | 🟡 teilweise | `triggers::attacker_blocked_by_creature_names_the_blocker` | ValidCard, ValidBlocker, TriggeredBlocker | trigger/TriggerAttackerBlockedByCreature.java |
 | AttackersDeclared | 🟡 teilweise | `triggers::attackers_declared_once_with_minimum_amount` | AttackingPlayer, AttackedTarget (nur Spieler), ValidAttackers/Amount, TriggeredAttackingPlayer | trigger/TriggerAttackersDeclared.java |
@@ -106,6 +107,7 @@ Offen (149): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, A
 | ChaosEnsues | ⚪ n/a |  | Planechase | trigger/TriggerChaosEnsues.java |
 | ConjureAll | ⚪ n/a |  | Alchemy | trigger/TriggerConjureAll.java |
 | CounterAdded | 🟡 teilweise | `sagas::adding_several_lore_counters_triggers_each_chapter` | je einzelner Marke (Java TriggerCounterAdded), ValidCard, CounterType, CounterAmount | trigger/TriggerCounterAdded.java |
+| CounterAddedOnce | 🟡 teilweise | `more_triggers::counter_added_once_and_ability_cast` | einmal je Ereignis (auch Marken beim Eintreten), ValidCard, CounterType, ValidSource (Controller der Effektquelle), TriggerCount Amount | trigger/TriggerCounterAddedOnce.java |
 | CrankContraption | ⚪ n/a |  | Unstable | trigger/TriggerCrankContraption.java |
 | Cycled | 🟡 teilweise | `keywords_misc::cycled_and_discarded_triggers` | ValidCard (auch Self aus der Hand), ValidPlayer | trigger/TriggerCycled.java |
 | DamageDealtOnce | 🟡 teilweise | `triggers::attacks_alone_second_spell_damage_dealt_once_changeling` | einmal je Quelle bei gleichzeitigem Schaden, ValidSource, ValidTarget, CombatDamage, TriggerCount$DamageAmount | trigger/TriggerDamageDealtOnce.java |
@@ -128,7 +130,7 @@ Offen (149): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, A
 | TurnFaceUp | 🟡 teilweise | `morph::cast_face_down_then_turn_up_with_trigger` | ValidCard | trigger/TriggerTurnFaceUp.java |
 | VisitAttraction | ⚪ n/a |  | Unfinity | trigger/TriggerVisitAttraction.java |
 
-Offen (113): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlockedOnce, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTargetOnce, BlockersDeclared, CaseSolved, Championed, ChangesController, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterAddedOnce, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, DamageAll, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, DiscardedAll, Discover, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
+Offen (111): AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlockedOnce, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTargetOnce, BlockersDeclared, CaseSolved, Championed, ChangesController, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, DamageAll, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, DiscardedAll, Discover, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
 
 ## Replacement Effect
 
@@ -176,7 +178,7 @@ Offen (80): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | AssembleContraption | ⚪ n/a |  | Unstable | ability/effects/AssembleContraptionEffect.java |
 | BecomeMonarch | 🟡 teilweise | `monarch::monarch_draws_at_end_step_and_static_condition, monarch::combat_damage_to_monarch_steals_crown` | CR 724: ein Monarch, Ziehen im Endsegment, Übergang durch Kampfschaden, Weitergabe beim Ausscheiden, Condition Monarch/CheckDefinedPlayer You.isMonarch, Count$Monarch | ability/effects/BecomeMonarchEffect.java |
 | Branch | 🟡 teilweise | `choose_player_branch::branch_picks_sub_ability_by_condition` | BranchConditionSVar/Compare, True-/FalseSubAbility ohne eigene Ziele (erben die Ziele) | ability/effects/BranchEffect.java |
-| ChangeZone | 🟡 teilweise | `change_zone::search_library_tapped_then_shuffle, until_leaves::banisher_priest_exiles_until_it_leaves, change_zone_ext::shuffle_into_library, change_zone_ext::optional_move_can_be_declined, change_zone_ext::search_graveyard_and_exile` | Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1 | ability/effects/ChangeZoneEffect.java |
+| ChangeZone | 🟡 teilweise | `change_zone::search_library_tapped_then_shuffle, until_leaves::banisher_priest_exiles_until_it_leaves, change_zone_ext::shuffle_into_library, change_zone_ext::optional_move_can_be_declined, change_zone_ext::search_graveyard_and_exile, more_triggers::exile_from_opponents_hand_chosen_by_caster` | Ziele in beliebigen Zonen, Suche (verdeckt: darf nicht finden), Tapped, GainControl, LibraryPosition 0/-1 | ability/effects/ChangeZoneEffect.java |
 | ChangeZoneAll | 🟡 teilweise | `change_zone::change_zone_all_bounces_everything` | ChangeType + Origin/Destination, gleichzeitig (Rückblick für Trigger) | ability/effects/ChangeZoneAllEffect.java |
 | ChaosEnsues | ⚪ n/a |  | Planechase | ability/effects/ChaosEnsuesEffect.java |
 | Charm | 🟡 teilweise | `tokens_charm::charm_choose_two_resolve_in_printed_order` | CharmNum/MinCharmNum, CanRepeatModes, nur Modi mit legalen Zielen, Druckreihenfolge, bei Triggern beim Stapeln | ability/effects/CharmEffect.java |

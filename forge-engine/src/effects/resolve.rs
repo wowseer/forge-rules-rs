@@ -2567,15 +2567,26 @@ impl GameState {
             Effect::ChangeZoneSearch {
                 origin,
                 optional,
+                zone_owner,
+                mandatory,
                 destination,
                 change_type,
                 num,
                 place,
                 shuffle,
             } => {
-                let p = ctx.controller;
+                let chooser = ctx.controller;
+                let p = match zone_owner {
+                    Some(d) => {
+                        match Self::players_of(&self.resolve_defined(*d, targets, ctx)).first() {
+                            Some(o) => *o,
+                            None => return Ok(()),
+                        }
+                    }
+                    None => chooser,
+                };
                 let n = self.amount(num, ctx, targets).max(0) as u32;
-                // Kandidaten: eigene Karten in den Ursprungszonen (Battlefield: kontrolliert).
+                // Kandidaten: Karten des Spielers in den Ursprungszonen (Battlefield: kontrolliert).
                 let mut pool: Vec<CardId> = Vec::new();
                 for z in origin {
                     match z {
@@ -2598,11 +2609,13 @@ impl GameState {
                 }
                 let options: Vec<CardId> = pool
                     .into_iter()
-                    .filter(|c| self.card_matches(*c, change_type, ctx.source, p))
+                    .filter(|c| self.card_matches(*c, change_type, ctx.source, chooser))
                     .collect();
                 let max = n.min(options.len() as u32);
                 // CR 701.19b: nur in verdeckten Zonen darf man „nicht finden“.
-                let min = if *optional || origin.iter().any(|z| z.is_hidden()) {
+                let min = if *mandatory {
+                    max
+                } else if *optional || origin.iter().any(|z| z.is_hidden()) {
                     0
                 } else {
                     max
@@ -2611,7 +2624,7 @@ impl GameState {
                     Vec::new()
                 } else {
                     match ch.ask(Decision::ChooseCards {
-                        player: p,
+                        player: chooser,
                         reason: crate::decision::CardChoiceReason::Search,
                         options,
                         min,
@@ -2622,7 +2635,7 @@ impl GameState {
                     }
                 };
                 for c in chosen {
-                    let new = self.put_into_zone(c, *destination, place, p);
+                    let new = self.put_into_zone(c, *destination, place, chooser);
                     if place.remember {
                         self.card_mut(ctx.source).remembered.push(new);
                     }
