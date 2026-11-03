@@ -110,6 +110,33 @@ impl GameState {
         v
     }
 
+    /// `CanAttackDefender`: darf trotz Defender angreifen.
+    fn may_attack_with_defender(&self, c: CardId) -> bool {
+        self.battlefield
+            .iter()
+            .chain(self.command.iter())
+            .any(|&h| {
+                let o = self.card(h);
+                let Some(zone) = o.zone else { return false };
+                o.compiled().statics.iter().any(|s| {
+                    let crate::statics::CompiledStatic::CanAttackDefender(r) = s.as_ref() else {
+                        return false;
+                    };
+                    let ctx = crate::expr::EvalCtx {
+                        source: h,
+                        controller: o.controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                        paid: &[],
+                    };
+                    r.effect_zones.contains(&zone)
+                        && self.card_matches(c, &r.valid, h, o.controller)
+                        && self.check_conditions(&r.conditions, &ctx)
+                })
+            })
+    }
+
     /// Ausweichfähigkeiten (CR 702.14, 702.13, 702.28, 702.31, 702.36, 702.118).
     fn evasion_allows_block(&self, blocker: CardId, attacker: CardId) -> bool {
         let a = self.chars(attacker);
@@ -321,7 +348,8 @@ impl GameState {
                 self.is_creature(*c)
                     && !self.card(*c).tapped
                     && !self.is_summoning_sick(*c)
-                    && !self.has_keyword(*c, &Keyword::Defender)
+                    && (!self.has_keyword(*c, &Keyword::Defender)
+                        || self.may_attack_with_defender(*c))
                     && !self.restricted(crate::statics::RestrictionKind::CantAttack, *c)
             })
             .collect()

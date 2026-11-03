@@ -12,11 +12,11 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
-| Keyword | 198 | 34 | 15 | 4 |
-| Trigger | 137 | 0 | 26 | 11 |
+| Keyword | 198 | 38 | 15 | 4 |
+| Trigger | 137 | 1 | 27 | 11 |
 | Replacement Effect | 35 | 0 | 4 | 5 |
-| Static Ability | 90 | 2 | 8 | 0 |
-| Effect (ApiType) | 188 | 5 | 65 | 16 |
+| Static Ability | 90 | 3 | 8 | 0 |
+| Effect (ApiType) | 188 | 6 | 66 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 15 | 1 | 3 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **94** | **143** | **81** |
+| **Summe** | **789** | **101** | **145** | **81** |
 
 ## Keyword
 
@@ -34,6 +34,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 |---|---|---|---|---|
 | Affinity | ✅ ja | `cost_helpers::affinity_reduces_cost_per_artifact` | CR 702.41a: {1} weniger je bleibender Karte des Typs unter eigener Kontrolle (Kostensenkung CR 601.2f) | keyword/Keyword.java (Affinity) |
 | Aftermath | ✅ ja | `split::aftermath_half_only_from_graveyard_then_exiled` | CR 702.127: zweite Hälfte nur aus dem Friedhof, erste nicht von dort, danach ins Exil | keyword/Keyword.java (SimpleKeyword) |
+| Bushido | ✅ ja | `mechanics_batch1::bushido_and_flanking_in_combat` | CR 702.45: blockt oder wird geblockt → +n/+n bis Zugende | keyword/Keyword.java (KeywordWithAmount) |
 | Cascade | ✅ ja | `storm_cascade::cascade_casts_cheaper_nonland_for_free` | CR 702.85: exilieren bis Nichtland mit geringerem Manawert, gratis wirken dürfen, Rest zufällig unter die Bibliothek | keyword/Keyword.java (SimpleKeyword) |
 | Changeling | ✅ ja | `triggers::attacks_alone_second_spell_damage_dealt_once_changeling` | CR 702.73a: jeder Kreaturtyp (laut Typliste), in allen Zonen | keyword/Keyword.java (SimpleKeyword) |
 | Convoke | ✅ ja | `cost_helpers::convoke_taps_creatures_for_colored_and_generic_mana, cost_helpers::convoke_green_creature_cannot_pay_red` | CR 702.51a: getappte Kreatur zahlt {1} oder ein Symbol ihrer Farbe (auch Hybrid), vor dem Mana | keyword/Keyword.java (SimpleKeyword) |
@@ -51,6 +52,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Exalted | ✅ ja | `evasion::exalted_pumps_lone_attacker` | CR 702.83: je Instanz +1/+1, wenn eine Kreatur allein angreift | keyword/Keyword.java (SimpleKeyword) |
 | Fear | ✅ ja | `evasion::evasion_rules` | CR 702.36: nur von Artefakt- und/oder schwarzen Kreaturen blockbar | keyword/Keyword.java (SimpleKeyword) |
 | First Strike | ✅ ja | `combat::first_strike_kills_before_regular_damage` |  | keyword/Keyword.java (SimpleKeyword) |
+| Flanking | ✅ ja | `mechanics_batch1::bushido_and_flanking_in_combat` | CR 702.25: Blocker ohne Flanking erhält -1/-1 | keyword/Keyword.java (SimpleKeyword) |
 | Flash | ✅ ja | `spells::flash_allows_instant_speed_casting` |  | keyword/Keyword.java (SimpleKeyword) |
 | Flying | ✅ ja | `combat::flying_needs_flying_or_reach_to_block` |  | keyword/Keyword.java (SimpleKeyword) |
 | Haste | ✅ ja | `combat::summoning_sickness_haste_defender` |  | keyword/Keyword.java (SimpleKeyword) |
@@ -68,6 +70,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Megamorph | 🟡 teilweise | `morph::megamorph_adds_counter_and_leaving_reveals` | CR 702.37b: wie Morph, beim Umdrehen +1/+1-Marke | keyword/Keyword.java (KeywordWithCost) |
 | Morph | 🟡 teilweise | `morph::cast_face_down_then_turn_up_with_trigger` | CR 702.37: verdeckt für {3} wirken, als Sonderaktion für die Morph-Kosten umdrehen, verdeckt 2/2 ohne Name/Farbe/Fähigkeiten (CR 708.2), beim Verlassen aufgedeckt | keyword/Keyword.java (KeywordWithCost) |
 | Partner | 🟡 teilweise | `storm_cascade::partner_is_supported` | Deckbau-Keyword ohne Spielwirkung (auch Choose a Background, Doctor's companion, Partner:<Gruppe>) | keyword/Keyword.java (Partner) |
+| Persist | ✅ ja | `mechanics_batch1::undying_and_persist_return_once` | CR 702.79: stirbt ohne -1/-1-Marke → kehrt mit einer zurück | keyword/Keyword.java (SimpleKeyword) |
 | Protection | 🟡 teilweise | `protection::cannot_be_targeted_by_black_spell, protection::cannot_be_blocked_by_black_creatures_and_prevents_their_damage, protection::black_aura_falls_off, protection::protection_effect_with_chosen_color` | CR 702.16 DEBT: Schaden verhindert, Auren/Ausrüstung fallen ab, nicht blockbar, nicht Ziel | keyword/Keyword.java (Protection) |
 | Prowess | ✅ ja | `keywords_misc::prowess_pumps_on_noncreature_spell` |  | keyword/Keyword.java (SimpleKeyword) |
 | Reach | ✅ ja | `combat::flying_needs_flying_or_reach_to_block` |  | keyword/Keyword.java (SimpleKeyword) |
@@ -82,11 +85,12 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Toxic | ✅ ja | `infect::toxic_adds_poison_on_combat_damage_only` | CR 702.164: zusätzlich n Giftmarken bei Kampfschaden an Spielern | keyword/Keyword.java (KeywordWithAmount) |
 | Trample | 🟡 teilweise | `combat::trample_assigns_excess_to_player` | Trample über Planeswalker fehlt | keyword/Keyword.java (Trample) |
 | TypeCycling | 🟡 teilweise | `keywords_misc::typecycling_searches_library_for_type` | Bibliothekssuche nach Typ | keyword/Keyword.java (KeywordWithCostAndType) |
+| Undying | ✅ ja | `mechanics_batch1::undying_and_persist_return_once` | CR 702.93: stirbt ohne +1/+1-Marke → kehrt mit einer zurück | keyword/Keyword.java (SimpleKeyword) |
 | Vigilance | ✅ ja | `combat::vigilance_does_not_tap` |  | keyword/Keyword.java (SimpleKeyword) |
 | Ward | 🟡 teilweise | `triggers::ward_counters_unless_paid` | Ward:<Kosten> mit Mana/PayLife/Discard/Sac | keyword/Keyword.java (Ward) |
 | Wither | ✅ ja | `infect::infect_and_wither_damage` | CR 702.80: -1/-1-Marken an Kreaturen | keyword/Keyword.java (SimpleKeyword) |
 
-Offen (149): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exploit, Extort, Fabricate, Fading, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Impending, Increment, Ingest, Job select, Jump-start, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Miracle, Mobilize, Modular, More Than Meets the Eye, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner with, Persist, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
+Offen (145): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Buyback, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exploit, Extort, Fabricate, Fading, Firebending, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Impending, Increment, Ingest, Job select, Jump-start, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Miracle, Mobilize, Modular, More Than Meets the Eye, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner with, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
 
 ## Trigger
 
@@ -94,6 +98,7 @@ Offen (149): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, A
 |---|---|---|---|---|
 | Abandoned | ⚪ n/a |  | Archenemy | trigger/TriggerAbandoned.java |
 | AbilityCast | 🟡 teilweise | `more_triggers::counter_added_once_and_ability_cast` | aktivierte Nicht-Mana-Fähigkeiten, ValidCard, ValidActivatingPlayer, ValidSA Activated.Loyalty | trigger/TriggerSpellAbilityCastOrCopy.java |
+| Always | 🟡 teilweise | `mechanics_batch1::untaps_trigger_and_state_trigger` | CR 603.8 Zustandstrigger: Bedingungen, erneut erst nach Verlassen des Stapels | trigger/TriggerAlways.java |
 | AttackerBlocked | 🟡 teilweise | `triggers::blocks_attacker_blocked_and_unblocked_triggers` | ValidCard, ValidBlocker/Amount | trigger/TriggerAttackerBlocked.java |
 | AttackerBlockedByCreature | 🟡 teilweise | `triggers::attacker_blocked_by_creature_names_the_blocker` | ValidCard, ValidBlocker, TriggeredBlocker | trigger/TriggerAttackerBlockedByCreature.java |
 | AttackersDeclared | 🟡 teilweise | `triggers::attackers_declared_once_with_minimum_amount` | AttackingPlayer, AttackedTarget (nur Spieler), ValidAttackers/Amount, TriggeredAttackingPlayer | trigger/TriggerAttackersDeclared.java |
@@ -128,9 +133,10 @@ Offen (149): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, A
 | Taps | 🟡 teilweise | `triggers::drawn_number_life_gained_and_taps_triggers` | ValidCard, ValidPlayer | trigger/TriggerTaps.java |
 | TapsForMana | 🟡 teilweise | `taps_for_mana::flare_doubles_land_mana_immediately, taps_for_mana::flare_mana_used_when_auto_paying` | CR 605.1b: sofort ohne Stapel nach Mana-Fähigkeiten mit {T} (auch beim automatischen Bezahlen), ValidCard, Activator, Bedingungen | trigger/TriggerTapsForMana.java |
 | TurnFaceUp | 🟡 teilweise | `morph::cast_face_down_then_turn_up_with_trigger` | ValidCard | trigger/TriggerTurnFaceUp.java |
+| Untaps | ✅ ja | `mechanics_batch1::untaps_trigger_and_state_trigger` | über GameState::untap (Enttappsegment, Effekte, Kosten) | trigger/TriggerUntaps.java |
 | VisitAttraction | ⚪ n/a |  | Unfinity | trigger/TriggerVisitAttraction.java |
 
-Offen (111): AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlockedOnce, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTargetOnce, BlockersDeclared, CaseSolved, Championed, ChangesController, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, DamageAll, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, DiscardedAll, Discover, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
+Offen (109): AbilityResolves, AbilityTriggered, Adapt, Airbend, Attached, AttackerBlockedOnce, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTargetOnce, BlockersDeclared, CaseSolved, Championed, ChangesController, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, DamageAll, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, DiscardedAll, Discover, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, Unattached, UnlockDoor, UntapAll, Vote, Waterbend
 
 ## Replacement Effect
 
@@ -157,19 +163,21 @@ Offen (31): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Casca
 | CantBeCast | 🟡 teilweise | `cant_play::opponents_cant_cast_spells, cant_play::only_one_spell_each_turn` | ValidCard, Caster, Origin, EffectZone, Bedingungen, NumLimitEachTurn, OnlySorcerySpeed | staticability/StaticAbilityCantBeCast.java |
 | CantBeActivated | 🟡 teilweise | `cant_play::opponents_cant_activate_non_mana_abilities` | ValidCard, Activator, AffectedZone, ValidSA Activated[.!ManaAbility/.Loyalty], Bedingungen, auch Mana-Fähigkeiten beim Bezahlen | staticability/StaticAbilityCantBeCast.java |
 | CantAttack | 🟡 teilweise | `combat_restrictions::cant_attack` | ValidCard, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
+| CanAttackDefender | ✅ ja | `mechanics_batch1::defender_may_attack_with_permission` | CR 702.3b: darf trotz Defender angreifen (ValidCard, Bedingungen) | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlock | ✅ ja | `combat_restrictions::cant_block` |  | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlockBy | 🟡 teilweise | `combat_restrictions::cant_be_blocked_by_small_creatures_via_effect` | ValidAttacker, ValidBlocker, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | MinMaxBlocker | ✅ ja | `debuff_repeat::max_one_blocker` | CR 509.1b/c: Mindest-/Höchstzahl an Blockern je Angreifer | staticability/StaticAbilityCantAttackBlock.java |
 | MustAttack | 🟡 teilweise | `combat_restrictions::must_attack_if_able` | ValidCreature (CR 508.1d) | staticability/StaticAbilityMustAttack.java |
 | CastWithFlash | 🟡 teilweise | `cast_with_flash::creature_with_flash_permission` | ValidCard, Caster, EffectZone (auch All/Hand), Bedingungen, ValidSA Spell | staticability/StaticAbilityCastWithFlash.java |
 
-Offen (80): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackDefender, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
+Offen (79): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
 
 ## Effect (ApiType)
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Abandon | ⚪ n/a |  | Archenemy | ability/effects/AbandonEffect.java |
+| AddTurn | 🟡 teilweise | `mechanics_batch1::extra_turn_twiddle_random_discard_mill_memory` | CR 500.7: Zusatzzüge (zuletzt erzeugter zuerst) | ability/effects/AddTurnEffect.java |
 | AdvanceCrank | ⚪ n/a |  | Unstable | ability/effects/AdvanceCrankEffect.java |
 | Amass | ✅ ja | `amass::amass_creates_army_then_grows_and_gains_type` | CR 701.47: ohne Army zuerst 0/0-Army-Spielstein, +1/+1-Marken auf eine gewählte Army, Typ zusätzlich | ability/effects/AmassEffect.java |
 | Animate | 🟡 teilweise | `library_regen_animate::animate_land_until_end_of_turn` | Power/Toughness, Types, RemoveCreatureTypes, Keywords, Colors/OverwriteColors, Duration Permanent | ability/effects/AnimateEffect.java |
@@ -220,7 +228,7 @@ Offen (80): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | LoseLife | 🟡 teilweise | `spells::draw_gain_lose_life_and_pump` | Grundform | ability/effects/LifeLoseEffect.java |
 | LosePerpetual | ⚪ n/a |  | Alchemy | ability/effects/LosePerpetualEffect.java |
 | Mana | 🟡 teilweise | `spells::manual_mana_payment_and_cancel` |  | ability/effects/ManaEffect.java |
-| Mill | 🟡 teilweise | `library_regen_animate::mill_target_player` | NumCards, Defined/Ziel | ability/effects/MillEffect.java |
+| Mill | 🟡 teilweise | `library_regen_animate::mill_target_player, mechanics_batch1::extra_turn_twiddle_random_discard_mill_memory` | NumCards, Defined/Ziel | ability/effects/MillEffect.java |
 | NameCard | 🟡 teilweise | `name_card::named_card_abilities_are_blocked` | Defined, ValidCards, AtRandom, Filter NamedCard, Cleanup ClearNamedCard | ability/effects/ChooseCardNameEffect.java |
 | OpenAttraction | ⚪ n/a |  | Unfinity | ability/effects/OpenAttractionEffect.java |
 | PeekAndReveal | 🟡 teilweise | `change_zone::peek_and_reveal_remembers_only_matching_revealed_cards` | PeekAmount, RevealValid, NoReveal, RevealOptional (Decision::Confirm), RememberRevealed, RememberPeeked | ability/effects/PeekAndRevealEffect.java |
@@ -252,11 +260,12 @@ Offen (80): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Surveil | 🟡 teilweise | `library_regen_animate::surveil_puts_chosen_cards_into_graveyard` | Amount, Defined | ability/effects/SurveilEffect.java |
 | Tap | 🟡 teilweise |  | Grundform | ability/effects/TapEffect.java |
 | TapAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Zielspieler/Defined | ability/effects/TapAllEffect.java |
+| TapOrUntap | ✅ ja | `mechanics_batch1::extra_turn_twiddle_random_discard_mill_memory` | Wahl tappen/enttappen | ability/effects/TapOrUntapEffect.java |
 | Token | 🟡 teilweise | `tokens_charm::tokens_enter_and_trigger_etb` | TokenScript (Liste), TokenAmount, TokenOwner, TokenTapped, TokenPower/Toughness | ability/effects/TokenEffect.java |
 | Untap | 🟡 teilweise |  | Grundform | ability/effects/UntapEffect.java |
 | UntapAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Zielspieler/Defined | ability/effects/UntapAllEffect.java |
 
-Offen (118): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Assimilate, AssignGroup, Balance, BecomesBlocked, BidLife, Blight, Block, Bond, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, ControlSpell, ControlPlayer, Detain, DayTime, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, ReverseTurnOrder, RingTemptsYou, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
+Offen (116): ActivateAbility, AddOrRemoveCounter, AddPhase, Airbend, AlterAttribute, Assimilate, AssignGroup, Balance, BecomesBlocked, BidLife, Blight, Block, Bond, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, ControlSpell, ControlPlayer, Detain, DayTime, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, ReverseTurnOrder, RingTemptsYou, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
 
 ## Cost
 

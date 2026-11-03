@@ -416,7 +416,7 @@ impl GameState {
             Effect::Untap { what } => {
                 let ts = self.resolve_defined(*what, targets, ctx);
                 for c in self.cards_of(&ts) {
-                    self.card_mut(c).tapped = false;
+                    self.untap(c);
                 }
             }
             Effect::PutCounter {
@@ -1786,6 +1786,30 @@ impl GameState {
                     self.push_event(Event::Revealed { player: p, cards });
                 }
             }
+            Effect::TapOrUntap { what } => {
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let tap = matches!(
+                        ch.ask(Decision::Confirm {
+                            player: ctx.controller,
+                            prompt: "Tappen (ja) oder enttappen (nein)?".into(),
+                        })?,
+                        Choice::Yes
+                    );
+                    if tap {
+                        self.tap(c);
+                    } else {
+                        self.untap(c);
+                    }
+                }
+            }
+            Effect::AddTurn { who, num } => {
+                let n = self.amount(num, ctx, targets).max(0);
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    for _ in 0..n {
+                        self.extra_turns.push(p);
+                    }
+                }
+            }
             Effect::Debuff { what, keywords } => {
                 for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
                     let timestamp = self.timestamp();
@@ -2363,7 +2387,7 @@ impl GameState {
                     }
                 }
             }
-            Effect::Mill { who, num } => {
+            Effect::Mill { who, num, remember } => {
                 let n = self.amount(num, ctx, targets).max(0) as usize;
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let top: Vec<CardId> = self
@@ -2375,7 +2399,10 @@ impl GameState {
                         .copied()
                         .collect();
                     for c in top {
-                        self.move_card(c, Zone::Graveyard, true);
+                        let new = self.move_card(c, Zone::Graveyard, true);
+                        if *remember {
+                            self.card_mut(ctx.source).remembered.push(new);
+                        }
                     }
                 }
             }
@@ -2763,6 +2790,11 @@ impl GameState {
         }
         if self.card(new).zone == Some(Zone::Battlefield) && place.transformed {
             self.transform(new);
+        }
+        if self.card(new).zone == Some(Zone::Battlefield)
+            && let Some(k) = &place.with_counter
+        {
+            self.add_counters(new, k, 1);
         }
         new
     }

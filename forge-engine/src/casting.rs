@@ -86,6 +86,9 @@ impl GameState {
             CostPart::TapType { amount, valid } => {
                 self.tap_type_options(cost, valid, source, p).len() as u32 >= *amount
             }
+            CostPart::DiscardRandom { amount } => {
+                self.player(p).hand.iter().filter(|c| **c != source).count() as u32 >= *amount
+            }
             CostPart::TapTotalPower { power, valid } => {
                 self.tap_type_options(cost, valid, source, p)
                     .iter()
@@ -1559,7 +1562,9 @@ impl GameState {
                 CostPart::Tap => {
                     self.tap(source);
                 }
-                CostPart::Untap => self.card_mut(source).tapped = false,
+                CostPart::Untap => {
+                    self.untap(source);
+                }
                 CostPart::SacrificeSelf => {
                     if self.sacrifice(source) {
                         note(PaidKind::Sacrificed, source);
@@ -1593,6 +1598,20 @@ impl GameState {
                         if self.sacrifice(c) {
                             note(PaidKind::Sacrificed, c);
                         }
+                    }
+                }
+                CostPart::DiscardRandom { amount } => {
+                    let mut hand: Vec<CardId> = self
+                        .player(p)
+                        .hand
+                        .iter()
+                        .copied()
+                        .filter(|c| *c != source)
+                        .collect();
+                    self.rng.shuffle(&mut hand);
+                    for c in hand.into_iter().take(*amount as usize) {
+                        self.discard(c);
+                        note(PaidKind::Discarded, c);
                     }
                 }
                 CostPart::Discard { amount, valid } => {

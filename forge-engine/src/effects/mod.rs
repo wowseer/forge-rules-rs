@@ -348,6 +348,8 @@ pub enum Effect {
     Mill {
         who: Defined,
         num: Amount,
+        /// `RememberMilled$`
+        remember: bool,
     },
     /// Oberste `dig` Karten ansehen, bis zu `change` (gefiltert) nach `dest1`, Rest nach `dest2`.
     Dig {
@@ -523,6 +525,15 @@ pub enum Effect {
         random: bool,
         optional: bool,
         remember: bool,
+    },
+    /// Tappen oder enttappen nach Wahl (Java `TapOrUntapEffect`).
+    TapOrUntap {
+        what: Defined,
+    },
+    /// Zusatzzüge (CR 500.7).
+    AddTurn {
+        who: Defined,
+        num: Amount,
     },
     /// Keywords bis Zugende verlieren (Java `DebuffEffect`).
     Debuff {
@@ -729,6 +740,8 @@ pub struct ZonePlacement {
     pub remember: bool,
     /// `Duration$ UntilHostLeavesPlay`: zurück, wenn die Quelle das Battlefield verlässt
     pub until_host_leaves: bool,
+    /// `WithCountersType$`: kommt mit einer Marke dieser Art ins Spiel
+    pub with_counter: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -984,7 +997,8 @@ fn parse_produced(s: &str) -> Option<ManaProduce> {
     }
     if let Some(rest) = s.strip_prefix("Combo ") {
         if rest.trim() == "Any" {
-            return None; // Kombinationen mehrerer Farben: später
+            // jede Einheit einzeln wählbar (beliebige Kombination)
+            return Some(ManaProduce::OneOf(Color::ALL.to_vec()));
         }
         let cols: Option<Vec<Color>> = rest
             .split_whitespace()
@@ -1051,6 +1065,7 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
             Some("UntilHostLeavesPlay") => true,
             Some(v) => return Err(c.unsupported("Duration", v)),
         },
+        with_counter: c.get("WithCountersType").map(|t| t.to_ascii_uppercase()),
     };
     // reine Text-/Hinweisparameter
     for k in ["ChangeTypeDesc", "SelectPrompt", "ShuffleNonMandatory"] {
@@ -1974,6 +1989,13 @@ fn compile_depth(
                 remember: flag(&mut c, "RememberRevealed"),
             }
         }
+        "TapOrUntap" => Effect::TapOrUntap {
+            what: c.defined(Defined::Targeted)?,
+        },
+        "AddTurn" => Effect::AddTurn {
+            who: c.defined(Defined::You)?,
+            num: c.amount("NumTurns", Some(1))?,
+        },
         "Debuff" => {
             let keywords =
                 Keyword::parse_list(c.get("Keywords").unwrap_or("").replace(',', "&").as_str());
@@ -2355,9 +2377,13 @@ fn compile_depth(
         }
         "Mill" => {
             let num = c.amount("NumCards", Some(1))?;
+            let remember = c
+                .get("RememberMilled")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
             Effect::Mill {
                 who: c.defined(Defined::You)?,
                 num,
+                remember,
             }
         }
         "Dig" => {

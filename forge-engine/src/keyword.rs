@@ -59,6 +59,12 @@ pub enum Keyword {
     DeckBuilding(String),
     /// CR 702.88: Rebound
     Rebound,
+    /// CR 702.93 Undying, 702.79 Persist, 702.45 Bushido n, 702.25 Flanking
+    /// (als Trigger übersetzt, siehe `definition.rs`)
+    Undying,
+    Persist,
+    Bushido(u32),
+    Flanking,
     /// CR 702.83: Exalted (als Trigger übersetzt, siehe `definition.rs`)
     Exalted,
     /// CR 702.61: Split second – solange auf dem Stapel keine Zauber/Nicht-Mana-Fähigkeiten
@@ -138,6 +144,12 @@ impl Keyword {
             "Skulk" => Keyword::Skulk,
             "Exalted" => Keyword::Exalted,
             "Rebound" => Keyword::Rebound,
+            "Undying" => Keyword::Undying,
+            "Persist" => Keyword::Persist,
+            "Flanking" => Keyword::Flanking,
+            t if t.starts_with("Bushido:") && t["Bushido:".len()..].parse::<u32>().is_ok() => {
+                Keyword::Bushido(t["Bushido:".len()..].parse().unwrap_or(1))
+            }
             "Partner" | "Choose a Background" | "Doctor's companion" => {
                 Keyword::DeckBuilding(t_full(s))
             }

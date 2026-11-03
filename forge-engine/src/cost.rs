@@ -37,6 +37,8 @@ pub enum CostPart {
     ExileFromGraveyard { amount: u32, valid: ValidSpec },
     /// `tapXType<n/Typ>`: n ungetappte eigene Permanents tappen (CR 302.6 gilt nicht)
     TapType { amount: u32, valid: ValidSpec },
+    /// `Discard<n/Random>`: n zufällige Handkarten abwerfen
+    DiscardRandom { amount: u32 },
     /// `tapXType<Any/Filter+withTotalPowerGEn>` (Crew, CR 702.122): beliebig viele
     /// ungetappte eigene Kreaturen mit Gesamtstärke ≥ n tappen.
     TapTotalPower { power: u32, valid: ValidSpec },
@@ -87,6 +89,7 @@ impl fmt::Display for Cost {
                     format!("ExileFromGrave<{amount}/{valid:?}>")
                 }
                 CostPart::TapType { amount, valid } => format!("tapXType<{amount}/{valid:?}>"),
+                CostPart::DiscardRandom { amount } => format!("Discard<{amount}/Random>"),
                 CostPart::TapTotalPower { power, valid } => {
                     format!("tapXType<Any/{valid:?}+withTotalPowerGE{power}>")
                 }
@@ -236,6 +239,9 @@ impl Cost {
                             ("Discard", [n, "CARDNAME", ..]) if n.trim() == "1" => {
                                 CostPart::DiscardSelf
                             }
+                            ("Discard", [n, "Random", ..]) => CostPart::DiscardRandom {
+                                amount: amount(n, &tok)?,
+                            },
                             ("Discard", [n, v, ..]) if *v != "Hand" && *v != "Random" => {
                                 CostPart::Discard {
                                     amount: amount(n, &tok)?,

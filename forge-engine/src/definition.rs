@@ -232,6 +232,54 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             }
             continue;
         }
+        // Undying, Persist, Bushido, Flanking (Java CardFactoryUtil: Trigger)
+        let kw_triggers: Option<Vec<(String, String)>> = match Keyword::parse(k) {
+            Keyword::Undying => Some(vec![(
+                "Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Card.Self+counters_EQ0_P1P1 | TriggerZones$ Battlefield | Execute$ KwEff | TriggerDescription$ Undying".into(),
+                "DB$ ChangeZone | Defined$ TriggeredNewCardLKICopy | Origin$ Graveyard | Destination$ Battlefield | WithCountersType$ P1P1".into(),
+            )]),
+            Keyword::Persist => Some(vec![(
+                "Mode$ ChangesZone | Origin$ Battlefield | Destination$ Graveyard | ValidCard$ Card.Self+counters_EQ0_M1M1 | TriggerZones$ Battlefield | Execute$ KwEff | TriggerDescription$ Persist".into(),
+                "DB$ ChangeZone | Defined$ TriggeredNewCardLKICopy | Origin$ Graveyard | Destination$ Battlefield | WithCountersType$ M1M1".into(),
+            )]),
+            Keyword::Bushido(n) => {
+                let pump = format!("DB$ Pump | Defined$ Self | NumAtt$ +{n} | NumDef$ +{n}");
+                Some(vec![
+                    (
+                        "Mode$ Blocks | ValidCard$ Card.Self | TriggerZones$ Battlefield | Execute$ KwEff | TriggerDescription$ Bushido".into(),
+                        pump.clone(),
+                    ),
+                    (
+                        "Mode$ AttackerBlocked | ValidCard$ Card.Self | TriggerZones$ Battlefield | Execute$ KwEff | TriggerDescription$ Bushido".into(),
+                        pump,
+                    ),
+                ])
+            }
+            Keyword::Flanking => Some(vec![(
+                "Mode$ AttackerBlockedByCreature | ValidCard$ Card.Self | ValidBlocker$ Creature.withoutFlanking | TriggerZones$ Battlefield | Execute$ KwEff | TriggerDescription$ Flanking".into(),
+                "DB$ Pump | Defined$ TriggeredBlocker | NumAtt$ -1 | NumDef$ -1".into(),
+            )]),
+            _ => None,
+        };
+        if let Some(list) = kw_triggers {
+            let mut ok = true;
+            for (trig, eff) in list {
+                let mut f = face.clone();
+                f.svars.push(("KwEff".into(), eff));
+                match forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(&trig))
+                    .map_err(|_| ())
+                    .and_then(|st| crate::triggers::compile_trigger(&f, &st).map_err(|_| ()))
+                {
+                    Ok(t) => out.triggers.push(Arc::new(t)),
+                    Err(()) => ok = false,
+                }
+            }
+            if !ok {
+                unsupported.push(format!("Keyword: {k}"));
+            }
+            out.keywords.push(Keyword::parse(k));
+            continue;
+        }
         // CR 702.40: Storm / CR 702.85: Cascade (Java: SpellCast-Trigger der Karte selbst)
         if k == "Storm" || k == "Cascade" {
             let mut f = face.clone();

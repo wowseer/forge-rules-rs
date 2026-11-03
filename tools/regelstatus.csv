@@ -131,7 +131,7 @@ State-Based Action;CR 704.5m;ja;auras_equipment::aura_goes_to_graveyard_when_cre
 State-Based Action;CR 704.5n;ja;auras_equipment::equipment_stays_when_creature_dies;
 State-Based Action;CR 704.5p;teilweise;;Lösen angelegter Nicht-Aura/Nicht-Ausrüstung; ohne eigenen Test
 Effect (ApiType);Scry;ja;library_regen_animate::scry_bottom_and_reorder_then_draw;
-Effect (ApiType);Mill;teilweise;library_regen_animate::mill_target_player;NumCards, Defined/Ziel; RememberMilled, Destination fehlen
+Effect (ApiType);Mill;teilweise;library_regen_animate::mill_target_player, mechanics_batch1::extra_turn_twiddle_random_discard_mill_memory;NumCards, Defined/Ziel; RememberMilled; RememberMilled, Destination fehlen
 Effect (ApiType);Dig;teilweise;library_regen_animate::dig_one_to_hand_rest_bottom;DigNum, ChangeNum (auch All), ChangeValid, Destination(2), LibraryPosition(2), Optional; RememberChanged, Tapped fehlen
 Effect (ApiType);Regenerate;ja;library_regen_animate::regenerate_replaces_destruction;inkl. SBA-Zerstörung, NoRegen bei Destroy/DestroyAll
 Effect (ApiType);Animate;teilweise;library_regen_animate::animate_land_until_end_of_turn;Power/Toughness, Types, RemoveCreatureTypes, Keywords, Colors/OverwriteColors, Duration Permanent; Triggers, statische Fähigkeiten, RemoveCardTypes fehlen
@@ -321,3 +321,12 @@ Effect (ApiType);Repeat;teilweise;debuff_repeat::repeat_until_condition_fails;Re
 Static Ability;MinMaxBlocker;ja;debuff_repeat::max_one_blocker;CR 509.1b/c: Mindest-/Höchstzahl an Blockern je Angreifer
 Trigger;CounterAddedOnce;teilweise;more_triggers::counter_added_once_and_ability_cast;einmal je Ereignis (auch Marken beim Eintreten), ValidCard, CounterType, ValidSource (Controller der Effektquelle), TriggerCount Amount
 Trigger;AbilityCast;teilweise;more_triggers::counter_added_once_and_ability_cast;aktivierte Nicht-Mana-Fähigkeiten, ValidCard, ValidActivatingPlayer, ValidSA Activated.Loyalty; Exhaust fehlt
+Keyword;Undying;ja;mechanics_batch1::undying_and_persist_return_once;CR 702.93: stirbt ohne +1/+1-Marke → kehrt mit einer zurück
+Keyword;Persist;ja;mechanics_batch1::undying_and_persist_return_once;CR 702.79: stirbt ohne -1/-1-Marke → kehrt mit einer zurück
+Keyword;Bushido;ja;mechanics_batch1::bushido_and_flanking_in_combat;CR 702.45: blockt oder wird geblockt → +n/+n bis Zugende
+Keyword;Flanking;ja;mechanics_batch1::bushido_and_flanking_in_combat;CR 702.25: Blocker ohne Flanking erhält -1/-1
+Trigger;Untaps;ja;mechanics_batch1::untaps_trigger_and_state_trigger;über GameState::untap (Enttappsegment, Effekte, Kosten)
+Trigger;Always;teilweise;mechanics_batch1::untaps_trigger_and_state_trigger;CR 603.8 Zustandstrigger: Bedingungen, erneut erst nach Verlassen des Stapels; LowPriority/MaxRollsPerTurn fehlen
+Effect (ApiType);AddTurn;teilweise;mechanics_batch1::extra_turn_twiddle_random_discard_mill_memory;CR 500.7: Zusatzzüge (zuletzt erzeugter zuerst); ExtraTurnDelayedTrigger fehlt
+Effect (ApiType);TapOrUntap;ja;mechanics_batch1::extra_turn_twiddle_random_discard_mill_memory;Wahl tappen/enttappen
+Static Ability;CanAttackDefender;ja;mechanics_batch1::defender_may_attack_with_permission;CR 702.3b: darf trotz Defender angreifen (ValidCard, Bedingungen)

@@ -400,6 +400,16 @@ impl GameState {
 
     /// Tappt eine bleibende Karte; „wird getappt“-Trigger (CR 701.26a). Ins
     /// Spiel kommen getappt zählt nicht und läuft nicht hierüber.
+    /// Enttappt eine bleibende Karte; Trigger `Untaps`.
+    pub fn untap(&mut self, c: CardId) -> bool {
+        if !self.card(c).tapped {
+            return false;
+        }
+        self.card_mut(c).tapped = false;
+        self.fire(crate::triggers::TriggerEvent::Untaps { card: c });
+        true
+    }
+
     pub fn tap(&mut self, c: CardId) -> bool {
         if self.card(c).tapped {
             return false;

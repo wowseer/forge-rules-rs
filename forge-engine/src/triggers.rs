@@ -141,6 +141,10 @@ pub enum TriggerKind {
         valid_card: Option<ValidSpec>,
         valid_player: Option<ValidSpec>,
     },
+    /// `Mode$ Untaps` – eine bleibende Karte wird enttappt.
+    Untaps { valid_card: Option<ValidSpec> },
+    /// `Mode$ Always` – Zustandstrigger (CR 603.8), Bedingungen in `conditions`.
+    Always,
     /// `Mode$ CounterAddedOnce` – Marken wurden (in einem Ereignis) daraufgelegt.
     CounterAddedOnce {
         valid_card: Option<ValidSpec>,
@@ -373,6 +377,9 @@ pub enum TriggerEvent {
         card: CardId,
     },
     TurnFaceUp {
+        card: CardId,
+    },
+    Untaps {
         card: CardId,
     },
     CounterAddedOnce {
@@ -655,6 +662,10 @@ pub fn compile_trigger(
         "LifeGained" => TriggerKind::LifeGained {
             valid_player: valid("ValidPlayer", &mut used)?,
         },
+        "Untaps" => TriggerKind::Untaps {
+            valid_card: valid("ValidCard", &mut used)?,
+        },
+        "Always" => TriggerKind::Always,
         "CounterAddedOnce" => {
             used.push("CounterType");
             TriggerKind::CounterAddedOnce {
@@ -1432,6 +1443,17 @@ impl GameState {
                     ..Default::default()
                 })
             }
+            (TriggerKind::Untaps { valid_card }, TriggerEvent::Untaps { card }) => {
+                if !self.opt_card(valid_card, *card, source, controller) {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*card),
+                    card_lki: Some(*card),
+                    player: Some(self.card(*card).controller),
+                    ..Default::default()
+                })
+            }
             (
                 TriggerKind::CounterAddedOnce {
                     valid_card,
@@ -1753,9 +1775,52 @@ impl GameState {
         self.pending_triggers.extend(found);
     }
 
+    /// CR 603.8: Zustandstrigger (`Mode$ Always`) lösen aus, wenn ihre Bedingung
+    /// gilt – erneut erst, wenn der vorige vom Stapel verschwunden ist.
+    fn check_state_triggers(&mut self) {
+        let mut found = Vec::new();
+        for host in self.live_cards().collect::<Vec<_>>() {
+            let h = self.card(host);
+            let Some(zone) = h.zone else { continue };
+            for t in &h.compiled().triggers {
+                if !matches!(t.kind, TriggerKind::Always) || !t.active_zones.contains(&zone) {
+                    continue;
+                }
+                let busy = self.stack.iter().any(|i| {
+                    i.source == host
+                        && matches!(&i.kind, StackKind::Trigger { description, .. } if *description == t.description)
+                }) || self
+                    .pending_triggers
+                    .iter()
+                    .any(|p| p.source == host && Arc::ptr_eq(&p.trigger, t));
+                if busy {
+                    continue;
+                }
+                let ctx = crate::expr::EvalCtx {
+                    source: host,
+                    controller: h.controller,
+                    x: 0,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                if self.check_conditions(&t.conditions, &ctx) {
+                    found.push(PendingTrigger {
+                        trigger: t.clone(),
+                        source: host,
+                        controller: h.controller,
+                        info: TriggerInfo::default(),
+                    });
+                }
+            }
+        }
+        self.pending_triggers.extend(found);
+    }
+
     /// CR 603.3b: vorgemerkte Trigger in APNAP-Reihenfolge auf den Stapel.
     /// Liefert `true`, wenn mindestens einer gelegt wurde.
     pub fn put_triggers_on_stack(&mut self, ch: &mut Choices) -> Res<bool> {
+        self.check_state_triggers();
         if self.pending_triggers.is_empty() {
             return Ok(false);
         }

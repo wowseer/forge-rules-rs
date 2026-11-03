@@ -122,6 +122,15 @@ pub enum CompiledStatic {
     CastWithFlash(CastWithFlash),
     /// `MinMaxBlocker`: Angreifer nur von mindestens/höchstens so vielen Kreaturen blockbar.
     MinMaxBlocker(MinMaxBlocker),
+    /// `CanAttackDefender`: kann trotz Defender angreifen (CR 702.3b).
+    CanAttackDefender(CanAttackDefender),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanAttackDefender {
+    pub valid: ValidSpec,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -408,6 +417,7 @@ impl CompiledStatic {
             CompiledStatic::CantPlay(c) => &mut c.effect_zones,
             CompiledStatic::CastWithFlash(c) => &mut c.effect_zones,
             CompiledStatic::MinMaxBlocker(c) => &mut c.effect_zones,
+            CompiledStatic::CanAttackDefender(c) => &mut c.effect_zones,
         }
     }
 }
@@ -656,6 +666,26 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         "CantBeCast" => return compile_cant_play(face, s, false),
         "CastWithFlash" => return compile_cast_with_flash(face, s),
         "MinMaxBlocker" => return compile_min_max_blocker(face, s),
+        "CanAttackDefender" => {
+            let mut used: Vec<&str> = NEUTRAL.to_vec();
+            used.extend(["EffectZone", "ValidCard"]);
+            let effect_zones = match p.get("EffectZone") {
+                Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+                None => vec![Zone::Battlefield],
+            };
+            let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+            used.extend(ck);
+            for (k, v) in p.iter() {
+                if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+                    return Err(err(k, v));
+                }
+            }
+            return Ok(CompiledStatic::CanAttackDefender(CanAttackDefender {
+                valid: ValidSpec::parse(p.get("ValidCard").unwrap_or("Creature"))?,
+                effect_zones,
+                conditions,
+            }));
+        }
         "CantBeActivated" => return compile_cant_play(face, s, true),
         "ReduceCost" => return compile_cost_adjust(face, s, true),
         "RaiseCost" => return compile_cost_adjust(face, s, false),

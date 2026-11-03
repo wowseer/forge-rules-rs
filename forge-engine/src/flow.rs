@@ -153,7 +153,7 @@ impl GameState {
                     o.controlled_since_turn_start = true;
                     o.skip_next_untap = false;
                     if !keep_tapped {
-                        o.tapped = false;
+                        self.untap(c);
                     }
                 }
             }
@@ -373,7 +373,14 @@ impl GameState {
                 self.flow = Flow::BeginStep;
             }
             None => {
-                let next = self.next_player(self.active);
+                // CR 500.7: Zusatzzüge zuerst (der zuletzt erzeugte zuerst)
+                let next = loop {
+                    match self.extra_turns.pop() {
+                        Some(p) if self.player(p).is_in_game() => break p,
+                        Some(_) => continue,
+                        None => break self.next_player(self.active),
+                    }
+                };
                 let n = self.turn + 1;
                 self.start_turn(next, n);
             }
