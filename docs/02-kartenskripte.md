@@ -244,6 +244,19 @@ CompiledAbility {
 - `DividedAsYouChoose$` (`TargetSpec::divided`, `StackItem::division`), variable
   `TargetMin$/TargetMax$` (`TargetSpec::min_expr/max_expr`).
 
+- Keywords Undying, Persist, Bushido n, Flanking (Trigger wie Java), „You may choose not to
+  untap …“; `ChangeZone | WithCountersType$`, `RememberTargets$`, `Origin$ All`,
+  `Chooser$ Targeted`; `Token | RememberTokens$ | TokenAttacking$`.
+- Trigger `Untaps`, `Always` (Zustandstrigger), `LandPlayed`, `SpellCastOrCopy`;
+  Effekte `AddTurn`, `TapOrUntap`, `Explore`, `StoreSVar` (Laufzeitvariable),
+  `MultiplyCounter`, `Connive`; `Mill | RememberMilled$`.
+- Statics `CanAttackDefender`, `CantTarget`, `Panharmonicon`, Spieler-Static `AdjustLandPlays$`.
+- Ersatzeffekte `R:Event$ AddCounter` (`ReplaceCount$CounterNum`) und `CreateToken`
+  (`ReplaceToken | Type$ Amount`).
+- Spieler-Marken `Player::counters` (ENERGY, EXPERIENCE …), `PayEnergy<n>`,
+  `Count$YourCounters<Art>`; Kosten `Discard<n/Random>`; Mana `Combo Any`.
+- Filter `EffectSource`, `wasCastByYou`, `DamagedBy`, `modified`, `ThisTurnEntered`.
+
 ## Token und modale Fähigkeiten
 
 - `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,

@@ -5,6 +5,35 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-03 – Sitzung 14: drei Mechanik-Blöcke (35 Bausteine)
+
+### Ergebnis
+
+| Block | Inhalt |
+|---|---|
+| 1 | Undying, Persist, Bushido, Flanking, Trigger Untaps/Always, AddTurn, TapOrUntap, Discard<Random>, Combo Any, Mill RememberMilled, CanAttackDefender |
+| 2 | Explore, StoreSVar, Token RememberTokens, CantTarget, Panharmonicon, SpellCastOrCopy, EffectSource/wasCastByYou/DamagedBy, Origin All, Chooser Targeted |
+| 3 | Energie und Spieler-Marken, Ersatzeffekte AddCounter/CreateToken, MultiplyCounter, Connive, LandPlayed, AdjustLandPlays, modified/ThisTurnEntered, RememberTargets, „may not untap“, TokenAttacking |
+| Tests | 357, alle grün |
+| Unterstützte Karten im Zielpool | 53,1 % → **55,5 %** |
+
+### Entscheidungen
+
+- Zustandstrigger (`Always`) werden vor dem Stapeln geprüft; erneut erst, wenn der
+  vorige nicht mehr auf dem Stapel liegt (CR 603.8).
+- Marken-Ersatzeffekte werden nach Zeitstempel angewandt (statt Wahl des Betroffenen,
+  CR 616.1); bei Spielsteinen bestimmt der erste erzeugte Spielstein die Verdopplung.
+- `StoreSVar`-Ziele werden beim Laden zu Laufzeitvariablen (nur Startwert 0).
+- `TokenAttacking$`: greift an, was die Quelle angreift, sonst den ersten Gegner.
+
+### Nächste Schritte
+
+1. `AlterAttribute` (Suspect/Case/Prepare), `IsImprinted`/Imprint, `Phases`, `RingTemptsYou`.
+2. `Replacement Draw`, Static `OptionalCost`, Daybound/Nightbound, Start your engines.
+3. Deckprüfung je Format.
+
+---
+
 ## 2026-11-03 – Sitzung 13: Trigger, fremde Zonen, Aufteilung, variable Ziele
 
 ### Ergebnis
