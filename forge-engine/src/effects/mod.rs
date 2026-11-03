@@ -475,6 +475,9 @@ pub enum Effect {
         valid: Option<ValidSpec>,
         random: bool,
     },
+    /// CR 702.85a: Cascade – exilieren bis Nichtland mit geringerem Manawert,
+    /// gratis wirken dürfen, Rest zufällig unter die Bibliothek.
+    Cascade,
     /// CR 701.47: Amass <Typ> n
     Amass {
         num: Amount,
@@ -2321,6 +2324,7 @@ fn compile_depth(
                     .is_some_and(|v| v.eq_ignore_ascii_case("true")),
             }
         }
+        "Cascade" => Effect::Cascade,
         "Amass" => Effect::Amass {
             num: c.amount("Num", Some(1))?,
             kind: c

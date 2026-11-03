@@ -311,3 +311,7 @@ Keyword;Shadow;ja;evasion::evasion_rules;CR 702.28: blockt und wird geblockt nur
 Keyword;Horsemanship;ja;evasion::evasion_rules;CR 702.31: nur von Kreaturen mit Horsemanship blockbar
 Keyword;Skulk;ja;evasion::evasion_rules;CR 702.118: nicht von Kreaturen mit größerer Stärke blockbar
 Keyword;Exalted;ja;evasion::exalted_pumps_lone_attacker;CR 702.83: je Instanz +1/+1, wenn eine Kreatur allein angreift
+Keyword;Storm;ja;storm_cascade::storm_copies_for_each_earlier_spell;CR 702.40: SpellCast-Trigger der Karte, Kopie je früher in diesem Zug gewirktem Zauber, neue Ziele wählbar
+Keyword;Cascade;ja;storm_cascade::cascade_casts_cheaper_nonland_for_free;CR 702.85: exilieren bis Nichtland mit geringerem Manawert, gratis wirken dürfen, Rest zufällig unter die Bibliothek
+Keyword;Rebound;teilweise;storm_cascade::rebound_recasts_next_upkeep;CR 702.88: aus der Hand gewirkt → Exil, im nächsten eigenen Upkeep gratis wirkbar (ohne verzögerten Trigger auf dem Stapel)
+Keyword;Partner;teilweise;storm_cascade::partner_is_supported;Deckbau-Keyword ohne Spielwirkung (auch Choose a Background, Doctor's companion, Partner:<Gruppe>); Deckprüfung und „Partner with“ fehlen

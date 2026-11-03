@@ -54,6 +54,11 @@ pub enum Keyword {
     Shadow,
     Horsemanship,
     Skulk,
+    /// Deckbau-Keywords ohne Spielwirkung (Partner, Choose a Background,
+    /// Doctor's companion; CR 702.124, 702.155, 702.163)
+    DeckBuilding(String),
+    /// CR 702.88: Rebound
+    Rebound,
     /// CR 702.83: Exalted (als Trigger übersetzt, siehe `definition.rs`)
     Exalted,
     /// CR 702.61: Split second – solange auf dem Stapel keine Zauber/Nicht-Mana-Fähigkeiten
@@ -93,6 +98,10 @@ pub enum ProtectionFrom {
     Valid(String),
 }
 
+fn t_full(s: &str) -> String {
+    s.trim().to_string()
+}
+
 impl Keyword {
     pub fn parse(s: &str) -> Keyword {
         match s.trim() {
@@ -128,6 +137,11 @@ impl Keyword {
             "Horsemanship" => Keyword::Horsemanship,
             "Skulk" => Keyword::Skulk,
             "Exalted" => Keyword::Exalted,
+            "Rebound" => Keyword::Rebound,
+            "Partner" | "Choose a Background" | "Doctor's companion" => {
+                Keyword::DeckBuilding(t_full(s))
+            }
+            t if t.starts_with("Partner:") => Keyword::DeckBuilding(t.to_string()),
             t if t.starts_with("Landwalk:")
                 && crate::valid::ValidSpec::parse(
                     t["Landwalk:".len()..].split(':').next().unwrap_or(""),

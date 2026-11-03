@@ -157,7 +157,30 @@ impl GameState {
                     }
                 }
             }
-            Step::Upkeep => {}
+            Step::Upkeep => {
+                // CR 702.88a: Rebound – zu Beginn des eigenen Upkeeps gratis wirken
+                // dürfen (vereinfacht ohne verzögerten Trigger auf dem Stapel)
+                let rebounds: Vec<_> = self
+                    .exile
+                    .iter()
+                    .copied()
+                    .filter(|c| self.card(*c).rebound && self.card(*c).owner == ap)
+                    .collect();
+                for c in rebounds {
+                    self.card_mut(c).rebound = false;
+                    if self.playable_by_effect(ap, c, None, c)
+                        && matches!(
+                            ch.ask(Decision::Confirm {
+                                player: ap,
+                                prompt: "Rebound: Karte gratis wirken?".into(),
+                            })?,
+                            Choice::Yes
+                        )
+                    {
+                        self.play_by_effect(ap, c, true, false, ch)?;
+                    }
+                }
+            }
             Step::Draw => {
                 // CR 103.8a
                 let skip = self.turn == 1

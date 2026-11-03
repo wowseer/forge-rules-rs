@@ -46,6 +46,7 @@ impl GameState {
             goaded_by: Vec::new(),
             face_down: false,
             disguised: false,
+            rebound: false,
             effect: None,
             attached_to: None,
             regen_shields: 0,
@@ -178,6 +179,7 @@ impl GameState {
             chosen_player: None,
             named_card: None,
             runtime_vars: Default::default(),
+            rebound: false,
             face_down: old.face_down
                 && (to == Zone::Stack || (from == Some(Zone::Stack) && to == Zone::Battlefield)),
             disguised: old.disguised

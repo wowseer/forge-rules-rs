@@ -161,6 +161,8 @@ pub struct CardObj {
     pub chosen_cards: Vec<CardId>,
     /// Gewählter Typ (`ChooseType`, Java `Card.chosenType`).
     pub chosen_type: Option<String>,
+    /// CR 702.88: im Exil durch Rebound – zu Beginn des nächsten Upkeeps wirkbar
+    pub rebound: bool,
     /// CR 708: verdeckt (Morph/Disguise); als 2/2-Kreatur ohne Name und Fähigkeiten.
     pub face_down: bool,
     /// verdeckt per Disguise (Ward {2}, CR 702.168b)

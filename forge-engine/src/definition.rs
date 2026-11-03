@@ -232,6 +232,34 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             }
             continue;
         }
+        // CR 702.40: Storm / CR 702.85: Cascade (Java: SpellCast-Trigger der Karte selbst)
+        if k == "Storm" || k == "Cascade" {
+            let mut f = face.clone();
+            let (name, exec) = if k == "Storm" {
+                f.svars.push((
+                    "StormCount".into(),
+                    "Count$ThisTurnCast_Card/Minus.1".into(),
+                ));
+                (
+                    "StormCopy",
+                    "DB$ CopySpellAbility | Defined$ TriggeredSpellAbility | Amount$ StormCount | MayChooseTarget$ True",
+                )
+            } else {
+                ("CascadeDig", "DB$ Cascade")
+            };
+            f.svars.push((name.into(), exec.into()));
+            let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(&format!(
+                "Mode$ SpellCast | ValidCard$ Card.Self | TriggerZones$ Stack | Execute$ {name} | TriggerDescription$ {k}"
+            )));
+            match st
+                .map_err(|_| ())
+                .and_then(|st| crate::triggers::compile_trigger(&f, &st).map_err(|_| ()))
+            {
+                Ok(t) => out.triggers.push(Arc::new(t)),
+                Err(()) => unsupported.push(format!("Keyword: {k}")),
+            }
+            continue;
+        }
         // CR 702.83: Exalted (Java: Attacks-Trigger „allein“, +1/+1 bis Zugende)
         if k == "Exalted" {
             let mut f = face.clone();

@@ -1560,6 +1560,51 @@ impl GameState {
                     self.card_mut(ctx.source).named_card = Some(names[i].clone());
                 }
             }
+            Effect::Cascade => {
+                let p = ctx.controller;
+                let mv = self
+                    .chars(ctx.source)
+                    .mana_cost
+                    .as_ref()
+                    .map_or(0, |m| m.mana_value());
+                let mut exiled: Vec<CardId> = Vec::new();
+                let mut hit = None;
+                while let Some(&top) = self.player(p).library.last() {
+                    let ch_top = self.chars(top);
+                    let new = self.move_card(top, Zone::Exile, true);
+                    exiled.push(new);
+                    let top_mv = ch_top.mana_cost.as_ref().map_or(0, |m| m.mana_value());
+                    if !ch_top.types.is_land() && top_mv < mv {
+                        hit = Some(new);
+                        break;
+                    }
+                }
+                self.push_event(Event::Revealed {
+                    player: p,
+                    cards: exiled.clone(),
+                });
+                if let Some(h) = hit
+                    && self.playable_by_effect(p, h, None, ctx.source)
+                    && matches!(
+                        ch.ask(Decision::Confirm {
+                            player: p,
+                            prompt: "Kaskade: Karte gratis wirken?".into(),
+                        })?,
+                        Choice::Yes
+                    )
+                {
+                    self.play_by_effect(p, h, true, false, ch)?;
+                }
+                // CR 702.85a: übrige (nicht gewirkte) in zufälliger Reihenfolge unter die Bibliothek
+                let mut rest: Vec<CardId> = exiled
+                    .into_iter()
+                    .filter(|c| self.card(*c).zone == Some(Zone::Exile))
+                    .collect();
+                self.rng.shuffle(&mut rest);
+                for c in rest {
+                    self.move_card(c, Zone::Library, false);
+                }
+            }
             Effect::Amass { num, kind } => {
                 let p = ctx.controller;
                 let is_army = |g: &GameState, c: CardId| g.chars(c).types.has_subtype("Army");
@@ -2743,6 +2788,13 @@ impl GameState {
                     self.card_mut(new).attached_to = Some(t);
                 }
             }
+        } else if !fizzled
+            && self.card(card).cast_from == Some(Zone::Hand)
+            && self.chars(card).has(&crate::keyword::Keyword::Rebound)
+        {
+            // CR 702.88a: aus der Hand gewirkt → ins Exil statt in den Friedhof
+            let new = self.move_card(card, Zone::Exile, true);
+            self.card_mut(new).rebound = true;
         } else {
             self.move_card(card, Zone::Graveyard, true);
         }
