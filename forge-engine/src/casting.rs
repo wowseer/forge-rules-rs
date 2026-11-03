@@ -377,8 +377,10 @@ impl GameState {
         }
         let card = self.card(c);
         let ch = self.chars(c);
-        let instant_speed =
-            ch.types.has_core(forge_types::CoreType::Instant) || ch.has(&Keyword::Flash) || flash;
+        let instant_speed = ch.types.has_core(forge_types::CoreType::Instant)
+            || ch.has(&Keyword::Flash)
+            || self.may_cast_with_flash(p, c)
+            || flash;
         if !(instant_speed || self.sorcery_timing(p)) {
             return false;
         }
@@ -399,6 +401,7 @@ impl GameState {
         let ch = self.chars(c);
         let instant_speed = ch.types.has_core(forge_types::CoreType::Instant)
             || ch.has(&Keyword::Flash)
+            || self.may_cast_with_flash(p, c)
             || grant.is_some_and(|g| g.with_flash);
         if !(instant_speed || self.sorcery_timing(p)) {
             return false;

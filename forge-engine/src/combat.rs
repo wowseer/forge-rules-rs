@@ -110,6 +110,35 @@ impl GameState {
         v
     }
 
+    /// Darf `p` die Karte `c` wie mit Flash wirken (`CastWithFlash`)?
+    pub fn may_cast_with_flash(&self, p: PlayerId, c: CardId) -> bool {
+        self.cards.iter().any(|o| {
+            let Some(zone) = o.zone else { return false };
+            if zone == Zone::Library {
+                return false;
+            }
+            o.compiled().statics.iter().any(|s| {
+                let crate::statics::CompiledStatic::CastWithFlash(r) = s.as_ref() else {
+                    return false;
+                };
+                let ctx = crate::expr::EvalCtx {
+                    source: o.id,
+                    controller: o.controller,
+                    x: 0,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                r.effect_zones.contains(&zone)
+                    && r.caster
+                        .as_ref()
+                        .is_none_or(|v| self.player_matches_src(p, v, o.controller, o.id))
+                    && self.card_matches(c, &r.valid_card, o.id, o.controller)
+                    && self.check_conditions(&r.conditions, &ctx)
+            })
+        })
+    }
+
     /// Verbietet ein `CantBeCast`, dass `p` die Karte `c` wirkt?
     pub fn cant_cast(&self, p: PlayerId, c: CardId) -> bool {
         let zone = self.card(c).zone;

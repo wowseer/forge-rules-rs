@@ -252,6 +252,7 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Infect Lite\nManaCost:1 G\nTypes:Creature Phyrexian\nPT:2/2\nK:Infect\nOracle:\n",
     "Name:Wither Lite\nManaCost:1 B\nTypes:Creature Elemental\nPT:2/2\nK:Wither\nOracle:\n",
     "Name:Toxic Lite\nManaCost:1 G\nTypes:Creature Phyrexian\nPT:1/1\nK:Toxic:2\nOracle:\n",
+    "Name:Orrery Lite\nManaCost:4\nTypes:Artifact\nS:Mode$ CastWithFlash | ValidCard$ Card | ValidSA$ Spell | Caster$ You | Description$ x\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",

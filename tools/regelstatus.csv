@@ -291,3 +291,4 @@ Keyword;Infect;ja;infect::infect_and_wither_damage;CR 702.90: Giftmarken an Spie
 Keyword;Wither;ja;infect::infect_and_wither_damage;CR 702.80: -1/-1-Marken an Kreaturen
 Effect (ApiType);RevealHand;teilweise;;Hand aufdecken/ansehen (Event Revealed), RememberRevealed; ohne eigenen Regeltest
 Keyword;Toxic;ja;infect::toxic_adds_poison_on_combat_damage_only;CR 702.164: zusätzlich n Giftmarken bei Kampfschaden an Spielern
+Static Ability;CastWithFlash;teilweise;cast_with_flash::creature_with_flash_permission;ValidCard, Caster, EffectZone (auch All/Hand), Bedingungen, ValidSA Spell; Aktivierungen (Loyalty/Equip) fehlen

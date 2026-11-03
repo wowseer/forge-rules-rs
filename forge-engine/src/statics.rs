@@ -118,6 +118,16 @@ pub enum CompiledStatic {
     Player(PlayerStatic),
     /// `CantBeCast`/`CantBeActivated` (CR 101.2: „kann nicht“ gewinnt).
     CantPlay(CantPlay),
+    /// `CastWithFlash`: Zauber dürfen wie mit Flash gewirkt werden (CR 702.8, 601.3).
+    CastWithFlash(CastWithFlash),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CastWithFlash {
+    pub valid_card: ValidSpec,
+    pub caster: Option<ValidSpec>,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
 }
 
 /// Verbot, Zauber zu wirken oder Fähigkeiten zu aktivieren
@@ -385,8 +395,44 @@ impl CompiledStatic {
             CompiledStatic::AlternativeCost(c) => &mut c.effect_zones,
             CompiledStatic::Player(c) => &mut c.effect_zones,
             CompiledStatic::CantPlay(c) => &mut c.effect_zones,
+            CompiledStatic::CastWithFlash(c) => &mut c.effect_zones,
         }
     }
+}
+
+fn compile_cast_with_flash(
+    face: &CardFace,
+    s: &ScriptStatic,
+) -> Result<CompiledStatic, CompileError> {
+    let p = &s.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: format!("Static {}", s.mode),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend(["EffectZone", "ValidCard", "Caster", "ValidSA"]);
+    match p.get("ValidSA") {
+        None | Some("Spell") => {}
+        Some(v) => return Err(err("ValidSA", v)),
+    }
+    let effect_zones = match p.get("EffectZone") {
+        Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+        None => vec![Zone::Battlefield],
+    };
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    Ok(CompiledStatic::CastWithFlash(CastWithFlash {
+        valid_card: ValidSpec::parse(p.get("ValidCard").unwrap_or("Card"))?,
+        caster: p.get("Caster").map(ValidSpec::parse).transpose()?,
+        effect_zones,
+        conditions,
+    }))
 }
 
 fn compile_cant_play(
@@ -557,6 +603,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         "CantAttack" => return compile_combat(face, s, RestrictionKind::CantAttack),
         "MustAttack" => return compile_combat(face, s, RestrictionKind::MustAttack),
         "CantBeCast" => return compile_cant_play(face, s, false),
+        "CastWithFlash" => return compile_cast_with_flash(face, s),
         "CantBeActivated" => return compile_cant_play(face, s, true),
         "ReduceCost" => return compile_cost_adjust(face, s, true),
         "RaiseCost" => return compile_cost_adjust(face, s, false),
