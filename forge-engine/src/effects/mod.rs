@@ -461,6 +461,11 @@ pub enum Effect {
         random: bool,
         remember: bool,
     },
+    /// CR 701.47: Amass <Typ> n
+    Amass {
+        num: Amount,
+        kind: String,
+    },
     /// Münzwurf (CR 705): Gewinn/Verlust bzw. Kopf/Zahl (`NoCall$`).
     FlipCoin {
         win: Option<Arc<CompiledAbility>>,
@@ -2273,6 +2278,16 @@ fn compile_depth(
             tapped: false,
             power: None,
             toughness: None,
+        },
+        "Amass" => Effect::Amass {
+            num: c.amount("Num", Some(1))?,
+            kind: c
+                .get("Type")
+                .ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "Type",
+                })?
+                .to_string(),
         },
         "Fog" => Effect::Fog,
         "Proliferate" => Effect::Proliferate {

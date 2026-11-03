@@ -1483,6 +1483,68 @@ impl GameState {
                     }
                 }
             }
+            Effect::Amass { num, kind } => {
+                let p = ctx.controller;
+                let is_army = |g: &GameState, c: CardId| g.chars(c).types.has_subtype("Army");
+                // CR 701.47a: ohne Army zuerst einen 0/0-Army-Spielstein erschaffen
+                if !self.battlefield_of(p).any(|c| is_army(self, c)) {
+                    let specific = format!("b_0_0_{}_army", kind.to_ascii_lowercase());
+                    let script = if self.token_defs.contains_key(&specific) {
+                        specific
+                    } else {
+                        "b_0_0_army".to_string()
+                    };
+                    self.apply_effect_inner(
+                        &super::Effect::Token {
+                            scripts: vec![script],
+                            amount: super::Amount::Fixed(1),
+                            owner: super::Defined::You,
+                            tapped: false,
+                            power: None,
+                            toughness: None,
+                        },
+                        targets,
+                        ctx,
+                        ch,
+                    )?;
+                }
+                let armies: Vec<CardId> = self
+                    .battlefield_of(p)
+                    .filter(|c| is_army(self, *c))
+                    .collect();
+                let Some(&first) = armies.first() else {
+                    return Ok(());
+                };
+                let army = if armies.len() > 1 {
+                    match ch.ask(Decision::ChooseCards {
+                        player: p,
+                        reason: crate::decision::CardChoiceReason::Choose,
+                        options: armies.clone(),
+                        min: 1,
+                        max: 1,
+                    })? {
+                        Choice::Cards(v) => {
+                            v.into_iter().find(|c| armies.contains(c)).unwrap_or(first)
+                        }
+                        _ => first,
+                    }
+                } else {
+                    first
+                };
+                let n = self.amount(num, ctx, targets).max(0) as u32;
+                self.add_counters(army, "P1P1", n);
+                // CR 701.47a: wird zusätzlich vom Typ
+                if !self.chars(army).types.has_subtype(kind) {
+                    let timestamp = self.timestamp();
+                    self.effects.push(ContinuousEffect {
+                        affected: army,
+                        add_types: vec![kind.clone()],
+                        duration: Duration::Permanent,
+                        timestamp,
+                        ..Default::default()
+                    });
+                }
+            }
             Effect::FlipCoin { win, lose } => {
                 let won = self.rng.below(2) == 0;
                 self.push_event(Event::CoinFlipped {

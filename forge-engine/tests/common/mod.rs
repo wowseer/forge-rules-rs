@@ -261,6 +261,8 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Sudden Lite\nManaCost:1 R\nTypes:Instant\nK:Split second\nA:SP$ DealDamage | ValidTgts$ Any | NumDmg$ 2 | SpellDescription$ x\nOracle:\n",
     "Name:Morph Lite\nManaCost:3 U U\nTypes:Creature Bird\nPT:4/4\nK:Flying\nK:Morph:2 U\nT:Mode$ TurnFaceUp | ValidCard$ Card.Self | Execute$ TrigDraw | TriggerDescription$ x\nSVar:TrigDraw:DB$ Draw | NumCards$ 1\nOracle:\n",
     "Name:Mega Lite\nManaCost:2 G\nTypes:Creature Bear\nPT:3/3\nK:Megamorph:G\nOracle:\n",
+    "Name:Amass Lite\nManaCost:B\nTypes:Sorcery\nA:SP$ Amass | Type$ Orc | Num$ 2 | SpellDescription$ x\nOracle:\n",
+    "Name:Amass Zombie Lite\nManaCost:B\nTypes:Sorcery\nA:SP$ Amass | Type$ Zombie | Num$ 1 | SpellDescription$ x\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",
@@ -294,6 +296,14 @@ pub const SCRIPTS: &[&str] = &[
 ];
 
 pub const TOKENS: &[(&str, &str)] = &[
+    (
+        "b_0_0_orc_army",
+        "Name:Orc Army Token\nManaCost:no cost\nColors:black\nTypes:Creature Orc Army\nPT:0/0\nOracle:\n",
+    ),
+    (
+        "b_0_0_army",
+        "Name:Army Token\nManaCost:no cost\nColors:black\nTypes:Creature Army\nPT:0/0\nOracle:\n",
+    ),
     (
         "c_a_clue_draw",
         "Name:Clue Token\nManaCost:no cost\nTypes:Artifact Clue\nA:AB$ Draw | Cost$ 2 Sac<1/CARDNAME/this token> | NumCards$ 1 | SpellDescription$ Draw a card.\nOracle:\n",

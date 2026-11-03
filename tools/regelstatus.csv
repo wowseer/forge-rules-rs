@@ -301,3 +301,4 @@ Keyword;Morph;teilweise;morph::cast_face_down_then_turn_up_with_trigger;CR 702.3
 Keyword;Megamorph;teilweise;morph::megamorph_adds_counter_and_leaving_reveals;CR 702.37b: wie Morph, beim Umdrehen +1/+1-Marke
 Keyword;Disguise;teilweise;;CR 702.168: wie Morph, verdeckt mit Ward {2}; ohne eigenen Regeltest
 Trigger;TurnFaceUp;teilweise;morph::cast_face_down_then_turn_up_with_trigger;ValidCard
+Effect (ApiType);Amass;ja;amass::amass_creates_army_then_grows_and_gains_type;CR 701.47: ohne Army zuerst 0/0-Army-Spielstein, +1/+1-Marken auf eine gewählte Army, Typ zusätzlich
