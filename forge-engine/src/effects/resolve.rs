@@ -1483,6 +1483,47 @@ impl GameState {
                     }
                 }
             }
+            Effect::FlipCoin { win, lose } => {
+                let won = self.rng.below(2) == 0;
+                self.push_event(Event::CoinFlipped {
+                    player: ctx.controller,
+                    won,
+                });
+                if let Some(ab) = if won { win } else { lose } {
+                    self.apply_chain_inherit(ab, targets, ctx, ch)?;
+                }
+            }
+            Effect::ChooseNumber {
+                who,
+                min,
+                max,
+                random,
+            } => {
+                let lo = self.amount(min, ctx, targets).max(0) as u32;
+                let hi = (self.amount(max, ctx, targets).max(0) as u32).max(lo);
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let n = if *random {
+                        lo + self.rng.below(u64::from(hi - lo + 1)) as u32
+                    } else {
+                        match ch.ask(Decision::ChooseX { player: p, max: hi })? {
+                            Choice::Number(n) => n.clamp(lo, hi),
+                            _ => lo,
+                        }
+                    };
+                    self.card_mut(ctx.source)
+                        .runtime_vars
+                        .insert("ChosenNumber".into(), n as i32);
+                }
+            }
+            Effect::Goad { what, permanent } => {
+                let goader = ctx.controller;
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let o = self.card_mut(c);
+                    if !o.goaded_by.iter().any(|(g, _)| *g == goader) {
+                        o.goaded_by.push((goader, *permanent));
+                    }
+                }
+            }
             Effect::RevealHand { who, remember } => {
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let cards = self.player(p).hand.clone();

@@ -292,3 +292,6 @@ Keyword;Wither;ja;infect::infect_and_wither_damage;CR 702.80: -1/-1-Marken an Kr
 Effect (ApiType);RevealHand;teilweise;;Hand aufdecken/ansehen (Event Revealed), RememberRevealed; ohne eigenen Regeltest
 Keyword;Toxic;ja;infect::toxic_adds_poison_on_combat_damage_only;CR 702.164: zusätzlich n Giftmarken bei Kampfschaden an Spielern
 Static Ability;CastWithFlash;teilweise;cast_with_flash::creature_with_flash_permission;ValidCard, Caster, EffectZone (auch All/Hand), Bedingungen, ValidSA Spell; Aktivierungen (Loyalty/Equip) fehlen
+Effect (ApiType);FlipCoin;teilweise;coin_number_goad::coin_flip_win_or_lose;CR 705: Win/Lose bzw. Heads/Tails (NoCall), Event CoinFlipped; Ansage ohne Einfluss (50 %), Flipper nur You, Trigger FlippedCoin fehlt
+Effect (ApiType);ChooseNumber;teilweise;coin_number_goad::chosen_number_is_used;Min/Max, Random, Count$ChosenNumber; mehrere Wähler überschreiben sich
+Effect (ApiType);Goad;teilweise;coin_number_goad::goaded_creature_must_attack, coin_number_goad::goaded_prefers_other_player_in_multiplayer;CR 701.38: muss angreifen, möglichst nicht den Goader, endet mit dessen nächstem Zug, Duration Permanent; TargetsForEachPlayer fehlt

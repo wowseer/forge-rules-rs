@@ -103,6 +103,12 @@ impl GameState {
             pl.life_lost_this_turn = 0;
         }
         self.this_turn = Default::default();
+        // CR 701.38a: Goad endet mit dem nächsten Zug des Goaders
+        for c in self.battlefield.clone() {
+            self.card_mut(c)
+                .goaded_by
+                .retain(|(g, perm)| *perm || *g != p);
+        }
         self.push_event(Event::TurnBegan {
             turn: number,
             player: p,

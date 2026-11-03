@@ -248,8 +248,30 @@ impl GameState {
     pub fn must_attack(&self, p: PlayerId) -> Vec<CardId> {
         self.attack_candidates(p)
             .into_iter()
-            .filter(|c| self.restricted(crate::statics::RestrictionKind::MustAttack, *c))
+            .filter(|c| {
+                !self.card(*c).goaded_by.is_empty()
+                    || self.restricted(crate::statics::RestrictionKind::MustAttack, *c)
+            })
             .collect()
+    }
+
+    /// CR 701.38b: Ein gegoadeter Angreifer greift möglichst einen anderen Spieler
+    /// als seine Goader an. Liefert die erlaubten Ziele aus `defenders`.
+    pub fn goad_allowed_targets(&self, c: CardId, defenders: &[Target]) -> Vec<Target> {
+        let goaders: Vec<PlayerId> = self.card(c).goaded_by.iter().map(|(g, _)| *g).collect();
+        if goaders.is_empty() {
+            return defenders.to_vec();
+        }
+        let others: Vec<Target> = defenders
+            .iter()
+            .copied()
+            .filter(|t| !goaders.contains(&self.defending_player_of(*t)))
+            .collect();
+        if others.is_empty() {
+            defenders.to_vec()
+        } else {
+            others
+        }
     }
 
     /// CR 508.1a: Kreaturen, die angreifen können.
@@ -355,7 +377,7 @@ impl GameState {
             match ch.ask(Decision::DeclareAttackers {
                 player: p,
                 candidates,
-                defenders,
+                defenders: defenders.clone(),
             })? {
                 Choice::Attackers(v) => v,
                 _ => Vec::new(),
@@ -366,6 +388,14 @@ impl GameState {
         if let Some(m) = must.iter().find(|m| !chosen.iter().any(|(c, _)| c == *m)) {
             return Err(Interrupt::Invalid(InvalidChoice(format!(
                 "{m} muss angreifen"
+            ))));
+        }
+        if let Some((c, _)) = chosen
+            .iter()
+            .find(|(c, t)| !self.goad_allowed_targets(*c, &defenders).contains(t))
+        {
+            return Err(Interrupt::Invalid(InvalidChoice(format!(
+                "{c} ist gegoadet und muss möglichst einen anderen Spieler angreifen"
             ))));
         }
         let infos: Vec<AttackerInfo> = chosen

@@ -98,7 +98,7 @@ impl Controller for SimpleAi {
                 let att = candidates
                     .iter()
                     .filter(|c| must.contains(c) || self.rng.below(2) == 0)
-                    .map(|c| (*c, defenders[0]))
+                    .map(|c| (*c, state.goad_allowed_targets(*c, defenders)[0]))
                     .collect();
                 Choice::Attackers(att)
             }

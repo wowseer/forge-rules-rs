@@ -461,6 +461,23 @@ pub enum Effect {
         random: bool,
         remember: bool,
     },
+    /// Münzwurf (CR 705): Gewinn/Verlust bzw. Kopf/Zahl (`NoCall$`).
+    FlipCoin {
+        win: Option<Arc<CompiledAbility>>,
+        lose: Option<Arc<CompiledAbility>>,
+    },
+    /// Zahl wählen → Laufzeitwert `ChosenNumber` der Quelle.
+    ChooseNumber {
+        who: Defined,
+        min: Amount,
+        max: Amount,
+        random: bool,
+    },
+    /// CR 701.38: gegoadet bis zum nächsten Zug des Goaders (oder dauerhaft).
+    Goad {
+        what: Defined,
+        permanent: bool,
+    },
     /// Hand aufdecken bzw. ansehen (`RevealHand`, `Look$`); optional merken.
     RevealHand {
         who: Defined,
@@ -1777,6 +1794,66 @@ fn compile_depth(
                 choices: ValidSpec::parse(c.get("Choices").unwrap_or("Player"))?,
                 random: flag(&mut c, "Random"),
                 remember: flag(&mut c, "RememberChosen"),
+            }
+        }
+        "FlipCoin" => {
+            if let Some(v) = c.get("Flipper")
+                && v != "You"
+            {
+                return Err(c.unsupported("Flipper", v));
+            }
+            let no_call = c
+                .get("NoCall")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            let (wk, lk) = if no_call {
+                ("HeadsSubAbility", "TailsSubAbility")
+            } else {
+                ("WinSubAbility", "LoseSubAbility")
+            };
+            let sub = |c: &mut Ctx,
+                       k: &'static str|
+             -> Result<Option<Arc<CompiledAbility>>, CompileError> {
+                let Some(name) = c.get(k) else {
+                    return Ok(None);
+                };
+                let sv = face
+                    .svar(name)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+                let ab = ScriptAbility::from_svar(sv)
+                    .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+                    .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+                let compiled = compile_depth(face, &ab, depth + 1)?;
+                if compiled.chain().iter().any(|a| a.target.is_some()) {
+                    return Err(c.unsupported(k, "mit Zielen"));
+                }
+                Ok(Some(Arc::new(compiled)))
+            };
+            let win = sub(&mut c, wk)?;
+            let lose = sub(&mut c, lk)?;
+            Effect::FlipCoin { win, lose }
+        }
+        "ChooseNumber" => {
+            for k in ["AILogic", "ListTitle", "ChooseAnyNumber"] {
+                c.get(k);
+            }
+            Effect::ChooseNumber {
+                who: c.defined(Defined::You)?,
+                min: c.amount("Min", Some(0))?,
+                max: c.amount("Max", Some(10))?,
+                random: c
+                    .get("Random")
+                    .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+            }
+        }
+        "Goad" => {
+            let permanent = match c.get("Duration") {
+                None => false,
+                Some("Permanent") => true,
+                Some(v) => return Err(c.unsupported("Duration", v)),
+            };
+            Effect::Goad {
+                what: c.defined(Defined::Targeted)?,
+                permanent,
             }
         }
         "RevealHand" => {

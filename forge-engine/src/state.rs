@@ -161,6 +161,8 @@ pub struct CardObj {
     pub chosen_cards: Vec<CardId>,
     /// Gewählter Typ (`ChooseType`, Java `Card.chosenType`).
     pub chosen_type: Option<String>,
+    /// CR 701.38: von diesen Spielern „gegoadet“ (Spieler, dauerhaft?)
+    pub goaded_by: Vec<(PlayerId, bool)>,
     /// Laufzeitwerte (`ResultSVar$`), z. B. Würfelergebnis.
     pub runtime_vars: BTreeMap<String, i32>,
     /// Gewählter Spieler (`ChoosePlayer`, Java `Card.chosenPlayer`).
@@ -471,6 +473,11 @@ pub enum Flow {
 /// Protokoll für Tests, Replays und den Abgleich mit der Java-Engine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    /// Münzwurf (CR 705); `won` aus Sicht des Werfenden.
+    CoinFlipped {
+        player: PlayerId,
+        won: bool,
+    },
     /// Gewürfelt (CR 706).
     DiceRolled {
         player: PlayerId,

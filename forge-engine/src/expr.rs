@@ -559,6 +559,7 @@ impl Expr {
             "YouDrewThisTurn" => Expr::DrewThisTurn,
             "AttackersDeclared" => Expr::AttackersDeclared,
             "Party" => Expr::Party,
+            "ChosenNumber" => Expr::RuntimeVar("ChosenNumber".into()),
             "RememberedSize" => Expr::RememberedSize,
             _ => return None,
         })
