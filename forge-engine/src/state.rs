@@ -78,6 +78,8 @@ pub struct Player {
     pub name: String,
     pub life: i32,
     pub poison: u32,
+    /// CR 702.179: Geschwindigkeit (`None` = keine), höchstens 4
+    pub speed: Option<u32>,
     /// Weitere Spieler-Marken (ENERGY, EXPERIENCE, RAD …), CR 122.1.
     pub counters: BTreeMap<String, u32>,
     /// Oberste Karte = letztes Element.
@@ -171,6 +173,12 @@ pub struct CardObj {
     pub disguised: bool,
     /// CR 701.38: von diesen Spielern „gegoadet“ (Spieler, dauerhaft?)
     pub goaded_by: Vec<(PlayerId, bool)>,
+    /// Eingeprägte Objekte (`Imprint$`, Java `imprintedCards`).
+    pub imprinted: Vec<CardId>,
+    /// CR 701.60: verdächtig (Bedrohlich, kann nicht blocken)
+    pub suspected: bool,
+    /// CR 719.3: Fall gelöst
+    pub solved: bool,
     /// Laufzeitwerte (`ResultSVar$`), z. B. Würfelergebnis.
     pub runtime_vars: BTreeMap<String, i32>,
     /// Genannter Kartenname (`NameCard`, Java `Card.namedCard`).
@@ -367,6 +375,8 @@ pub struct TurnHistory {
     pub cast: Vec<CardId>,
     /// Kreaturen, die angegriffen haben, mit ihrem Controller.
     pub attackers: Vec<(PlayerId, CardId)>,
+    /// Geschwindigkeit wurde in diesem Zug bereits erhöht (CR 702.179d)
+    pub speed_increased: bool,
     /// Schaden an Kreaturen in diesem Zug (Quelle, Ziel) – Filter `DamagedBy`.
     pub damaged: Vec<(CardId, CardId)>,
     /// `Fog`: aller Kampfschaden dieses Zuges wird verhindert.
@@ -605,6 +615,10 @@ pub struct Characteristics {
     pub power: Option<i32>,
     pub toughness: Option<i32>,
     pub keywords: Vec<Keyword>,
+    /// Durch Statics verliehene aktivierte Fähigkeiten (`AddAbility$`, Layer 6)
+    pub granted_abilities: Vec<Arc<crate::effects::CompiledAbility>>,
+    /// Durch Statics verliehene Trigger (`AddTrigger$`, Layer 6)
+    pub granted_triggers: Vec<Arc<crate::triggers::CompiledTrigger>>,
 }
 
 impl Characteristics {
@@ -651,6 +665,8 @@ pub struct GameState {
     /// mit Verschachtelungstiefe; `None` = jeder Wechsel ein eigenes Ereignis.
     pub zone_batch: Option<Vec<ZoneMove>>,
     pub zone_batch_depth: u32,
+    /// CR 726: `Some(true)` = Tag, `Some(false)` = Nacht, `None` = weder noch.
+    pub day: Option<bool>,
     /// Zusatzzüge (CR 500.7): zuletzt hinzugefügter zuerst.
     pub extra_turns: Vec<PlayerId>,
     /// Monarch (CR 724), höchstens ein Spieler.
@@ -830,6 +846,24 @@ impl GameState {
             .collect()
     }
 
+    /// Aktivierte Fähigkeiten von `c`: eigene und verliehene (Index = `Action::Activate`).
+    pub fn activated(&self, c: CardId) -> Vec<Arc<crate::effects::CompiledAbility>> {
+        let mut v = self.card(c).compiled().activated.clone();
+        if self.card(c).zone == Some(Zone::Battlefield) {
+            v.extend(self.chars(c).granted_abilities);
+        }
+        v
+    }
+
+    /// Trigger von `c`: eigene und verliehene.
+    pub fn all_triggers(&self, c: CardId) -> Vec<Arc<crate::triggers::CompiledTrigger>> {
+        let mut v = self.card(c).compiled().triggers.clone();
+        if self.card(c).zone == Some(Zone::Battlefield) {
+            v.extend(self.chars(c).granted_triggers);
+        }
+        v
+    }
+
     fn chars_uncached(&self, id: CardId) -> Characteristics {
         use crate::statics::{CompiledStatic, ContinuousStatic};
         let c = self.card(id);
@@ -862,7 +896,17 @@ impl GameState {
                 .map(|b| b.1)
                 .or_else(|| face.toughness.as_ref().map(|t| t.base())),
             keywords: compiled.keywords.clone(),
+            granted_abilities: Vec::new(),
+            granted_triggers: Vec::new(),
         };
+        // CR 701.60c: verdächtig → Bedrohlich und kann nicht blocken
+        if c.suspected && c.zone == Some(Zone::Battlefield) {
+            for k in [Keyword::Menace, Keyword::CantBlock] {
+                if !ch.keywords.contains(&k) {
+                    ch.keywords.push(k);
+                }
+            }
+        }
         // CR 708.2a: verdeckt → 2/2-Kreatur ohne Namen, Farbe, Manakosten, Untertypen
         if c.face_down && matches!(c.zone, Some(Zone::Battlefield) | Some(Zone::Stack)) {
             ch.name = String::new();
@@ -1098,11 +1142,17 @@ impl GameState {
         }
         // Layer 6 (statisch und Pump-Effekte gemeinsam nach Zeitstempel)
         let mut l6: Vec<(u64, Vec<Keyword>, Vec<Keyword>)> = Vec::new();
+        let mut granted_ab = Vec::new();
+        let mut granted_tr = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer6()) {
             if applies(self, s, &ch) {
                 l6.push((s.ts, s.st.add_keywords.clone(), Vec::new()));
+                granted_ab.extend(s.st.add_abilities.iter().cloned());
+                granted_tr.extend(s.st.add_triggers.iter().cloned());
             }
         }
+        ch.granted_abilities.extend(granted_ab);
+        ch.granted_triggers.extend(granted_tr);
         l6.extend(
             pumps
                 .iter()
@@ -1338,6 +1388,7 @@ impl GameState {
             effect_source: None,
             monarch: None,
             extra_turns: Vec::new(),
+            day: None,
             damage_batch: None,
             log: Vec::new(),
             this_turn: TurnHistory::default(),
@@ -1352,6 +1403,7 @@ impl GameState {
                 life: rules.starting_life,
                 poison: 0,
                 counters: BTreeMap::new(),
+                speed: None,
                 library: Vec::new(),
                 hand: Vec::new(),
                 graveyard: Vec::new(),

@@ -63,6 +63,9 @@ pub enum Defined {
     RememberedLki,
     /// Von der Quelle gewählte Karten in ihrem aktuellen Zustand (`ChosenCard`).
     ChosenCard,
+    /// Eingeprägte Objekte der Quelle (aktuell) bzw. deren Controller.
+    Imprinted,
+    ImprintedController,
     /// Von der Quelle gewählter Spieler (`ChosenPlayer`).
     ChosenPlayer,
     /// Von der Quelle exilierte Karten (`ExiledWith`, `ExiledWithSource`).
@@ -180,6 +183,8 @@ pub enum Effect {
         random_order: bool,
         shuffle: bool,
         optional: bool,
+        /// `ImprintFound$`
+        imprint_found: bool,
         remember_found: bool,
         remember_revealed: bool,
         tapped: bool,
@@ -472,7 +477,7 @@ pub enum Effect {
         what: Defined,
         clear_remembered: bool,
         /// `ClearChosenCard/Player/Color/Type$`, `ClearNamedCard$`
-        clear_chosen: [bool; 5],
+        clear_chosen: [bool; 6],
     },
     /// Spieler wählen (Java `ChoosePlayerEffect`) → `CardObj::chosen_player` der Quelle.
     ChoosePlayer {
@@ -531,6 +536,12 @@ pub enum Effect {
         random: bool,
         optional: bool,
         remember: bool,
+    },
+    /// `AlterAttribute`: Verdächtig (CR 701.60) bzw. Gelöst (CR 719.3) setzen/entfernen.
+    AlterAttribute {
+        what: Defined,
+        suspected: Option<bool>,
+        solved: Option<bool>,
     },
     /// Marken vervielfachen (`MultiplyCounter`, Standard verdoppeln).
     MultiplyCounter {
@@ -771,6 +782,8 @@ pub struct ZonePlacement {
     pub with_counter: Option<String>,
     /// `RememberTargets$ True`: die Quelle merkt sich die Ziele (vor dem Bewegen)
     pub remember_targets: bool,
+    /// `Imprint$ True`: die bewegten Objekte werden eingeprägt
+    pub imprint: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1005,6 +1018,8 @@ impl<'a> Ctx<'a> {
                 // Gemerkte Karten und Spieler (Java `getDefinedObjects("Remembered")`).
                 "Remembered" | "Player.IsRemembered" | "RememberedCard" => Defined::Remembered,
                 "ChosenCard" => Defined::ChosenCard,
+                "Imprinted" => Defined::Imprinted,
+                "ImprintedController" => Defined::ImprintedController,
                 "Enchanted" | "Equipped" | "AttachedTo" => Defined::Enchanted,
                 "ExiledWith" | "ExiledWithSource" => Defined::ExiledWith,
                 "ChosenPlayer" => Defined::ChosenPlayer,
@@ -1109,6 +1124,9 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         with_counter: c.get("WithCountersType").map(|t| t.to_ascii_uppercase()),
         remember_targets: c
             .get("RememberTargets")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+        imprint: c
+            .get("Imprint")
             .is_some_and(|v| v.eq_ignore_ascii_case("true")),
     };
     // reine Text-/Hinweisparameter
@@ -1568,6 +1586,7 @@ fn compile_depth(
                 shuffle: flag(&mut c, "Shuffle"),
                 optional: flag(&mut c, "Optional"),
                 remember_found: flag(&mut c, "RememberFound"),
+                imprint_found: flag(&mut c, "ImprintFound"),
                 remember_revealed: flag(&mut c, "RememberRevealed"),
                 tapped: flag(&mut c, "Tapped"),
                 gain_control: flag(&mut c, "GainControl"),
@@ -1920,7 +1939,7 @@ fn compile_depth(
         "Cleanup" => {
             let clear_remembered = c.get("ClearRemembered").is_some();
             // Zustände, die die Engine (noch) nicht erzeugt: Leeren ohne Wirkung.
-            for k in ["ClearImprinted", "ClearCoinFlips", "Log"] {
+            for k in ["ClearCoinFlips", "Log"] {
                 c.get(k);
             }
             let flag = |c: &mut Ctx, k: &'static str| c.get(k).is_some();
@@ -1930,6 +1949,7 @@ fn compile_depth(
                 flag(&mut c, "ClearChosenColor"),
                 flag(&mut c, "ClearChosenType"),
                 flag(&mut c, "ClearNamedCard"),
+                flag(&mut c, "ClearImprinted"),
             ];
             Effect::Cleanup {
                 what: c.defined(Defined::SelfCard)?,
@@ -2035,6 +2055,24 @@ fn compile_depth(
                 random: flag(&mut c, "Random"),
                 optional: flag(&mut c, "Optional"),
                 remember: flag(&mut c, "RememberRevealed"),
+            }
+        }
+        "AlterAttribute" => {
+            let on = !c
+                .get("Activate")
+                .is_some_and(|v| v.eq_ignore_ascii_case("false"));
+            let (mut suspected, mut solved) = (None, None);
+            for a in c.get("Attributes").unwrap_or("").split(',').map(str::trim) {
+                match a {
+                    "Suspected" | "Suspect" => suspected = Some(on),
+                    "Solved" | "Solve" => solved = Some(on),
+                    other => return Err(c.unsupported("Attributes", other)),
+                }
+            }
+            Effect::AlterAttribute {
+                what: c.defined(Defined::SelfCard)?,
+                suspected,
+                solved,
             }
         }
         "MultiplyCounter" => Effect::MultiplyCounter {

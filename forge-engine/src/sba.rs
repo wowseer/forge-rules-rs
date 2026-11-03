@@ -21,6 +21,7 @@ impl GameState {
         any |= self.expire_control_effects(false);
         // Statische Kontrolle (Layer 2); eine Änderung beendet den Schritt wie eine SBA.
         any |= self.apply_static_control();
+        any |= self.day_night_and_speed();
         // CR 903.9: Commander dürfen in die Befehlszone zurück
         any |= self.commander_zone_returns(ch)?;
         loop {
@@ -83,6 +84,45 @@ impl GameState {
             }
         }
         Ok(any)
+    }
+
+    /// CR 726.2/702.145: Tag/Nacht beginnt mit einer Daybound-Karte; Day-/Nightbound-
+    /// Karten zeigen die passende Seite. CR 702.179b: „Start your engines!“ gibt
+    /// Geschwindigkeit 1. Liefert `true`, wenn sich etwas geändert hat.
+    fn day_night_and_speed(&mut self) -> bool {
+        use crate::keyword::Keyword;
+        let mut changed = false;
+        let bound: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .copied()
+            .filter(|c| {
+                let k = &self.card(*c).def.compiled(0).keywords;
+                k.contains(&Keyword::Daybound)
+            })
+            .collect();
+        if self.day.is_none() && !bound.is_empty() {
+            self.day = Some(true);
+            changed = true;
+        }
+        if let Some(day) = self.day {
+            for c in bound {
+                let face = self.card(c).face;
+                if (!day && face == 0) || (day && face == 1) {
+                    changed |= self.transform(c);
+                }
+            }
+        }
+        for &c in &self.battlefield.clone() {
+            if self.chars(c).has(&Keyword::StartYourEngines) {
+                let p = self.card(c).controller;
+                if self.player(p).speed.is_none() {
+                    self.player_mut(p).speed = Some(1);
+                    changed = true;
+                }
+            }
+        }
+        changed
     }
 
     /// CR 903.9a/b: Ein Commander im Friedhof, Exil, auf der Hand oder in der

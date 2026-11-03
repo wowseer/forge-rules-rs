@@ -40,9 +40,7 @@ impl Controller for SimpleAi {
                     .copied()
                     .filter(|a| match a {
                         Action::Cast(_) | Action::CastFaceDown(_) | Action::TurnFaceUp(_) => true,
-                        Action::Activate(c, i) => {
-                            !state.card(*c).compiled().activated[*i].is_mana_ability()
-                        }
+                        Action::Activate(c, i) => !state.activated(*c)[*i].is_mana_ability(),
                         _ => false,
                     })
                     .collect();

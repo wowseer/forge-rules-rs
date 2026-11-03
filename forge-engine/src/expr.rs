@@ -214,6 +214,8 @@ pub enum ObjRef {
     ParentTargeted,
     /// `Remembered` (wie gemerkt)
     Remembered,
+    /// `Imprinted` (aktuelle Objekte)
+    Imprinted,
     /// `TriggeredCard`
     TriggeredCard,
     /// `TriggeredCards` (Sammel-Trigger)
@@ -232,6 +234,7 @@ impl ObjRef {
             "Targeted" => ObjRef::Targeted,
             "ParentTargeted" => ObjRef::ParentTargeted,
             "Remembered" => ObjRef::Remembered,
+            "Imprinted" => ObjRef::Imprinted,
             "TriggeredCard" => ObjRef::TriggeredCard,
             "TriggeredCards" => ObjRef::TriggeredCards,
             "TargetedPlayer" => ObjRef::TargetedPlayer,
@@ -314,6 +317,10 @@ pub enum Condition {
     Kicked,
     /// Du bist der Monarch (`Condition$ Monarch`, `CheckDefinedPlayer$ You.isMonarch`).
     Monarch,
+    /// `Condition$ MaxSpeed`: Geschwindigkeit 4 (CR 702.179)
+    MaxSpeed,
+    /// `Condition$ Day` / `Night` (CR 726)
+    IsDay(bool),
     /// Gemerkte Objekte der Quelle filtern und zählen
     /// (`ConditionDefined$ Remembered` + `ConditionPresent$`).
     RememberedPresent {
@@ -327,6 +334,8 @@ pub enum Condition {
         chosen: bool,
         /// `ConditionDefined$ Self`: die Quelle selbst.
         self_card: bool,
+        /// `ConditionDefined$ Imprinted`
+        imprinted: bool,
     },
 }
 
@@ -393,6 +402,8 @@ impl Expr {
         }
         match face.svar(t) {
             Some(sv) => Expr::parse_svar(face, sv),
+            // Ausdruck direkt im Parameter (`NumDmg$ Count$YourSpeed`)
+            None if t.contains('$') => Expr::parse_svar(face, t),
             None => Err(bad("Wert", v)),
         }
     }
@@ -568,6 +579,7 @@ impl Expr {
             "YouDrewThisTurn" => Expr::DrewThisTurn,
             "AttackersDeclared" => Expr::AttackersDeclared,
             "Party" => Expr::Party,
+            "YourSpeed" => Expr::YourCounters("SPEED".into()),
             "ChosenNumber" => Expr::RuntimeVar("ChosenNumber".into()),
             "RememberedSize" => Expr::RememberedSize,
             _ => return None,
@@ -671,7 +683,7 @@ pub fn parse_conditions(
         // Java: ohne ConditionPresent$ wird ConditionDefined$ nicht geprüft.
         if !matches!(
             d,
-            "Remembered" | "RememberedLKI" | "Targeted" | "ChosenCard" | "Self"
+            "Remembered" | "RememberedLKI" | "Targeted" | "ChosenCard" | "Self" | "Imprinted"
         ) {
             return Err(bad("ConditionDefined", d));
         }
@@ -686,6 +698,7 @@ pub fn parse_conditions(
                 targeted: d == "Targeted",
                 chosen: d == "ChosenCard",
                 self_card: d == "Self",
+                imprinted: d == "Imprinted",
             });
         }
     } else if let Some(p) = params.get(k_present) {
@@ -735,6 +748,9 @@ pub fn parse_conditions(
             "FatefulHour" => Condition::FatefulHour(true),
             "Kicked" => Condition::Kicked,
             "Monarch" => Condition::Monarch,
+            "MaxSpeed" => Condition::MaxSpeed,
+            "Day" => Condition::IsDay(true),
+            "Night" => Condition::IsDay(false),
             other => return Err(bad("Condition", other)),
         });
     }
@@ -941,6 +957,12 @@ impl GameState {
                 }
                 self.card(ctx.source).remembered.clone()
             }
+            ObjRef::Imprinted => self
+                .card(ctx.source)
+                .imprinted
+                .iter()
+                .map(|c| self.current_object(*c))
+                .collect(),
             ObjRef::TriggeredCards => ctx.trig.map(|t| t.cards.clone()).unwrap_or_default(),
             ObjRef::Paid(kind) => ctx
                 .paid
@@ -1072,7 +1094,9 @@ impl GameState {
             }
             Expr::YourCounters(k) => {
                 let pl = self.player(ctx.controller);
-                if k == "POISON" {
+                if k == "SPEED" {
+                    pl.speed.unwrap_or(0) as i32
+                } else if k == "POISON" {
                     pl.poison as i32
                 } else {
                     pl.counters.get(k).copied().unwrap_or(0) as i32
@@ -1273,6 +1297,8 @@ impl GameState {
             Condition::FatefulHour(b) => (self.player(you).life <= 5) == *b,
             Condition::Kicked => self.card(ctx.source).kicked != 0,
             Condition::Monarch => self.monarch == Some(you),
+            Condition::MaxSpeed => self.player(you).speed == Some(4),
+            Condition::IsDay(d) => self.day == Some(*d),
             Condition::RememberedPresent {
                 spec,
                 cmp,
@@ -1280,6 +1306,7 @@ impl GameState {
                 targeted,
                 chosen,
                 self_card,
+                imprinted,
             } => {
                 if *targeted {
                     let n = ctx
@@ -1296,7 +1323,13 @@ impl GameState {
                         .count() as i32;
                     return cmp.holds(n, self.eval(&cmp.rhs, ctx));
                 }
-                let objs = if *self_card {
+                let objs = if *imprinted {
+                    self.card(ctx.source)
+                        .imprinted
+                        .iter()
+                        .map(|c| self.current_object(*c))
+                        .collect()
+                } else if *self_card {
                     vec![ctx.source]
                 } else if *chosen {
                     self.card(ctx.source)

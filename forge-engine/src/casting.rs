@@ -123,7 +123,7 @@ impl GameState {
     pub fn available_mana_abilities(&self, p: PlayerId) -> Vec<(CardId, usize)> {
         let mut v = Vec::new();
         for c in self.battlefield_of(p).collect::<Vec<_>>() {
-            for (i, ab) in self.card(c).compiled().activated.iter().enumerate() {
+            for (i, ab) in self.activated(c).iter().enumerate() {
                 if ab.is_mana_ability()
                     && !self.cant_activate(p, c, ab)
                     && ab
@@ -144,7 +144,7 @@ impl GameState {
             .available_mana_abilities(p)
             .into_iter()
             .map(|(c, i)| {
-                let ab = &self.card(c).compiled().activated[i];
+                let ab = &self.activated(c)[i];
                 match &ab.effect {
                     crate::effects::Effect::AddMana { produce, amount } => {
                         let per = match produce {
@@ -906,7 +906,7 @@ impl GameState {
             pl.hand.iter().chain(pl.graveyard.iter()).copied().collect();
         for c in off_battlefield {
             let zone = self.card(c).zone;
-            for (i, ab) in self.card(c).compiled().activated.iter().enumerate() {
+            for (i, ab) in self.activated(c).iter().enumerate() {
                 if Some(ab.activation_zone) != zone {
                     continue;
                 }
@@ -930,7 +930,7 @@ impl GameState {
             }
         }
         for c in self.battlefield_of(p).collect::<Vec<_>>() {
-            for (i, ab) in self.card(c).compiled().activated.iter().enumerate() {
+            for (i, ab) in self.activated(c).iter().enumerate() {
                 if ab.activation_zone != Zone::Battlefield {
                     continue;
                 }
@@ -1054,7 +1054,7 @@ impl GameState {
                 self.perform_action(p, Action::PlayLand(c), ch)
             }
             Action::Activate(c, i) => {
-                let ab = self.card(c).compiled().activated[i].clone();
+                let ab = self.activated(c)[i].clone();
                 let turn = self.turn;
                 self.card_mut(c).activations.push((i, turn));
                 if ab.is_mana_ability() {
@@ -1447,7 +1447,11 @@ impl GameState {
             card: source,
             index,
         });
-        let loyalty = self.card(source).compiled().activated[index].planeswalker;
+        let loyalty = self
+            .stack
+            .last()
+            .and_then(|it| it.ability.as_ref())
+            .is_some_and(|a| a.planeswalker);
         self.fire(crate::triggers::TriggerEvent::AbilityCast {
             source,
             player: p,
@@ -1500,7 +1504,7 @@ impl GameState {
         for host in self.live_cards().collect::<Vec<_>>() {
             let h = self.card(host);
             let Some(zone) = h.zone else { continue };
-            for t in &h.compiled().triggers {
+            for t in &self.all_triggers(host) {
                 let crate::triggers::TriggerKind::TapsForMana {
                     valid_card,
                     activator,
@@ -1860,7 +1864,7 @@ impl GameState {
             })?;
             match choice {
                 Choice::Pay(PayAction::ActivateMana(c, i)) => {
-                    let ab = self.card(c).compiled().activated[i].clone();
+                    let ab = self.activated(c)[i].clone();
                     self.activate_mana_ability(p, c, &ab, ch)?;
                 }
                 Choice::Pay(PayAction::AutoPay) => {
@@ -1868,7 +1872,7 @@ impl GameState {
                         return Err(Interrupt::Cancelled);
                     };
                     for (c, i, color) in plan {
-                        let ab = self.card(c).compiled().activated[i].clone();
+                        let ab = self.activated(c)[i].clone();
                         let cost = ab.cost.clone().unwrap_or_default();
                         self.pay_nonmana_costs(p, c, &cost, ch)?;
                         let snow = self.chars(c).types.has_super(forge_types::Supertype::Snow);
@@ -1898,7 +1902,7 @@ impl GameState {
             .available_mana_abilities(p)
             .into_iter()
             .filter_map(|(c, i)| {
-                let ab = &self.card(c).compiled().activated[i];
+                let ab = &self.activated(c)[i];
                 if ab.sub.is_some() {
                     return None;
                 }

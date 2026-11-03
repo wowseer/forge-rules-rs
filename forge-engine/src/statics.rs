@@ -36,6 +36,10 @@ pub struct ContinuousStatic {
     pub set_color_chosen: bool,
     /// Layer 6
     pub add_keywords: Vec<Keyword>,
+    /// Layer 6: verliehene aktivierte Fähigkeiten (`AddAbility$`)
+    pub add_abilities: Vec<std::sync::Arc<crate::effects::CompiledAbility>>,
+    /// Layer 6: verliehene Trigger (`AddTrigger$`)
+    pub add_triggers: Vec<std::sync::Arc<crate::triggers::CompiledTrigger>>,
     /// Layer 7b (bzw. 7a bei `CharacteristicDefining$ True`)
     pub set_power: Option<Expr>,
     pub set_toughness: Option<Expr>,
@@ -80,6 +84,8 @@ impl ContinuousStatic {
     }
     pub fn has_layer6(&self) -> bool {
         !self.add_keywords.is_empty()
+            || !self.add_abilities.is_empty()
+            || !self.add_triggers.is_empty()
     }
     pub fn has_layer7b(&self) -> bool {
         self.set_power.is_some() || self.set_toughness.is_some()
@@ -886,6 +892,43 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         }
         None => None,
     };
+    let svar_list = |key: &str| -> Vec<String> {
+        p.get(key)
+            .map(|v| {
+                v.split('&')
+                    .map(|x| x.trim().to_string())
+                    .filter(|x| !x.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let mut add_abilities = Vec::new();
+    for name in svar_list("AddAbility") {
+        let sv = face
+            .svar(&name)
+            .ok_or_else(|| CompileError::MissingSvar(name.clone()))?;
+        let ab = forge_script::ScriptAbility::from_svar(sv)
+            .ok_or_else(|| CompileError::MissingSvar(name.clone()))?
+            .map_err(|_| CompileError::MissingSvar(name.clone()))?;
+        let compiled = crate::effects::compile(face, &ab)?;
+        if compiled.kind != forge_script::AbilityKind::Activated {
+            return Err(err("AddAbility", &name));
+        }
+        add_abilities.push(std::sync::Arc::new(compiled));
+    }
+    let mut add_triggers = Vec::new();
+    for name in svar_list("AddTrigger") {
+        let sv = face
+            .svar(&name)
+            .ok_or_else(|| CompileError::MissingSvar(name.clone()))?;
+        let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(sv))
+            .map_err(|_| err("AddTrigger", &name))?;
+        add_triggers.push(std::sync::Arc::new(crate::triggers::compile_trigger(
+            face, &st,
+        )?));
+    }
+    get("AddAbility");
+    get("AddTrigger");
     let add_keywords = match get("AddKeyword") {
         Some(k) => {
             let kws = Keyword::parse_list(k);
@@ -977,6 +1020,8 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         characteristic_defining,
         conditions,
         may_play,
+        add_abilities,
+        add_triggers,
         description: p.get("Description").unwrap_or("").to_string(),
     }))
 }

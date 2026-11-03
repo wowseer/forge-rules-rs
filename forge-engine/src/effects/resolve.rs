@@ -110,6 +110,18 @@ impl GameState {
                 .and_then(|t| t.target)
                 .into_iter()
                 .collect(),
+            Defined::Imprinted => self
+                .card(ctx.source)
+                .imprinted
+                .iter()
+                .map(|c| Target::Card(self.current_object(*c)))
+                .collect(),
+            Defined::ImprintedController => self
+                .card(ctx.source)
+                .imprinted
+                .iter()
+                .map(|c| Target::Player(self.card(self.current_object(*c)).controller))
+                .collect(),
             Defined::ChosenPlayer => self
                 .card(ctx.source)
                 .chosen_player
@@ -584,6 +596,7 @@ impl GameState {
                 random_order,
                 shuffle,
                 optional,
+                imprint_found,
                 remember_found,
                 remember_revealed,
                 tapped,
@@ -622,6 +635,9 @@ impl GameState {
                             found.push(c);
                             if *remember_found {
                                 self.card_mut(ctx.source).remembered.push(c);
+                            }
+                            if *imprint_found {
+                                self.card_mut(ctx.source).imprinted.push(c);
                             }
                             if found.len() == until {
                                 break;
@@ -1511,6 +1527,9 @@ impl GameState {
                     if clear_chosen[4] {
                         o.named_card = None;
                     }
+                    if clear_chosen[5] {
+                        o.imprinted.clear();
+                    }
                 }
             }
             Effect::ChoosePlayer {
@@ -1838,6 +1857,21 @@ impl GameState {
                             .extend(cards.iter().copied());
                     }
                     self.push_event(Event::Revealed { player: p, cards });
+                }
+            }
+            Effect::AlterAttribute {
+                what,
+                suspected,
+                solved,
+            } => {
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let o = self.card_mut(c);
+                    if let Some(v) = suspected {
+                        o.suspected = *v;
+                    }
+                    if let Some(v) = solved {
+                        o.solved = *v;
+                    }
                 }
             }
             Effect::MultiplyCounter {
@@ -2946,6 +2980,11 @@ impl GameState {
             && let Some(k) = &place.with_counter
         {
             self.add_counters(new, k, 1);
+        }
+        if place.imprint
+            && let Some(src) = self.effect_source
+        {
+            self.card_mut(src).imprinted.push(new);
         }
         new
     }

@@ -59,6 +59,11 @@ pub enum Keyword {
     DeckBuilding(String),
     /// CR 702.88: Rebound
     Rebound,
+    /// CR 702.145: Daybound / Nightbound (Tag/Nacht, CR 726)
+    Daybound,
+    Nightbound,
+    /// CR 702.179: „Start your engines!“ (Geschwindigkeit)
+    StartYourEngines,
     /// „You may choose not to untap CARDNAME during your untap step.“ (CR 502.3)
     MayNotUntap,
     /// CR 702.93 Undying, 702.79 Persist, 702.45 Bushido n, 702.25 Flanking
@@ -147,6 +152,9 @@ impl Keyword {
             "Exalted" => Keyword::Exalted,
             "Rebound" => Keyword::Rebound,
             "Undying" => Keyword::Undying,
+            "Daybound" => Keyword::Daybound,
+            "Nightbound" => Keyword::Nightbound,
+            "Start your engines" | "Start your engines!" => Keyword::StartYourEngines,
             "You may choose not to untap CARDNAME during your untap step." => Keyword::MayNotUntap,
             "Persist" => Keyword::Persist,
             "Flanking" => Keyword::Flanking,

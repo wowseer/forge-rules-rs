@@ -1712,6 +1712,12 @@ impl GameState {
         // Die Prüfung verändert keine Eigenschaften → `chars()` cachen.
         let _cache = crate::state::CharsCache::enter();
         // Kandidaten: Objekte in Zonen + Rückblick bei Verlassen des Battlefields.
+        // Verleiht irgendein Static Trigger (`AddTrigger$`)? Nur dann teuer prüfen.
+        let any_grants = self.battlefield.iter().chain(self.command.iter()).any(|h| {
+            self.card(*h).compiled().statics.iter().any(|st| {
+                matches!(st.as_ref(), crate::statics::CompiledStatic::Continuous(cs) if !cs.add_triggers.is_empty())
+            })
+        });
         let mut sources: Vec<(CardId, Zone)> = self
             .live_cards()
             .map(|id| self.card(id))
@@ -1721,6 +1727,9 @@ impl GameState {
                     .triggers
                     .iter()
                     .any(|t| t.active_zones.contains(z))
+                    || (any_grants
+                        && *z == Zone::Battlefield
+                        && !self.chars(c.id).granted_triggers.is_empty())
             })
             .map(|(c, z)| (c.id, z))
             .filter(|(id, _)| self.fire_only.is_none_or(|o| o == *id))
@@ -1760,7 +1769,9 @@ impl GameState {
             for id in lki {
                 let c = self.card(id);
                 if c.zone.is_none()
-                    && !c.compiled().triggers.is_empty()
+                    && (!c.compiled().triggers.is_empty()
+                        || (c.zone == Some(Zone::Battlefield)
+                            && !self.chars(c.id).granted_triggers.is_empty()))
                     && !sources.iter().any(|(s, _)| *s == id)
                 {
                     sources.push((id, Zone::Battlefield));
@@ -1771,7 +1782,7 @@ impl GameState {
         for (src, zone) in sources {
             let card = self.card(src);
             let controller = card.controller;
-            for t in &card.compiled().triggers {
+            for t in &self.all_triggers(src) {
                 if !t.active_zones.contains(&zone) {
                     continue;
                 }
@@ -1892,7 +1903,7 @@ impl GameState {
         for host in self.live_cards().collect::<Vec<_>>() {
             let h = self.card(host);
             let Some(zone) = h.zone else { continue };
-            for t in &h.compiled().triggers {
+            for t in &self.all_triggers(host) {
                 if !matches!(t.kind, TriggerKind::Always) || !t.active_zones.contains(&zone) {
                     continue;
                 }

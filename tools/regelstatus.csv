@@ -340,3 +340,7 @@ Replacement Effect;CreateToken;teilweise;mechanics_batch3::hardened_scales_and_d
 Effect (ApiType);MultiplyCounter;ja;mechanics_batch3::multiply_and_connive;Marken einer oder aller Arten vervielfachen (Multiplier, Standard 2)
 Effect (ApiType);Connive;ja;mechanics_batch3::multiply_and_connive;CR 701.50: ziehen, abwerfen, je Nichtland +1/+1-Marke
 Trigger;LandPlayed;ja;mechanics_batch3::landfall_trigger_and_extra_land_play;ValidCard, Origin
+Effect (ApiType);AlterAttribute;teilweise;mechanics_batch4::suspected_has_menace_and_cant_block;Suspected (CR 701.60: Bedrohlich, kann nicht blocken), Solved (CR 719.3), Activate False; Prepared, Plotted, Saddled fehlen
+Keyword;Daybound;ja;mechanics_batch4::day_night_transforms_werewolf;CR 702.145/726: Tag beginnt mit Daybound-Karte, Wechsel nach Zaubern des vorigen aktiven Spielers, passende Seite
+Keyword;Nightbound;ja;mechanics_batch4::day_night_transforms_werewolf;CR 702.145/726
+Keyword;Start your engines;teilweise;mechanics_batch4::speed_rises_when_opponent_loses_life_on_your_turn;CR 702.179: Geschwindigkeit 1, +1 je Zug bei Lebensverlust eines Gegners im eigenen Zug (max. 4), Condition MaxSpeed, Count$YourSpeed

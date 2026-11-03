@@ -12,11 +12,11 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
-| Keyword | 198 | 38 | 15 | 4 |
+| Keyword | 198 | 40 | 16 | 4 |
 | Trigger | 137 | 3 | 27 | 11 |
 | Replacement Effect | 35 | 0 | 6 | 5 |
 | Static Ability | 90 | 3 | 10 | 0 |
-| Effect (ApiType) | 188 | 9 | 67 | 16 |
+| Effect (ApiType) | 188 | 9 | 68 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 15 | 1 | 3 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **106** | **150** | **81** |
+| **Summe** | **789** | **108** | **152** | **81** |
 
 ## Keyword
 
@@ -40,6 +40,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Convoke | ✅ ja | `cost_helpers::convoke_taps_creatures_for_colored_and_generic_mana, cost_helpers::convoke_green_creature_cannot_pay_red` | CR 702.51a: getappte Kreatur zahlt {1} oder ein Symbol ihrer Farbe (auch Hybrid), vor dem Mana | keyword/Keyword.java (SimpleKeyword) |
 | Crew | 🟡 teilweise | `crew::crew_with_enough_power_animates_until_end_of_turn, crew::crew_needs_total_power` | CR 702.122: wie Java als AB$ Animate mit tapXType<Any/Creature.Other+withTotalPowerGEn> | keyword/Keyword.java (KeywordWithAmount) |
 | Cycling | 🟡 teilweise | `keywords_misc::cycling_from_hand_discards_and_draws, keywords_misc::cycling_not_offered_from_battlefield_or_without_mana` | Aktivierung aus der Hand, Abwerfen als Kosten | keyword/Keyword.java (KeywordWithCost) |
+| Daybound | ✅ ja | `mechanics_batch4::day_night_transforms_werewolf` | CR 702.145/726: Tag beginnt mit Daybound-Karte, Wechsel nach Zaubern des vorigen aktiven Spielers, passende Seite | keyword/Keyword.java (SimpleKeyword) |
 | Deathtouch | ✅ ja | `combat::deathtouch_lethal_is_one_for_damage_assignment` |  | keyword/Keyword.java (SimpleKeyword) |
 | Defender | ✅ ja | `combat::summoning_sickness_haste_defender` |  | keyword/Keyword.java (SimpleKeyword) |
 | Delve | ✅ ja | `cost_helpers::delve_exiles_graveyard_cards_for_generic` | CR 702.66a: exilierte Friedhofskarten zahlen je {1}, nur generisch | keyword/Keyword.java (SimpleKeyword) |
@@ -69,6 +70,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Menace | ✅ ja | `combat::menace_needs_two_blockers` |  | keyword/Keyword.java (SimpleKeyword) |
 | Megamorph | 🟡 teilweise | `morph::megamorph_adds_counter_and_leaving_reveals` | CR 702.37b: wie Morph, beim Umdrehen +1/+1-Marke | keyword/Keyword.java (KeywordWithCost) |
 | Morph | 🟡 teilweise | `morph::cast_face_down_then_turn_up_with_trigger` | CR 702.37: verdeckt für {3} wirken, als Sonderaktion für die Morph-Kosten umdrehen, verdeckt 2/2 ohne Name/Farbe/Fähigkeiten (CR 708.2), beim Verlassen aufgedeckt | keyword/Keyword.java (KeywordWithCost) |
+| Nightbound | ✅ ja | `mechanics_batch4::day_night_transforms_werewolf` | CR 702.145/726 | keyword/Keyword.java (SimpleKeyword) |
 | Partner | 🟡 teilweise | `storm_cascade::partner_is_supported` | Deckbau-Keyword ohne Spielwirkung (auch Choose a Background, Doctor's companion, Partner:<Gruppe>) | keyword/Keyword.java (Partner) |
 | Persist | ✅ ja | `mechanics_batch1::undying_and_persist_return_once` | CR 702.79: stirbt ohne -1/-1-Marke → kehrt mit einer zurück | keyword/Keyword.java (SimpleKeyword) |
 | Protection | 🟡 teilweise | `protection::cannot_be_targeted_by_black_spell, protection::cannot_be_blocked_by_black_creatures_and_prevents_their_damage, protection::black_aura_falls_off, protection::protection_effect_with_chosen_color` | CR 702.16 DEBT: Schaden verhindert, Auren/Ausrüstung fallen ab, nicht blockbar, nicht Ziel | keyword/Keyword.java (Protection) |
@@ -80,6 +82,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Skulk | ✅ ja | `evasion::evasion_rules` | CR 702.118: nicht von Kreaturen mit größerer Stärke blockbar | keyword/Keyword.java (SimpleKeyword) |
 | Space sculptor | ⚪ n/a |  | Unstable | keyword/Keyword.java (SimpleKeyword) |
 | Split second | ✅ ja | `split::split_second_locks_out_responses` | CR 702.61: solange auf dem Stapel nur Mana-Fähigkeiten | keyword/Keyword.java (SimpleKeyword) |
+| Start your engines | 🟡 teilweise | `mechanics_batch4::speed_rises_when_opponent_loses_life_on_your_turn` | CR 702.179: Geschwindigkeit 1, +1 je Zug bei Lebensverlust eines Gegners im eigenen Zug (max. 4), Condition MaxSpeed, Count$YourSpeed | keyword/Keyword.java (SimpleKeyword) |
 | Starting intensity | ⚪ n/a |  | Alchemy | keyword/Keyword.java (KeywordWithAmount) |
 | Storm | ✅ ja | `storm_cascade::storm_copies_for_each_earlier_spell` | CR 702.40: SpellCast-Trigger der Karte, Kopie je früher in diesem Zug gewirktem Zauber, neue Ziele wählbar | keyword/Keyword.java (SimpleKeyword) |
 | Toxic | ✅ ja | `infect::toxic_adds_poison_on_combat_damage_only` | CR 702.164: zusätzlich n Giftmarken bei Kampfschaden an Spielern | keyword/Keyword.java (KeywordWithAmount) |
@@ -90,7 +93,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Ward | 🟡 teilweise | `triggers::ward_counters_unless_paid` | Ward:<Kosten> mit Mana/PayLife/Discard/Sac | keyword/Keyword.java (Ward) |
 | Wither | ✅ ja | `infect::infect_and_wither_damage` | CR 702.80: -1/-1-Marken an Kreaturen | keyword/Keyword.java (SimpleKeyword) |
 
-Offen (145): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Buyback, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exploit, Extort, Fabricate, Fading, Firebending, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Impending, Increment, Ingest, Job select, Jump-start, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Miracle, Mobilize, Modular, More Than Meets the Eye, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner with, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
+Offen (142): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Buyback, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Decayed, Demonstrate, Dethrone, Devour, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exploit, Extort, Fabricate, Fading, Firebending, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Impending, Increment, Ingest, Job select, Jump-start, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Miracle, Mobilize, Modular, More Than Meets the Eye, Multikicker, Mutate, Myriad, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner with, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Station, Storied, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
 
 ## Trigger
 
@@ -185,6 +188,7 @@ Offen (77): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Abandon | ⚪ n/a |  | Archenemy | ability/effects/AbandonEffect.java |
 | AddTurn | 🟡 teilweise | `mechanics_batch1::extra_turn_twiddle_random_discard_mill_memory` | CR 500.7: Zusatzzüge (zuletzt erzeugter zuerst) | ability/effects/AddTurnEffect.java |
 | AdvanceCrank | ⚪ n/a |  | Unstable | ability/effects/AdvanceCrankEffect.java |
+| AlterAttribute | 🟡 teilweise | `mechanics_batch4::suspected_has_menace_and_cant_block` | Suspected (CR 701.60: Bedrohlich, kann nicht blocken), Solved (CR 719.3), Activate False | ability/effects/AlterAttributeEffect.java |
 | Amass | ✅ ja | `amass::amass_creates_army_then_grows_and_gains_type` | CR 701.47: ohne Army zuerst 0/0-Army-Spielstein, +1/+1-Marken auf eine gewählte Army, Typ zusätzlich | ability/effects/AmassEffect.java |
 | Animate | 🟡 teilweise | `library_regen_animate::animate_land_until_end_of_turn` | Power/Toughness, Types, RemoveCreatureTypes, Keywords, Colors/OverwriteColors, Duration Permanent | ability/effects/AnimateEffect.java |
 | AnimateAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Typen/P/T/Keywords/Farben wie Animate, Zielspieler/Defined | ability/effects/AnimateAllEffect.java |
@@ -275,7 +279,7 @@ Offen (77): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Untap | 🟡 teilweise |  | Grundform | ability/effects/UntapEffect.java |
 | UntapAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Zielspieler/Defined | ability/effects/UntapAllEffect.java |
 
-Offen (112): ActivateAbility, AddOrRemoveCounter, AddPhase, Airbend, AlterAttribute, Assimilate, AssignGroup, Balance, BecomesBlocked, BidLife, Blight, Block, Bond, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ClaimThePrize, Clash, ClassLevelUp, Cloak, ControlSpell, ControlPlayer, Detain, DayTime, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MustBlock, Mutate, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, ReverseTurnOrder, RingTemptsYou, SetLife, Shuffle, SkipPhase, SkipTurn, Subgame, SwitchBlock, TakeInitiative, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
+Offen (111): ActivateAbility, AddOrRemoveCounter, AddPhase, Airbend, Assimilate, AssignGroup, Balance, BecomesBlocked, BidLife, Blight, Block, Bond, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ClaimThePrize, Clash, ClassLevelUp, Cloak, ControlSpell, ControlPlayer, Detain, DayTime, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MustBlock, Mutate, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, ReverseTurnOrder, RingTemptsYou, SetLife, Shuffle, SkipPhase, SkipTurn, Subgame, SwitchBlock, TakeInitiative, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
 
 ## Cost
 

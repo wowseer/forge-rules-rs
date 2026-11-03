@@ -43,6 +43,9 @@ impl GameState {
             chosen_player: None,
             named_card: None,
             runtime_vars: Default::default(),
+            imprinted: Vec::new(),
+            suspected: false,
+            solved: false,
             goaded_by: Vec::new(),
             face_down: false,
             disguised: false,
@@ -180,6 +183,9 @@ impl GameState {
             chosen_player: None,
             named_card: None,
             runtime_vars: Default::default(),
+            imprinted: Vec::new(),
+            suspected: false,
+            solved: false,
             rebound: false,
             face_down: old.face_down
                 && (to == Zone::Stack || (from == Some(Zone::Stack) && to == Zone::Battlefield)),
@@ -431,6 +437,18 @@ impl GameState {
         }
         self.player_mut(p).life -= n;
         self.player_mut(p).life_lost_this_turn += n;
+        // CR 702.179d: verliert ein Gegner im eigenen Zug Leben → Geschwindigkeit +1
+        // (einmal je Zug, höchstens 4)
+        let ap = self.active;
+        if ap != p
+            && !self.this_turn.speed_increased
+            && self.player(ap).speed.is_some_and(|s| s < 4)
+        {
+            self.this_turn.speed_increased = true;
+            if let Some(s) = self.player_mut(ap).speed.as_mut() {
+                *s += 1;
+            }
+        }
         self.push_event(Event::LifeChanged {
             player: p,
             delta: -n,

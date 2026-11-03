@@ -102,6 +102,13 @@ pub enum Prop {
     FaceDown,
     /// `Historic` (CR 700.6): Artefakt, legendär oder Saga
     Historic,
+    /// `IsImprinted`: von der Quelle eingeprägt
+    IsImprinted,
+    /// `IsSolved` (CR 719.3), `IsSuspected` (CR 701.60)
+    IsSolved,
+    IsSuspected,
+    /// `wasDealtDamageThisTurn`
+    DealtDamageThisTurn,
     /// `modified` (CR 700.9): Marken, Ausrüstung oder eigene Aura
     Modified,
     /// `ThisTurnEntered`: kam in diesem Zug in seine Zone
@@ -312,6 +319,11 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
         "IsCommander" => return Ok(Prop::IsCommander),
         "EffectSource" => return Ok(Prop::EffectSource),
         "modified" => return Ok(Prop::Modified),
+        "IsImprinted" => return Ok(Prop::IsImprinted),
+        "IsSolved" => return Ok(Prop::IsSolved),
+        "IsUnsolved" => return Ok(Prop::Not(Box::new(Prop::IsSolved))),
+        "IsSuspected" | "suspected" => return Ok(Prop::IsSuspected),
+        "wasDealtDamageThisTurn" => return Ok(Prop::DealtDamageThisTurn),
         "ThisTurnEntered" => return Ok(Prop::ThisTurnEntered),
         "wasCastByYou" => return Ok(Prop::WasCastByYou),
         "DamagedBy" => return Ok(Prop::DamagedBy),

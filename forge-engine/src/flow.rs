@@ -93,6 +93,21 @@ impl GameState {
     }
 
     fn start_turn(&mut self, p: PlayerId, number: u32) {
+        // CR 726.3a: Tag/Nacht wechselt nach den Zaubern des vorigen aktiven Spielers
+        if let Some(day) = self.day {
+            let prev = self.active;
+            let casts = self
+                .this_turn
+                .cast
+                .iter()
+                .filter(|c| self.card(**c).cast_by == Some(prev))
+                .count();
+            if day && casts == 0 {
+                self.day = Some(false);
+            } else if !day && casts >= 2 {
+                self.day = Some(true);
+            }
+        }
         self.turn = number;
         self.active = p;
         self.step = Step::Untap;
