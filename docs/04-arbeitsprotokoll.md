@@ -5,6 +5,38 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-03 – Sitzung 11: Split-Karten, Morph, Amass, Mana-Trigger
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Split-Karten (CR 709), Aftermath, Split second | ✅ |
+| Morph, Megamorph, Disguise (CR 702.37, 708) | ✅ |
+| Amass (CR 701.47) | ✅ |
+| Getriggerte Mana-Fähigkeiten `TapsForMana`, `ManaReflected` | ✅ |
+| `DealDamage | DamageSource$` | ✅ |
+| Fehlerbehebung: `ParentTargeted$…` nahm die eigenen Ziele | ✅ |
+| Tests | 325, alle grün |
+| Unterstützte Karten im Zielpool | 49,1 % → **50,4 %** |
+
+### Entscheidungen
+
+- Verdeckte Objekte: `CardObj::compiled()` liefert eine feste leere (bzw. Ward-{2}-)Seite,
+  damit alle Stellen, die Fähigkeiten abfragen, automatisch „keine Fähigkeiten“ sehen.
+- Split-Karten: `chars()` kombiniert außerhalb des Stapels; für Bezahlbarkeit, Zeitpunkt
+  und Kosten zählt `spell_chars()` (gewählte Hälfte).
+- `TapsForMana` wird nicht über das allgemeine Trigger-System, sondern direkt nach
+  Mana-Fähigkeiten mit {T} ausgeführt (auch im automatischen Bezahlplan).
+
+### Nächste Schritte
+
+1. `NameCard` (65), Trigger `Always`/`Static$ True` bei ChangesZone, `DividedAsYouChoose`.
+2. Fuse, Rooms (`UnlockDoor`), Suspect/Case (`AlterAttribute`).
+3. Deckprüfung je Format (Commander-Farbidentität, Restricted-Liste).
+
+---
+
 ## 2026-11-03 – Sitzung 10: Commander, Monarch, Crew, Protection und viele Effekte
 
 ### Ergebnis

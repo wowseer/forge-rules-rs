@@ -224,6 +224,15 @@ CompiledAbility {
 - Keywords `Infect`, `Wither`, `Toxic:n`; Filter `Historic`; Static `CastWithFlash`;
   `RevealHand`; `ChangeZone` mit `Shuffle$`, `Optional$`, Suche über `Origin$ A,B`.
 
+- Split-Karten (`AlternateMode:Split`): außerhalb des Stapels kombinierte Werte, gewirkt
+  wird eine Hälfte (`spell_chars`); `K:Aftermath`, `K:Split second`.
+- Morph/Megamorph/Disguise: `K:Morph:<Kosten>` usw.; verdeckte Objekte nutzen
+  `definition::face_down_compiled` (keine Fähigkeiten bzw. Ward {2}); Aktionen
+  `CastFaceDown`/`TurnFaceUp`; Trigger `TurnFaceUp`, Filter `faceDown`.
+- `Amass | Type$ | Num$`; Trigger `TapsForMana` (sofort, ohne Stapel) und
+  `ManaReflected | ReflectProperty$ Produced`; `DealDamage | DamageSource$`.
+- `ParentTargeted$…` meint die Ziele der Elternfähigkeit (`GameState::parent_targets`).
+
 ## Token und modale Fähigkeiten
 
 - `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,
