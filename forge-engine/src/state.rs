@@ -396,6 +396,8 @@ pub enum StackKind {
     Trigger {
         info: crate::triggers::TriggerInfo,
         optional: bool,
+        /// Entscheider bei „may“ (sonst der Controller)
+        decider: Option<crate::effects::Defined>,
         description: String,
         /// Beim Auflösen erneut zu prüfende Bedingungen (CR 603.4).
         conditions: Vec<crate::expr::Condition>,

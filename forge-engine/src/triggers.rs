@@ -170,6 +170,9 @@ pub struct CompiledTrigger {
     pub active_zones: Vec<Zone>,
     /// `OptionalDecider$ You`: „you may“.
     pub optional: bool,
+    /// Wer bei `optional` entscheidet, falls nicht der Controller
+    /// (`OptionalDecider$ TriggeredCardController` u. a.).
+    pub decider: Option<crate::effects::Defined>,
     /// Bedingungen (CR 603.4 „intervening if“), geprüft beim Auslösen und Auflösen.
     pub conditions: Vec<crate::expr::Condition>,
     /// `NoResolvingCheck$ True`: beim Auflösen nicht erneut prüfen.
@@ -670,9 +673,16 @@ pub fn compile_trigger(
         }
     }
 
-    let optional = match p.get("OptionalDecider") {
-        None => false,
-        Some("You") => true,
+    use crate::effects::Defined as D;
+    let (optional, decider) = match p.get("OptionalDecider") {
+        None => (false, None),
+        Some("You") | Some("True") => (true, None),
+        Some("TriggeredCardController") => (true, Some(D::TriggeredCardController)),
+        Some("TriggeredPlayer") | Some("TriggeredActivator") => (true, Some(D::TriggeredPlayer)),
+        Some("TriggeredAttackingPlayer") => (true, Some(D::TriggeredAttackingPlayer)),
+        Some("TargetedController") => (true, Some(D::TargetedController)),
+        Some("EnchantedController") => (true, Some(D::EnchantedController)),
+        Some("Opponent") => (true, Some(D::EachOpponent)),
         Some(o) => return Err(unsupported("OptionalDecider", o)),
     };
     let exec_name = p.get("Execute").ok_or(CompileError::MissingParam {
@@ -730,6 +740,7 @@ pub fn compile_trigger(
         execute,
         active_zones,
         optional,
+        decider,
         conditions,
         recheck_on_resolve: !p
             .get("NoResolvingCheck")
@@ -1676,6 +1687,7 @@ impl GameState {
                     kind: StackKind::Trigger {
                         info: t.info.clone(),
                         optional: t.trigger.optional,
+                        decider: t.trigger.decider,
                         description: t.trigger.description.clone(),
                         conditions: if t.trigger.recheck_on_resolve {
                             t.trigger.conditions.clone()

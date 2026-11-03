@@ -2804,10 +2804,22 @@ impl GameState {
             self.push_event(Event::Fizzled { item: item.id });
         } else {
             // „You may“ wird beim Auflösen entschieden.
+            let decider = match &item.kind {
+                StackKind::Trigger {
+                    decider: Some(d), ..
+                } => {
+                    let flat: Vec<Target> = legal_targets.iter().flatten().copied().collect();
+                    Self::players_of(&self.resolve_defined(*d, &flat, &ctx))
+                        .into_iter()
+                        .find(|p| self.player(*p).is_in_game())
+                        .unwrap_or(item.controller)
+                }
+                _ => item.controller,
+            };
             let declined = optional
                 && matches!(
                     ch.ask(Decision::OptionalTrigger {
-                        player: item.controller,
+                        player: decider,
                         description: match &item.kind {
                             StackKind::Trigger { description, .. } => description.clone(),
                             _ => String::new(),
