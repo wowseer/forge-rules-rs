@@ -295,3 +295,5 @@ Static Ability;CastWithFlash;teilweise;cast_with_flash::creature_with_flash_perm
 Effect (ApiType);FlipCoin;teilweise;coin_number_goad::coin_flip_win_or_lose;CR 705: Win/Lose bzw. Heads/Tails (NoCall), Event CoinFlipped; Ansage ohne Einfluss (50 %), Flipper nur You, Trigger FlippedCoin fehlt
 Effect (ApiType);ChooseNumber;teilweise;coin_number_goad::chosen_number_is_used;Min/Max, Random, Count$ChosenNumber; mehrere Wähler überschreiben sich
 Effect (ApiType);Goad;teilweise;coin_number_goad::goaded_creature_must_attack, coin_number_goad::goaded_prefers_other_player_in_multiplayer;CR 701.38: muss angreifen, möglichst nicht den Goader, endet mit dessen nächstem Zug, Duration Permanent; TargetsForEachPlayer fehlt
+Keyword;Aftermath;ja;split::aftermath_half_only_from_graveyard_then_exiled;CR 702.127: zweite Hälfte nur aus dem Friedhof, erste nicht von dort, danach ins Exil
+Keyword;Split second;ja;split::split_second_locks_out_responses;CR 702.61: solange auf dem Stapel nur Mana-Fähigkeiten

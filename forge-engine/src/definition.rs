@@ -442,7 +442,11 @@ impl CardDefinition {
         let mut unsupported = Vec::new();
         if !matches!(
             script.split_mode,
-            SplitMode::None | SplitMode::Adventure | SplitMode::Modal | SplitMode::DoubleFaced
+            SplitMode::None
+                | SplitMode::Adventure
+                | SplitMode::Modal
+                | SplitMode::DoubleFaced
+                | SplitMode::Split
         ) {
             unsupported.push(format!("mehrseitige Karte ({:?})", script.split_mode));
         }
@@ -507,7 +511,7 @@ impl CardDefinition {
     pub fn alt_cast_face(&self) -> Option<usize> {
         matches!(
             self.script.split_mode,
-            SplitMode::Adventure | SplitMode::Modal
+            SplitMode::Adventure | SplitMode::Modal | SplitMode::Split
         )
         .then_some(1)
         .filter(|i| self.faces.get(*i).is_some_and(Option::is_some))

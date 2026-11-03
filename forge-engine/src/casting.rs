@@ -376,7 +376,7 @@ impl GameState {
             return false;
         }
         let card = self.card(c);
-        let ch = self.chars(c);
+        let ch = self.spell_chars(c);
         let instant_speed = ch.types.has_core(forge_types::CoreType::Instant)
             || ch.has(&Keyword::Flash)
             || self.may_cast_with_flash(p, c)
@@ -393,12 +393,28 @@ impl GameState {
         })
     }
 
+    /// Eigenschaften des zu wirkenden Zaubers: bei Split-Karten nur die gewählte
+    /// Hälfte (CR 709.3), sonst wie `chars`.
+    pub(crate) fn spell_chars(&self, c: CardId) -> crate::state::Characteristics {
+        let mut ch = self.chars(c);
+        let o = self.card(c);
+        if o.def.script.split_mode == forge_script::SplitMode::Split && o.zone != Some(Zone::Stack)
+        {
+            let f = o.def.face(o.face);
+            ch.mana_cost = f.mana_cost.clone();
+            ch.types = f.types.clone();
+            ch.colors = f.color();
+            ch.name = f.name.clone();
+        }
+        ch
+    }
+
     fn castable_with(&self, p: PlayerId, c: CardId, grant: Option<&MayPlayGrant>) -> bool {
         if self.cant_cast(p, c) {
             return false;
         }
         let card = self.card(c);
-        let ch = self.chars(c);
+        let ch = self.spell_chars(c);
         let instant_speed = ch.types.has_core(forge_types::CoreType::Instant)
             || ch.has(&Keyword::Flash)
             || self.may_cast_with_flash(p, c)
@@ -732,6 +748,18 @@ impl GameState {
     /// Alle legalen Prioritätsaktionen von `p` (CR 117.1).
     pub fn legal_actions(&self, p: PlayerId) -> Vec<Action> {
         let _cache = crate::state::CharsCache::enter();
+        // CR 702.61a: Split second auf dem Stapel → nur Mana-Fähigkeiten
+        if self.stack.iter().any(|i| {
+            matches!(i.kind, StackKind::Spell { card } if self.chars(card).has(&Keyword::SplitSecond))
+        }) {
+            let mut acts = vec![Action::Pass];
+            acts.extend(
+                self.available_mana_abilities(p)
+                    .into_iter()
+                    .map(|(c, i)| Action::Activate(c, i)),
+            );
+            return acts;
+        }
         let mut acts = vec![Action::Pass];
         let pl = self.player(p);
         let land_ok = self.sorcery_timing(p) && pl.lands_played_this_turn < pl.land_plays_per_turn;
@@ -753,8 +781,13 @@ impl GameState {
                     acts.push(Action::CastWithAltCost(c, i));
                 }
             }
-            // Andere Seite (Adventure, modale doppelseitige Karte)
-            if let Some(face) = card.def.alt_cast_face() {
+            // Andere Seite (Adventure, modale doppelseitige Karte, Split-Hälfte);
+            // Aftermath-Hälften nur aus dem Friedhof (CR 702.127a)
+            if let Some(face) = card
+                .def
+                .alt_cast_face()
+                .filter(|f| !card.def.compiled(*f).keywords.contains(&Keyword::Aftermath))
+            {
                 let mut g = self.clone();
                 g.card_mut(c).face = face;
                 if g.chars(c).types.is_land() {
@@ -762,6 +795,26 @@ impl GameState {
                         acts.push(Action::PlayLandAlt(c, face));
                     }
                 } else if g.castable_now(p, c) {
+                    acts.push(Action::CastAlt(c, face));
+                }
+            }
+        }
+        // CR 702.127a: Aftermath-Hälfte aus dem eigenen Friedhof
+        for &c in &self.player(p).graveyard {
+            let card = self.card(c);
+            if card.def.script.split_mode != forge_script::SplitMode::Split
+                || !card.def.is_supported()
+            {
+                continue;
+            }
+            if let Some(face) = card
+                .def
+                .alt_cast_face()
+                .filter(|f| card.def.compiled(*f).keywords.contains(&Keyword::Aftermath))
+            {
+                let mut g = self.clone();
+                g.card_mut(c).face = face;
+                if g.castable_now(p, c) {
                     acts.push(Action::CastAlt(c, face));
                 }
             }
@@ -899,8 +952,18 @@ impl GameState {
             }
             Action::CastAlt(c, face) => {
                 // Die Seite bleibt beim Wechsel auf den Stapel erhalten.
+                let from_graveyard = self.card(c).zone == Some(Zone::Graveyard);
                 self.card_mut(c).face = face;
-                self.cast_spell(p, c, ch)
+                let before = self.stack.len();
+                self.cast_spell(p, c, ch)?;
+                // CR 702.127a: aus dem Friedhof gewirkte Aftermath-Hälfte → Exil
+                if from_graveyard
+                    && let Some(StackKind::Spell { card }) =
+                        self.stack.get(before).map(|i| i.kind.clone())
+                {
+                    self.card_mut(card).exile_from_stack = true;
+                }
+                Ok(())
             }
             Action::PlayLandAlt(c, face) => {
                 self.card_mut(c).face = face;
@@ -995,7 +1058,7 @@ impl GameState {
         } else if let Some(a) = &alt {
             a.mana.clone().unwrap_or_default()
         } else {
-            self.chars(card).mana_cost.clone().unwrap_or_default()
+            self.spell_chars(card).mana_cost.clone().unwrap_or_default()
         };
         // CR 609.4b: Mana wie beliebigen Typs/beliebiger Farbe ausgeben → farbige
         // (bzw. alle nicht-generischen) Symbole wie generisches Mana behandeln.

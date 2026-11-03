@@ -12,7 +12,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
-| Keyword | 198 | 23 | 10 | 4 |
+| Keyword | 198 | 25 | 10 | 4 |
 | Trigger | 137 | 0 | 22 | 11 |
 | Replacement Effect | 35 | 0 | 4 | 5 |
 | Static Ability | 90 | 1 | 8 | 0 |
@@ -26,13 +26,14 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **80** | **131** | **81** |
+| **Summe** | **789** | **82** | **131** | **81** |
 
 ## Keyword
 
 | Regel | Status | Test | Hinweis | Java-Quelle |
 |---|---|---|---|---|
 | Affinity | ✅ ja | `cost_helpers::affinity_reduces_cost_per_artifact` | CR 702.41a: {1} weniger je bleibender Karte des Typs unter eigener Kontrolle (Kostensenkung CR 601.2f) | keyword/Keyword.java (Affinity) |
+| Aftermath | ✅ ja | `split::aftermath_half_only_from_graveyard_then_exiled` | CR 702.127: zweite Hälfte nur aus dem Friedhof, erste nicht von dort, danach ins Exil | keyword/Keyword.java (SimpleKeyword) |
 | Changeling | ✅ ja | `triggers::attacks_alone_second_spell_damage_dealt_once_changeling` | CR 702.73a: jeder Kreaturtyp (laut Typliste), in allen Zonen | keyword/Keyword.java (SimpleKeyword) |
 | Convoke | ✅ ja | `cost_helpers::convoke_taps_creatures_for_colored_and_generic_mana, cost_helpers::convoke_green_creature_cannot_pay_red` | CR 702.51a: getappte Kreatur zahlt {1} oder ein Symbol ihrer Farbe (auch Hybrid), vor dem Mana | keyword/Keyword.java (SimpleKeyword) |
 | Crew | 🟡 teilweise | `crew::crew_with_enough_power_animates_until_end_of_turn, crew::crew_needs_total_power` | CR 702.122: wie Java als AB$ Animate mit tapXType<Any/Creature.Other+withTotalPowerGEn> | keyword/Keyword.java (KeywordWithAmount) |
@@ -62,6 +63,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Reach | ✅ ja | `combat::flying_needs_flying_or_reach_to_block` |  | keyword/Keyword.java (SimpleKeyword) |
 | Shroud | ✅ ja | `spells::shroud_blocks_all_targeting` |  | keyword/Keyword.java (SimpleKeyword) |
 | Space sculptor | ⚪ n/a |  | Unstable | keyword/Keyword.java (SimpleKeyword) |
+| Split second | ✅ ja | `split::split_second_locks_out_responses` | CR 702.61: solange auf dem Stapel nur Mana-Fähigkeiten | keyword/Keyword.java (SimpleKeyword) |
 | Starting intensity | ⚪ n/a |  | Alchemy | keyword/Keyword.java (KeywordWithAmount) |
 | Toxic | ✅ ja | `infect::toxic_adds_poison_on_combat_damage_only` | CR 702.164: zusätzlich n Giftmarken bei Kampfschaden an Spielern | keyword/Keyword.java (KeywordWithAmount) |
 | Trample | 🟡 teilweise | `combat::trample_assigns_excess_to_player` | Trample über Planeswalker fehlt | keyword/Keyword.java (Trample) |
@@ -70,7 +72,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Ward | 🟡 teilweise | `triggers::ward_counters_unless_paid` | Ward:<Kosten> mit Mana/PayLife/Discard/Sac | keyword/Keyword.java (Ward) |
 | Wither | ✅ ja | `infect::infect_and_wither_damage` | CR 702.80: -1/-1-Marken an Kreaturen | keyword/Keyword.java (SimpleKeyword) |
 
-Offen (165): Absorb, Afflict, Afterlife, Aftermath, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disguise, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exalted, Exploit, Extort, Fabricate, Fading, Fear, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Horsemanship, Impending, Increment, Ingest, Intimidate, Job select, Jump-start, Landwalk, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Megamorph, Miracle, Mobilize, Modular, More Than Meets the Eye, Morph, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Shadow, Skulk, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Split second, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
+Offen (163): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disguise, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exalted, Exploit, Extort, Fabricate, Fading, Fear, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Horsemanship, Impending, Increment, Ingest, Intimidate, Job select, Jump-start, Landwalk, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Megamorph, Miracle, Mobilize, Modular, More Than Meets the Eye, Morph, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Shadow, Skulk, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
 
 ## Trigger
 

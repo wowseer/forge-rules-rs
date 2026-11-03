@@ -813,6 +813,24 @@ impl GameState {
                 .or_else(|| face.toughness.as_ref().map(|t| t.base())),
             keywords: compiled.keywords.clone(),
         };
+        // CR 709.4: Split-Karte außerhalb des Stapels hat die kombinierten Werte
+        // beider Hälften (Manakosten, Farben, Typen). Auf dem Stapel nur die gewirkte.
+        if c.def.script.split_mode == forge_script::SplitMode::Split
+            && c.zone != Some(Zone::Stack)
+            && c.copy.is_none()
+        {
+            let other = c.def.face(1 - c.face.min(1));
+            if let (Some(a), Some(b)) = (&ch.mana_cost, &other.mana_cost) {
+                let mut m = a.clone();
+                m.generic += b.generic;
+                m.shards.extend(b.shards.iter().cloned());
+                ch.mana_cost = Some(m);
+            }
+            ch.colors = ch.colors.union(other.color());
+            for t in &other.types.core_types {
+                ch.types.core_types.insert(*t);
+            }
+        }
         // Layer 1 (CR 613.1a): Änderungen einer Kopie an den kopierbaren Werten
         if let Some(cp) = &c.copy {
             let m = &cp.mods;

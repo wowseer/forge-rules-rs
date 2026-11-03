@@ -39,6 +39,10 @@ pub enum Keyword {
     Affinity(String),
     /// CR 702.33: `Kicker:<Kosten>[:<zweite Kosten>]` (Originaltext der Kosten)
     Kicker(Vec<String>),
+    /// CR 702.61: Split second – solange auf dem Stapel keine Zauber/Nicht-Mana-Fähigkeiten
+    SplitSecond,
+    /// CR 702.127: Aftermath (zweite Hälfte nur aus dem Friedhof, danach ins Exil)
+    Aftermath,
     /// CR 702.90: Schaden als -1/-1-Marken bzw. Giftmarken
     Infect,
     /// CR 702.80: Schaden an Kreaturen als -1/-1-Marken
@@ -100,6 +104,8 @@ impl Keyword {
             "HIDDEN This card doesn't untap during your next untap step." => Keyword::NoUntapNext,
             "Convoke" => Keyword::Convoke,
             "Infect" => Keyword::Infect,
+            "Aftermath" => Keyword::Aftermath,
+            "Split second" => Keyword::SplitSecond,
             "Wither" => Keyword::Wither,
             t if t.starts_with("Toxic:") && t["Toxic:".len()..].parse::<u32>().is_ok() => {
                 Keyword::Toxic(t["Toxic:".len()..].parse().unwrap_or(1))
