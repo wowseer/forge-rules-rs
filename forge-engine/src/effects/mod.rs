@@ -99,6 +99,8 @@ pub enum Effect {
     DealDamage {
         amount: Amount,
         to: Defined,
+        /// `DamageSource$`: andere Schadensquelle als die Quelle der Fähigkeit
+        source: Option<Defined>,
     },
     Draw {
         amount: Amount,
@@ -1300,7 +1302,12 @@ fn compile_depth(
         "DealDamage" => {
             let amount = c.amount("NumDmg", None)?;
             let to = c.defined(Defined::Targeted)?;
-            Effect::DealDamage { amount, to }
+            let source = if c.ab.params.has("DamageSource") {
+                Some(c.defined_key("DamageSource", Defined::SelfCard)?)
+            } else {
+                None
+            };
+            Effect::DealDamage { amount, to, source }
         }
         "Draw" => {
             let amount = c.amount("NumCards", Some(1))?;
@@ -2881,7 +2888,8 @@ mod tests {
             a.effect,
             Effect::DealDamage {
                 amount: Amount::Fixed(3),
-                to: Defined::Targeted
+                to: Defined::Targeted,
+                source: None,
             }
         );
         let x = first("Name:F\nManaCost:X R\nTypes:Sorcery\nA:SP$ DealDamage | ValidTgts$ Any | NumDmg$ X\nSVar:X:Count$xPaid\n").unwrap();
@@ -2889,7 +2897,8 @@ mod tests {
             x.effect,
             Effect::DealDamage {
                 amount: Amount::XPaid,
-                to: Defined::Targeted
+                to: Defined::Targeted,
+                source: None,
             }
         );
     }

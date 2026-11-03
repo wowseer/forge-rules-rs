@@ -205,8 +205,11 @@ impl PlayerQty {
 /// Objekte eines `<Objekte>$…`-Ausdrucks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObjRef {
-    /// `Targeted`, `ParentTargeted` (Ziele der Fähigkeit bzw. geerbt)
+    /// `Targeted` (Ziele der Fähigkeit bzw. geerbt)
     Targeted,
+    /// `ParentTargeted`: Ziele der Elternfähigkeit (auch wenn die Unterfähigkeit
+    /// eigene Ziele hat)
+    ParentTargeted,
     /// `Remembered` (wie gemerkt)
     Remembered,
     /// `TriggeredCard`
@@ -224,7 +227,8 @@ pub enum ObjRef {
 impl ObjRef {
     fn parse(s: &str) -> Option<ObjRef> {
         Some(match s {
-            "Targeted" | "ParentTargeted" => ObjRef::Targeted,
+            "Targeted" => ObjRef::Targeted,
+            "ParentTargeted" => ObjRef::ParentTargeted,
             "Remembered" => ObjRef::Remembered,
             "TriggeredCard" => ObjRef::TriggeredCard,
             "TriggeredCards" => ObjRef::TriggeredCards,
@@ -906,6 +910,17 @@ impl GameState {
                 .sum();
         }
         let cards: Vec<CardId> = match objs {
+            ObjRef::ParentTargeted => (if self.parent_targets.is_empty() {
+                ctx.targets
+            } else {
+                &self.parent_targets[..]
+            })
+            .iter()
+            .filter_map(|t| match t {
+                Target::Card(c) => Some(*c),
+                Target::Player(_) => None,
+            })
+            .collect(),
             ObjRef::Targeted => ctx
                 .targets
                 .iter()

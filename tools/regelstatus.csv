@@ -61,7 +61,7 @@ Cost;Sac;ja;spells::sacrifice_self_cost, sacrifice_unless::spell_additional_sacr
 Cost;Discard;teilweise;;Discard<n/Typ>; Hand/Random fehlen
 Cost;PayLife;ja;spells::phyrexian_mana_with_life;
 Cost;PayShards;n/a;;Adventure-Modus
-Effect (ApiType);DealDamage;teilweise;spells::bolt_face_and_creature_and_fizzle;Grundform; siehe docs/generated/unterstuetzung.md
+Effect (ApiType);DealDamage;teilweise;spells::bolt_face_and_creature_and_fizzle, damage_source::bite_uses_creature_as_source_with_its_keywords;Grundform; DamageSource (andere Quelle mit ihren Keywords); siehe docs/generated/unterstuetzung.md
 Effect (ApiType);Draw;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
 Effect (ApiType);GainLife;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
 Effect (ApiType);LoseLife;teilweise;spells::draw_gain_lose_life_and_pump;Grundform

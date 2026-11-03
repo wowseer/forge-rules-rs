@@ -280,11 +280,21 @@ impl GameState {
         ch: &mut Choices,
     ) -> Res<()> {
         match eff {
-            Effect::DealDamage { amount, to } => {
+            Effect::DealDamage { amount, to, source } => {
                 let n = self.amount(amount, ctx, targets).max(0) as u32;
+                // `DamageSource$`: erstes passende Objekt (auch LKI, Java)
+                let src = match source {
+                    None => ctx.source,
+                    Some(d) => {
+                        match Self::cards_of_any(&self.resolve_defined(*d, targets, ctx)).first() {
+                            Some(c) => *c,
+                            None => return Ok(()),
+                        }
+                    }
+                };
                 self.begin_damage_batch();
                 for t in self.resolve_defined(*to, targets, ctx) {
-                    self.deal_damage(ctx.source, t, n);
+                    self.deal_damage(src, t, n);
                 }
                 self.end_damage_batch();
             }
