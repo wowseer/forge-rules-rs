@@ -5,6 +5,33 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-03 – Sitzung 12: Keyword-Blöcke und kleine Effekte
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Ausweichfähigkeiten (Landwalk, Fear, Intimidate, Shadow, Horsemanship, Skulk), Exalted | ✅ |
+| Storm, Cascade, Rebound, Deckbau-Keywords (Partner u. a.) | ✅ |
+| `NameCard`, `Reveal`, `Attach | Defined$`, `Debuff`, `Repeat`, `MinMaxBlocker` | ✅ |
+| `OptionalDecider$` mit anderen Entscheidern | ✅ |
+| Tests | 338, alle grün |
+| Unterstützte Karten im Zielpool | 50,4 % → **52,3 %** |
+
+### Entscheidungen
+
+- `NameCard` bietet nur Namen von Karten im Spiel an (Engine kennt keine Gesamtdatenbank).
+- Rebound wird zu Beginn des Upkeeps direkt abgefragt (ohne verzögerten Trigger).
+- `Repeat` mit Schutzgrenze von 100 Wiederholungen.
+
+### Nächste Schritte
+
+1. `CounterAddedOnce`, `AbilityCast`, `IsTriggerRemembered`, `DefinedPlayer$` bei ChangeZone.
+2. Fuse, Rooms, Suspect/Case; `DividedAsYouChoose`.
+3. Deckprüfung je Format.
+
+---
+
 ## 2026-11-03 – Sitzung 11: Split-Karten, Morph, Amass, Mana-Trigger
 
 ### Ergebnis

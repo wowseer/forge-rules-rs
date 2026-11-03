@@ -233,6 +233,12 @@ CompiledAbility {
   `ManaReflected | ReflectProperty$ Produced`; `DealDamage | DamageSource$`.
 - `ParentTargeted$…` meint die Ziele der Elternfähigkeit (`GameState::parent_targets`).
 
+- `NameCard` (`Decision::NameCard`, Filter `NamedCard`), `Reveal`, `Attach | Defined$`,
+  `Debuff`, `Repeat`, Static `MinMaxBlocker`, `OptionalDecider$ <Spieler>`.
+- Keywords `Landwalk:<Filter>`, `Fear`, `Intimidate`, `Shadow`, `Horsemanship`, `Skulk`;
+  `Exalted`, `Storm`, `Cascade` als Trigger (wie Java); `Rebound`; Deckbau-Keywords
+  `Partner`, `Choose a Background`, `Doctor's companion` ohne Spielwirkung.
+
 ## Token und modale Fähigkeiten
 
 - `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,
