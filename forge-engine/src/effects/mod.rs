@@ -83,6 +83,9 @@ pub struct TargetSpec {
     pub zones: Vec<crate::zone::Zone>,
     /// `DividedAsYouChoose$`: Menge beim Wirken auf die Ziele aufteilen (CR 601.2d)
     pub divided: bool,
+    /// Variable Zielanzahl (`TargetMin$ X`, `TargetMax$ MaxTgts`), beim Wählen ausgewertet
+    pub min_expr: Option<Arc<crate::expr::Expr>>,
+    pub max_expr: Option<Arc<crate::expr::Expr>>,
 }
 
 /// Was eine Mana-Fähigkeit erzeugt (`Produced$`).
@@ -1309,14 +1312,24 @@ fn compile_depth(
     };
     let target = match c.get("ValidTgts") {
         Some(v) => {
-            let min = match c.get("TargetMin") {
-                Some(s) => s.parse().map_err(|_| c.unsupported("TargetMin", s))?,
-                None => 1,
-            };
-            let max = match c.get("TargetMax") {
-                Some(s) => s.parse().map_err(|_| c.unsupported("TargetMax", s))?,
-                None => 1,
-            };
+            let bound =
+                |c: &mut Ctx,
+                 k: &'static str,
+                 d: u32|
+                 -> Result<(u32, Option<Arc<crate::expr::Expr>>), CompileError> {
+                    match c.get(k) {
+                        None => Ok((d, None)),
+                        Some(s) => match s.trim().parse::<u32>() {
+                            Ok(n) => Ok((n, None)),
+                            Err(_) => {
+                                let e = crate::expr::Expr::parse_value(face, s)?;
+                                Ok((d, Some(Arc::new(e))))
+                            }
+                        },
+                    }
+                };
+            let (min, min_expr) = bound(&mut c, "TargetMin", 1)?;
+            let (max, max_expr) = bound(&mut c, "TargetMax", 1)?;
             // Ziele außerhalb des Battlefields: TgtZone$, bei ChangeZone die Origin-Zone.
             let zone_param = if c.ab.params.get("TargetType") == Some("Spell") {
                 Some("Stack")
@@ -1343,6 +1356,8 @@ fn compile_depth(
                 max,
                 prompt: c.get("TgtPrompt").map(str::to_string),
                 zones,
+                min_expr,
+                max_expr,
                 divided: c.get("DividedAsYouChoose").is_some(),
             })
         }

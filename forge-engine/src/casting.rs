@@ -187,7 +187,10 @@ impl GameState {
                 || (spec.can_repeat && feasible > 0);
         }
         ab.chain().iter().all(|a| match &a.target {
-            Some(spec) => spec.min == 0 || !self.target_candidates(spec, source, p).is_empty(),
+            Some(spec) => {
+                self.target_bounds(spec, source, p).0 == 0
+                    || !self.target_candidates(spec, source, p).is_empty()
+            }
             None => true,
         })
     }
@@ -1042,6 +1045,36 @@ impl GameState {
         }
     }
 
+    /// Zielanzahl (min, max), variable Grenzen ausgewertet (X = zuletzt gewähltes X
+    /// der Quelle bzw. angenommenes X bei der Wirkbarkeitsprüfung).
+    pub(crate) fn target_bounds(
+        &self,
+        spec: &crate::effects::TargetSpec,
+        source: CardId,
+        p: PlayerId,
+    ) -> (u32, u32) {
+        let ev = |e: &Option<Arc<crate::expr::Expr>>, d: u32| -> u32 {
+            match e {
+                None => d,
+                Some(e) => {
+                    let x = self.assumed_x().unwrap_or(self.card(source).last_x);
+                    let ctx = crate::expr::EvalCtx {
+                        source,
+                        controller: p,
+                        x,
+                        targets: &[],
+                        trig: None,
+                        paid: &[],
+                    };
+                    self.eval(e, &ctx).max(0) as u32
+                }
+            }
+        };
+        let min = ev(&spec.min_expr, spec.min);
+        let max = ev(&spec.max_expr, spec.max).max(min);
+        (min, max)
+    }
+
     /// CR 601.2d: Aufteilung (`DividedAsYouChoose$`) je Fähigkeit der Kette festlegen;
     /// jedes Ziel erhält mindestens 1.
     #[allow(clippy::too_many_arguments)]
@@ -1118,8 +1151,9 @@ impl GameState {
                 continue;
             };
             let candidates = self.target_candidates(spec, source, p);
-            let max = spec.max.min(candidates.len() as u32);
-            if (candidates.len() as u32) < spec.min {
+            let (smin, smax) = self.target_bounds(spec, source, p);
+            let max = smax.min(candidates.len() as u32);
+            if (candidates.len() as u32) < smin {
                 return Err(Interrupt::Cancelled);
             }
             let choice = ch.ask(Decision::ChooseTargets {
@@ -1127,7 +1161,7 @@ impl GameState {
                 source,
                 description: spec.prompt.clone().unwrap_or_else(|| a.description.clone()),
                 candidates,
-                min: spec.min,
+                min: smin.min(max),
                 max,
             })?;
             match choice {

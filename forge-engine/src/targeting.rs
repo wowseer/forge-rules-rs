@@ -258,6 +258,11 @@ impl GameState {
         })
     }
 
+    /// Angenommenes X während einer Wirkbarkeitsprüfung, sonst `None`.
+    pub(crate) fn assumed_x(&self) -> Option<u32> {
+        ASSUMED_X.with(|a| a.get())
+    }
+
     /// Prüft `f` mit angenommenem X (Wirkbarkeit vor der Wahl von X, CR 601.2b).
     pub(crate) fn with_assumed_x<T>(&self, x: u32, f: impl FnOnce() -> T) -> T {
         let prev = ASSUMED_X.with(|a| a.replace(Some(x)));
