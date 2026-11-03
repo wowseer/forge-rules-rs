@@ -5,6 +5,48 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-03 – Sitzung 10: Commander, Monarch, Crew, Protection und viele Effekte
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Commander-Grundlagen (CR 903): Befehlszone, Steuer, Rückkehr, 21 Commander-Schaden, `IsCommander` | ✅ |
+| 4-Spieler-Commander-Lasttest | ✅ |
+| Monarch (CR 724) | ✅ (Ziehen/Übergang ohne Stapel) |
+| Crew (CR 702.122), Protection (CR 702.16), Infect/Wither/Toxic | ✅ |
+| `ChoosePlayer`, `Branch`, `RollDice`, `FlipCoin`, `ChooseNumber`, `Goad`, `RevealHand` | ✅ |
+| Static `CastWithFlash`, Filter `Historic`, `ChangeZone` Shuffle/Optional/mehrere Zonen | ✅ |
+| Fehlerbehebung: `Cleanup | ClearChosen…$` war wirkungslos | ✅ |
+| Tests | 315, alle grün (inkl. Lasttests) |
+| Unterstützte Karten im Zielpool | 47,0 % → **49,1 %** |
+
+### Entscheidungen
+
+- Commander-Kennung (`CardObj::commander`) und Steuerzähler wandern bei jedem Zonenwechsel
+  mit dem Objekt. Rückkehr in die Befehlszone ist für alle Zonen eine Wahl beim nächsten
+  SBA-Durchlauf (für Hand/Bibliothek eigentlich Ersatzeffekt, CR 903.9b) – Ablehnung gilt
+  je Objekt.
+- Monarch-Ziehen und -Übergang ohne Stapel (vereinfachte Trigger), dokumentierte Abweichung.
+- Würfel-/Wahlergebnisse als Laufzeitwerte der Quelle (`runtime_vars`); beim Laden werden
+  fehlende `ResultSVar`-Namen als `Count$RuntimeVar` ergänzt.
+- Protection-Filter werden je Text einmal geparst und zwischengespeichert.
+- Commits laufen nur noch über ein Prüfskript (fmt, Clippy, Tests – sonst kein Commit).
+
+### Bekannte Lücken
+
+- Commander: Farbidentität/Deckprüfung, Partner/Background, freier Mulligan, Initiative.
+- Morph/`TurnFaceUp` (121), Split-Karten (124), `AlterAttribute` (90), `Amass` (68),
+  `NameCard` (65), Trigger `TapsForMana`/`Always`.
+
+### Nächste Schritte
+
+1. Split-Karten und Morph (größte Einzelblöcke).
+2. Deckprüfung je Format (inkl. Commander-Farbidentität, Restricted-Liste).
+3. `AlterAttribute`, `Amass`, `NameCard`, Trigger `TapsForMana`.
+
+---
+
 ## 2026-11-02 – Sitzung 9: Filtervariablen, Ausdrücke, Kicker, Wahl-Effekte, „bis … verlässt“
 
 ### Ergebnis

@@ -209,6 +209,21 @@ CompiledAbility {
 - Schadens-Ersatz `ReplaceWith$` → `ChangeZone Defined$ Self Origin$ Command Destination$ Exile`
   mit `PreventionEffect$`: einmal verhindern (`DamageAction::PreventOnce`).
 
+- Commander: `GameRules::commander()`, `GameState::add_commander`; Filter `IsCommander`.
+  Monarch: `BecomeMonarch`, `Condition$ Monarch`, `CheckDefinedPlayer$ You.isMonarch`,
+  `Count$Monarch.A.B`, `PlayerCountPlayers$HasPropertyisMonarch`.
+- Crew: `K:Crew:n` → `AB$ Animate | Cost$ tapXType<Any/Creature.Other+withTotalPowerGEn>`.
+- `ChoosePlayer` (`Defined$ ChosenPlayer`, Filter `ChosenCtrl`, `Player.Chosen`), `Branch`
+  (`BranchConditionSVar$`, `True/FalseSubAbility$`), `Cleanup | ClearChosen…$`.
+- `RollDice` (`Sides$`, `Amount$`, `Modifier$`, `ResultSubAbilities$ 1-9:A,10-20:B,Else:C`,
+  `ResultSVar$`); fehlende `ResultSVar`-Namen werden beim Laden als `Count$RuntimeVar.<n>`
+  ergänzt (`CardObj::runtime_vars`). `ChooseNumber` → `Count$ChosenNumber`.
+- `FlipCoin` (`Win/LoseSubAbility$`, `NoCall$` + `Heads/TailsSubAbility$`), `Goad`.
+- Protection: `K:Protection from <Farbe>|each color|everything`, `K:Protection:<Filter>[:Text]`,
+  Effekt `Protection | Gains$ <Farbe>|Choice`.
+- Keywords `Infect`, `Wither`, `Toxic:n`; Filter `Historic`; Static `CastWithFlash`;
+  `RevealHand`; `ChangeZone` mit `Shuffle$`, `Optional$`, Suche über `Origin$ A,B`.
+
 ## Token und modale Fähigkeiten
 
 - `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,
