@@ -5,6 +5,44 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-03 – Sitzung 16: Mechanik-Block 5
+
+### Ergebnis
+
+| Bereich | Inhalt |
+|---|---|
+| Filter | Filterkontext (Trigger-Info, Ziele, Trigger-Gemerktes): `ControlledBy …`, `OwnedBy …`, `TargetedPlayerCtrl`, `IsTriggerRemembered`, `sameName`, relative Basen `Remembered.`/`Targeted.`/`Triggered.` |
+| Effekte | Discover, `Defined$ Parent`, DamageResolve, Dig `ChangeNum$ Any`, Mana `Produced$ Chosen` |
+| Trigger | `Transformed`, `ActivationLimit$` (einmal je Zug) |
+| Layer | `RemoveAllAbilities$` (Layer 6), `RemoveLandTypes$` (Layer 4), intrinsische Mana-Fähigkeiten nach aktuellen Landtypen (CR 305.7) |
+| Schlüsselwörter | Buyback, Living Weapon |
+| Dauer | Clone bis Zugende, Effekt `UntilHostLeavesPlayOrEOT` |
+| Tests | 380, alle grün (18 neu in `mechanics_batch5`) |
+| Unterstützte Karten im Zielpool | 56,5 % → **58,3 %** |
+
+### Entscheidungen
+
+- Filterkontext thread-lokal mit Guard statt neuer Parameter in allen Filteraufrufen
+  (siehe `01-architektur.md`, Abschnitt Trigger).
+- `DamageMap$`: Schaden wird weiterhin sofort zugefügt (SBA erst nach der Auflösung);
+  `DamageResolve` beendet nur die Bündelung für „einmal“-Schadenstrigger.
+- Buyback wird wie Kicker beim Wirken angeboten (nur wenn grob bezahlbar).
+
+### Bekannte Lücken
+
+- Statics/Ersatzeffekte eines Objekts ohne Fähigkeiten wirken weiter (Abhängigkeiten
+  CR 613.8 fehlen).
+- Filterkontext bei Zaubern, die während der Auflösung eines Triggers gewirkt werden,
+  erbt den Trigger-Kontext.
+
+### Nächste Schritte
+
+- Ersatzeffekt Draw, Phasing, Battles, OptionalAttackCost, ChangeTargets, CommitCrime,
+  TwoPiles/Clash, Powerstone-Einschränkung.
+- Deckvalidierung pro Format.
+
+---
+
 ## 2026-11-03 – Sitzung 15: Mechanik-Block 4
 
 ### Ergebnis

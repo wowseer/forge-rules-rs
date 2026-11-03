@@ -142,6 +142,21 @@ einmal je Empfänger aus. Ausdrücke sehen über `EvalCtx` die Ziele der
 auflösenden Fähigkeit und den Trigger-Kontext (`TriggerInfo`), auch schon beim
 Prüfen von Trigger-Bedingungen.
 
+**Filterkontext:** Filter wie `Creature.ControlledBy TriggeredTarget`,
+`TargetedPlayerCtrl`, `IsTriggerRemembered` oder `Targeted.sameName` brauchen die
+Fähigkeit, gegen die geprüft wird (Java übergibt dazu die `SpellAbility`). Statt
+diesen Kontext durch alle Filteraufrufe zu reichen, setzt die Engine ihn als
+thread-lokalen `targeting::FilterCtx` (Trigger-Info, bisher gewählte Ziele, vom
+verzögerten Trigger gemerkte Objekte) über einen Guard (`FilterCtxGuard`), der
+beim Verlassen des Gültigkeitsbereichs – auch bei `Interrupt` – den vorigen
+Kontext wiederherstellt. Gesetzt wird er beim Stapeln von Triggern, je Teil der
+Zielwahl (`choose_targets`), beim Auflösen eines Stapelobjekts und beim Prüfen
+verzögerter Trigger. Der Kontext ist kein Spielzustand und nie Teil von
+`GameState`.
+
+`ActivationLimit$` bei Triggern zählt Auslösungen je (Quelle, Trigger) in
+`TurnHistory::trigger_counts`.
+
 Aktive Zonen wie in Java: `TriggerZones$`, sonst Battlefield; Selbst-ETB
 (`ValidCard$ Card.Self`, `Origin$ Any`) aktiv in der Zielzone, Verlassen des
 Battlefields immer Battlefield.
@@ -154,9 +169,14 @@ Battlefields immer Battlefield.
 2. Wirkende statische Fähigkeiten sammeln: Quelle in einer ihrer `EffectZone$`
    (Standard Battlefield), Objekt in einer `AffectedZone$` (Standard Battlefield).
    Zeitstempel = Zeitstempel der Quelle (CR 613.7a).
-3. Layer 4 (Typ hinzufügen) → 5 (Farbe setzen) → 6 (Keywords; statisch und
-   Pump-Effekte gemeinsam nach Zeitstempel) → 7b (P/T setzen) → 7c (P/T ändern,
-   ±1/±1-Marken).
+3. Layer 4 (Typ hinzufügen, Kreatur-/Landtypen entfernen) → 5 (Farbe setzen) →
+   6 (Keywords, verliehene Fähigkeiten/Trigger, „verliert alle Fähigkeiten“;
+   statisch und Pump-Effekte gemeinsam nach Zeitstempel) → 7b (P/T setzen) →
+   7c (P/T ändern, ±1/±1-Marken).
+   Aktivierte Fähigkeiten und Trigger eines Objekts liefern `GameState::activated`
+   bzw. `all_triggers` (eigene, sofern nicht verloren, plus verliehene).
+   Intrinsische Mana-Fähigkeiten der Standardlandtypen (CR 305.6) sind geteilte
+   Objekte (`definition::intrinsic_mana`) und folgen den aktuellen Landtypen.
 4. Ob ein Objekt betroffen ist, wird im ersten Layer entschieden, in dem der Effekt
    wirkt, gegen die Zwischen-Eigenschaften (CR 613.6) – deshalb
    `card_matches_with(id, &chars, …)` statt `card_matches`.
@@ -167,8 +187,8 @@ Auswertung ignorieren verschachtelte `chars()`-Aufrufe dynamische Statics. „+1
 jede Kreatur“ zählt also Kreaturen, ohne sich selbst endlos auszuwerten.
 CDAs (`CharacteristicDefining$ True`) gelten in allen Zonen in Layer 7a.
 
-Fehlt noch: Layer 1 (Kopie), 2 (Kontrolle), 3 (Text),
-Abhängigkeiten (613.8), Entfernen von Fähigkeiten.
+Fehlt noch: Layer 3 (Text), Abhängigkeiten (613.8); statische Fähigkeiten und
+Ersatzeffekte eines Objekts, das alle Fähigkeiten verloren hat, wirken noch weiter.
 
 ## Tests
 

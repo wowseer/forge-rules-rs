@@ -267,6 +267,19 @@ CompiledAbility {
 - Speed: `K:Start your engines!`, `Condition$ MaxSpeed`, `Count$YourSpeed`.
 - Zahlparameter dürfen einen Ausdruck direkt enthalten (`NumDmg$ Count$CardsInYourHand`)
   statt eines SVar-Namens.
+- Filter mit Bezug auf die prüfende Fähigkeit: `ControlledBy <Spieler>`/`OwnedBy <Spieler>`
+  (`TriggeredTarget`, `TriggeredPlayer`/`TriggeredDefendingPlayer`, `TriggeredCardController`,
+  `Targeted[Player]`, `TargetedController`, `TargetedOrController`, `Remembered`,
+  `RememberedController`, `ChosenPlayer`, `ParentTarget`), `TargetedPlayerCtrl`,
+  `IsTriggerRemembered`, `sameName`. Relative Basen `Remembered.…`, `Targeted.…`/
+  `TargetedCard.…`, `Triggered….…`: Eigenschaften beziehen sich auf dieses Objekt als
+  Quelle (Java `AbilityUtils`).
+- `Discover | Num$`, `Defined$ Parent` (der auflösende Zauber selbst), `DamageResolve`,
+  `DamageMap$` (akzeptiert), Trigger `Mode$ Transformed`, `ActivationLimit$` bei Triggern.
+- `RemoveAllAbilities$`, `RemoveLandTypes$` (Static Continuous und Animate),
+  `AddSVar$` (Continuous, akzeptiert), Mana `Produced$ Chosen`, Dig `ChangeNum$ Any`.
+- Schlüsselwörter `Buyback:<Kosten>`, `Living Weapon`; `Clone | Duration$ UntilEndOfTurn`,
+  `Effect | Duration$ UntilHostLeavesPlayOrEOT`.
 
 ## Token und modale Fähigkeiten
 
