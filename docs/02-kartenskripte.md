@@ -239,6 +239,11 @@ CompiledAbility {
   `Exalted`, `Storm`, `Cascade` als Trigger (wie Java); `Rebound`; Deckbau-Keywords
   `Partner`, `Choose a Background`, `Doctor's companion` ohne Spielwirkung.
 
+- Trigger `CounterAddedOnce` (einmal je Markenereignis), `AbilityCast`.
+- `ChangeZone | DefinedPlayer$ … | Chooser$ You | Mandatory$` → Suche in fremden Zonen.
+- `DividedAsYouChoose$` (`TargetSpec::divided`, `StackItem::division`), variable
+  `TargetMin$/TargetMax$` (`TargetSpec::min_expr/max_expr`).
+
 ## Token und modale Fähigkeiten
 
 - `Token`: `TokenScript$` verweist auf Dateien in `res/tokenscripts` (Name ohne `.txt`,

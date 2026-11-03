@@ -5,6 +5,32 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-03 – Sitzung 13: Trigger, fremde Zonen, Aufteilung, variable Ziele
+
+### Ergebnis
+
+| Bereich | Stand |
+|---|---|
+| Trigger `CounterAddedOnce`, `AbilityCast` | ✅ |
+| Suche in Hand/Friedhof eines anderen Spielers (`DefinedPlayer$`, `Chooser$ You`, `Mandatory$`) | ✅ |
+| Aufteilen beim Wirken (`DividedAsYouChoose`, CR 601.2d) | ✅ |
+| Variable Zielanzahl (`TargetMax$ X`) | ✅ |
+| Tests | 343, alle grün |
+| Unterstützte Karten im Zielpool | 52,3 % → **53,1 %** |
+
+### Entscheidungen
+
+- Aufteilung wird direkt nach der Zielwahl erfragt (vor dem Bezahlen) und je Kettenindex
+  am Stapelobjekt gespeichert; ohne Wahlmöglichkeit (Menge = Zielanzahl) keine Frage.
+- `CounterAddedOnce`: „wer legt die Marken“ = Controller der aktuellen Effektquelle.
+
+### Nächste Schritte
+
+1. `IsTriggerRemembered` (Trigger-Kontext in Filtern), Fuse, Rooms, Suspect/Case.
+2. Deckprüfung je Format.
+
+---
+
 ## 2026-11-03 – Sitzung 12: Keyword-Blöcke und kleine Effekte
 
 ### Ergebnis
