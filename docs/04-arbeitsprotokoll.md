@@ -5,6 +5,31 @@ Entscheidungen fielen und was als Nächstes ansteht. Neueste Einträge oben.
 
 ---
 
+## 2026-11-03 – Sitzung 15: Mechanik-Block 4
+
+### Ergebnis
+
+| Bereich | Inhalt |
+|---|---|
+| Statics | verliehene aktivierte Fähigkeiten und Trigger (`AddAbility$`, `AddTrigger$`) |
+| Effekte | Imprint, AlterAttribute (Suspected, Solved), inline-Ausdrücke in Zahlparametern |
+| Regeln | Tag/Nacht (CR 726) mit Daybound/Nightbound, Speed (Start your engines) |
+| Fehlerbehebung | Aktivieren mit Opfern der Quelle als Kosten: Loyalitätsflag aus dem Stapelobjekt (Panik im Commander-Lasttest) |
+| Unterstützte Karten im Zielpool | 55,5 % → **56,5 %** |
+
+### Entscheidungen
+
+- Verliehene Trigger werden in `fire()` nur abgefragt, wenn überhaupt ein Static mit
+  `AddTrigger$` im Spiel ist (Leistung der Zufallspartien).
+- Tag/Nacht-Wechsel zu Zugbeginn anhand der Zauberzahl des vorigen aktiven Spielers.
+
+### Nächste Schritte
+
+- RingTemptsYou, Phasing, Ersatzeffekt Draw, AddStaticAbility, Fuse, Rooms.
+- Deckvalidierung pro Format.
+
+---
+
 ## 2026-11-03 – Sitzung 14: drei Mechanik-Blöcke (35 Bausteine)
 
 ### Ergebnis

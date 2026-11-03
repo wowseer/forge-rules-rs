@@ -256,6 +256,17 @@ CompiledAbility {
 - Spieler-Marken `Player::counters` (ENERGY, EXPERIENCE …), `PayEnergy<n>`,
   `Count$YourCounters<Art>`; Kosten `Discard<n/Random>`; Mana `Combo Any`.
 - Filter `EffectSource`, `wasCastByYou`, `DamagedBy`, `modified`, `ThisTurnEntered`.
+- Verliehene Fähigkeiten: `S:Mode$ Continuous | AddAbility$ <SVar>[ & <SVar>]` und
+  `AddTrigger$ <SVar>` (Layer 6); die SVars werden beim Laden kompiliert. Im Spiel liefern
+  `GameState::activated`/`all_triggers` eigene und verliehene Fähigkeiten.
+- Imprint: `Imprint$ True` (ChangeZone), `ImprintFound$` (DigUntil), `Defined$ Imprinted`,
+  `ImprintedController`, Filter `IsImprinted`, `ClearImprinted$ True` (Cleanup).
+- `AlterAttribute | Attributes$ Suspected/Solved` (CR 701.60, 719.3), Filter
+  `IsSuspected`, `IsSolved`, `wasDealtDamageThisTurn`.
+- Tag/Nacht: Schlüsselwörter `Daybound`/`Nightbound`, Bedingung `IsDay`/`IsNight`.
+- Speed: `K:Start your engines!`, `Condition$ MaxSpeed`, `Count$YourSpeed`.
+- Zahlparameter dürfen einen Ausdruck direkt enthalten (`NumDmg$ Count$CardsInYourHand`)
+  statt eines SVar-Namens.
 
 ## Token und modale Fähigkeiten
 
