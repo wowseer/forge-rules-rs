@@ -1708,6 +1708,73 @@ impl GameState {
                     }
                 }
             }
+            Effect::Reveal {
+                who,
+                defined,
+                valid,
+                all_valid,
+                num,
+                any_number,
+                random,
+                optional,
+                remember,
+            } => {
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let cards: Vec<CardId> = if let Some(d) = defined {
+                        Self::cards_of_any(&self.resolve_defined(*d, targets, ctx))
+                    } else {
+                        let hand: Vec<CardId> = self
+                            .player(p)
+                            .hand
+                            .iter()
+                            .copied()
+                            .filter(|c| {
+                                valid
+                                    .as_ref()
+                                    .is_none_or(|v| self.card_matches(*c, v, ctx.source, p))
+                            })
+                            .collect();
+                        if *all_valid {
+                            hand
+                        } else if hand.is_empty() {
+                            Vec::new()
+                        } else if *random {
+                            vec![hand[self.rng.below(hand.len() as u64) as usize]]
+                        } else {
+                            let n = (self.amount(num, ctx, targets).max(0) as u32)
+                                .min(hand.len() as u32);
+                            let (min, max) = if *any_number {
+                                (0, hand.len() as u32)
+                            } else if *optional {
+                                (0, n)
+                            } else {
+                                (n, n)
+                            };
+                            match ch.ask(Decision::ChooseCards {
+                                player: p,
+                                reason: crate::decision::CardChoiceReason::Choose,
+                                options: hand.clone(),
+                                min,
+                                max,
+                            })? {
+                                Choice::Cards(v) => {
+                                    v.into_iter().filter(|c| hand.contains(c)).collect()
+                                }
+                                _ => Vec::new(),
+                            }
+                        }
+                    };
+                    if cards.is_empty() {
+                        continue;
+                    }
+                    if *remember {
+                        self.card_mut(ctx.source)
+                            .remembered
+                            .extend(cards.iter().copied());
+                    }
+                    self.push_event(Event::Revealed { player: p, cards });
+                }
+            }
             Effect::RevealHand { who, remember } => {
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let cards = self.player(p).hand.clone();
@@ -2359,8 +2426,12 @@ impl GameState {
                     });
                 }
             }
-            Effect::Attach { object } => {
-                let to = self.cards_of(targets).into_iter().next();
+            Effect::Attach { object, to } => {
+                // aktuelles Objekt (LKI-Verweise wie `TriggeredCardLKICopy` folgen dem Zonenwechsel)
+                let to = Self::cards_of_any(&self.resolve_defined(*to, targets, ctx))
+                    .into_iter()
+                    .map(|c| self.current_object(c))
+                    .find(|c| self.card(*c).zone == Some(Zone::Battlefield));
                 let obj = self
                     .resolve_defined(*object, &[], ctx)
                     .into_iter()

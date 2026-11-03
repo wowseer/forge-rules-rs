@@ -500,6 +500,20 @@ pub enum Effect {
         what: Defined,
         permanent: bool,
     },
+    /// Karten aus der Hand aufdecken (Java `RevealEffect`).
+    Reveal {
+        who: Defined,
+        /// `RevealDefined$`: genau diese Karten
+        defined: Option<Defined>,
+        /// `RevealValid$`/`RevealAllValid$`: Filter auf Handkarten
+        valid: Option<ValidSpec>,
+        all_valid: bool,
+        num: Amount,
+        any_number: bool,
+        random: bool,
+        optional: bool,
+        remember: bool,
+    },
     /// Hand aufdecken bzw. ansehen (`RevealHand`, `Look$`); optional merken.
     RevealHand {
         who: Defined,
@@ -558,6 +572,8 @@ pub enum Effect {
     /// `Attach`: `object` (Standard: Quelle) an das Ziel anlegen (CR 701.3).
     Attach {
         object: Defined,
+        /// Woran angelegt wird (Ziel oder `Defined$`)
+        to: Defined,
     },
     /// Platzhalter für modale Fähigkeiten; wird vor dem Stapeln durch die
     /// gewählten Modi ersetzt (`GameState::choose_modes`).
@@ -1884,6 +1900,32 @@ fn compile_depth(
                 permanent,
             }
         }
+        "Reveal" => {
+            let flag = |c: &mut Ctx, k: &'static str| {
+                c.get(k).is_some_and(|v| v.eq_ignore_ascii_case("true"))
+            };
+            let defined = if c.ab.params.has("RevealDefined") {
+                Some(c.defined_key("RevealDefined", Defined::SelfCard)?)
+            } else {
+                None
+            };
+            let (valid, all_valid) = match (c.get("RevealValid"), c.get("RevealAllValid")) {
+                (_, Some(v)) => (Some(ValidSpec::parse(v)?), true),
+                (Some(v), None) => (Some(ValidSpec::parse(v)?), false),
+                (None, None) => (None, false),
+            };
+            Effect::Reveal {
+                who: c.defined(Defined::You)?,
+                defined,
+                valid,
+                all_valid,
+                num: c.amount("NumCards", Some(1))?,
+                any_number: flag(&mut c, "AnyNumber"),
+                random: flag(&mut c, "Random"),
+                optional: flag(&mut c, "Optional"),
+                remember: flag(&mut c, "RememberRevealed"),
+            }
+        }
         "RevealHand" => {
             c.get("Look");
             Effect::RevealHand {
@@ -2363,11 +2405,12 @@ fn compile_depth(
             }
         }
         "Attach" => {
-            if c.ab.params.get("ValidTgts").is_none() {
-                return Err(c.unsupported("Attach", "ohne ValidTgts"));
+            if c.ab.params.get("ValidTgts").is_none() && !c.ab.params.has("Defined") {
+                return Err(c.unsupported("Attach", "ohne ValidTgts/Defined"));
             }
             let object = c.defined_key("Object", Defined::SelfCard)?;
-            Effect::Attach { object }
+            let to = c.defined(Defined::Targeted)?;
+            Effect::Attach { object, to }
         }
         "Token" => {
             let scripts_s = c.get("TokenScript").ok_or(CompileError::MissingParam {

@@ -126,7 +126,7 @@ Static Ability;CantAttack;teilweise;combat_restrictions::cant_attack;ValidCard, 
 Static Ability;MustAttack;teilweise;combat_restrictions::must_attack_if_able;ValidCreature (CR 508.1d); MustAttack$-Ziel, ValidPlayer fehlen
 Keyword;Enchant;teilweise;auras_equipment::aura_attaches_on_resolution_and_buffs, aura_control::enchant_with_description_and_defined_enchanted, aura_control::control_aura_steals_until_it_leaves, aura_control::enchanted_controller_upkeep_trigger_and_enchanted_filter;Aura-Zauber mit Ziel, angelegt beim Auflösen, Fizzle; Enchant:<Filter>:<Beschreibung>, Defined Enchanted/EnchantedController, statische Kontrolle (GainControl You, Layer 2), AffectedDefined AttachedBy Self, Filter Player.EnchantedController, enchanted/equipped; Enchant Player fehlt
 Keyword;Equip;teilweise;auras_equipment::equip_sorcery_speed_own_creature_and_moves;Kosten, optionaler Filter, Hexerei-Geschwindigkeit; Sonderformen (ReduceCost, AlternateCost) fehlen
-Effect (ApiType);Attach;teilweise;auras_equipment::equip_sorcery_speed_own_creature_and_moves;Object (Standard Self) an Ziel anlegen; Choices/Optional fehlen
+Effect (ApiType);Attach;teilweise;auras_equipment::equip_sorcery_speed_own_creature_and_moves, attach_reveal::equipment_attaches_to_entering_creature;Object (Standard Self) an Ziel anlegen; Defined$ statt Ziel (aktuelles Objekt); Choices/Optional fehlen
 State-Based Action;CR 704.5m;ja;auras_equipment::aura_goes_to_graveyard_when_creature_dies_and_trigger_returns_it;
 State-Based Action;CR 704.5n;ja;auras_equipment::equipment_stays_when_creature_dies;
 State-Based Action;CR 704.5p;teilweise;;Lösen angelegter Nicht-Aura/Nicht-Ausrüstung; ohne eigenen Test
@@ -315,3 +315,4 @@ Keyword;Storm;ja;storm_cascade::storm_copies_for_each_earlier_spell;CR 702.40: S
 Keyword;Cascade;ja;storm_cascade::cascade_casts_cheaper_nonland_for_free;CR 702.85: exilieren bis Nichtland mit geringerem Manawert, gratis wirken dürfen, Rest zufällig unter die Bibliothek
 Keyword;Rebound;teilweise;storm_cascade::rebound_recasts_next_upkeep;CR 702.88: aus der Hand gewirkt → Exil, im nächsten eigenen Upkeep gratis wirkbar (ohne verzögerten Trigger auf dem Stapel)
 Keyword;Partner;teilweise;storm_cascade::partner_is_supported;Deckbau-Keyword ohne Spielwirkung (auch Choose a Background, Doctor's companion, Partner:<Gruppe>); Deckprüfung und „Partner with“ fehlen
+Effect (ApiType);Reveal;teilweise;attach_reveal::reveal_creature_from_hand_and_use_it;Handkarten aufdecken: RevealValid/RevealAllValid, RevealDefined, NumCards, AnyNumber, Random, Optional, RememberRevealed

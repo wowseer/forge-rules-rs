@@ -738,6 +738,7 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
         }),
         effect: Effect::Attach {
             object: crate::effects::Defined::SelfCard,
+            to: crate::effects::Defined::Targeted,
         },
         sub: None,
         description: format!("Equip {}", k[1]),

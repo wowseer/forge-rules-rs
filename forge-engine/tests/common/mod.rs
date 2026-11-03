@@ -275,6 +275,8 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Cascade Lite\nManaCost:3 G\nTypes:Sorcery\nK:Cascade\nA:SP$ GainLife | LifeAmount$ 1 | SpellDescription$ x\nOracle:\n",
     "Name:Rebound Lite\nManaCost:W\nTypes:Instant\nK:Rebound\nA:SP$ GainLife | LifeAmount$ 3 | SpellDescription$ x\nOracle:\n",
     "Name:Partner Lite\nManaCost:1 W\nTypes:Legendary Creature Human\nPT:2/2\nK:Partner\nOracle:\n",
+    "Name:Auto Equip Lite\nManaCost:2\nTypes:Artifact Equipment\nK:Equip:3\nT:Mode$ ChangesZone | Destination$ Battlefield | ValidCard$ Creature.YouCtrl | TriggerZones$ Battlefield | Execute$ TrigAttach | TriggerDescription$ x\nSVar:TrigAttach:DB$ Attach | Defined$ TriggeredCardLKICopy\nS:Mode$ Continuous | AffectedDefined$ Equipped | AddPower$ 2 | Description$ x\nOracle:\n",
+    "Name:Reveal Lite\nManaCost:G\nTypes:Sorcery\nA:SP$ Reveal | RevealValid$ Creature | RememberRevealed$ True | SubAbility$ DBGain | SpellDescription$ x\nSVar:DBGain:DB$ GainLife | LifeAmount$ X\nSVar:X:Remembered$CardPower\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",
