@@ -120,6 +120,17 @@ pub enum CompiledStatic {
     CantPlay(CantPlay),
     /// `CastWithFlash`: Zauber dürfen wie mit Flash gewirkt werden (CR 702.8, 601.3).
     CastWithFlash(CastWithFlash),
+    /// `MinMaxBlocker`: Angreifer nur von mindestens/höchstens so vielen Kreaturen blockbar.
+    MinMaxBlocker(MinMaxBlocker),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MinMaxBlocker {
+    pub valid: ValidSpec,
+    pub min: Option<u32>,
+    pub max: Option<u32>,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -396,8 +407,48 @@ impl CompiledStatic {
             CompiledStatic::Player(c) => &mut c.effect_zones,
             CompiledStatic::CantPlay(c) => &mut c.effect_zones,
             CompiledStatic::CastWithFlash(c) => &mut c.effect_zones,
+            CompiledStatic::MinMaxBlocker(c) => &mut c.effect_zones,
         }
     }
+}
+
+fn compile_min_max_blocker(
+    face: &CardFace,
+    s: &ScriptStatic,
+) -> Result<CompiledStatic, CompileError> {
+    let p = &s.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: format!("Static {}", s.mode),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend(["EffectZone", "ValidCard", "Min", "Max"]);
+    let num = |k: &str| -> Result<Option<u32>, CompileError> {
+        match p.get(k) {
+            None => Ok(None),
+            Some(v) => v.trim().parse().map(Some).map_err(|_| err(k, v)),
+        }
+    };
+    let (min, max) = (num("Min")?, num("Max")?);
+    let effect_zones = match p.get("EffectZone") {
+        Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+        None => vec![Zone::Battlefield],
+    };
+    let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+    used.extend(ck);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    Ok(CompiledStatic::MinMaxBlocker(MinMaxBlocker {
+        valid: ValidSpec::parse(p.get("ValidCard").unwrap_or("Creature"))?,
+        min,
+        max,
+        effect_zones,
+        conditions,
+    }))
 }
 
 fn compile_cast_with_flash(
@@ -604,6 +655,7 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         "MustAttack" => return compile_combat(face, s, RestrictionKind::MustAttack),
         "CantBeCast" => return compile_cant_play(face, s, false),
         "CastWithFlash" => return compile_cast_with_flash(face, s),
+        "MinMaxBlocker" => return compile_min_max_blocker(face, s),
         "CantBeActivated" => return compile_cant_play(face, s, true),
         "ReduceCost" => return compile_cost_adjust(face, s, true),
         "RaiseCost" => return compile_cost_adjust(face, s, false),

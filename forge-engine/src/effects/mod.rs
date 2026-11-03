@@ -514,6 +514,19 @@ pub enum Effect {
         optional: bool,
         remember: bool,
     },
+    /// Keywords bis Zugende verlieren (Java `DebuffEffect`).
+    Debuff {
+        what: Defined,
+        keywords: Vec<Keyword>,
+    },
+    /// Unterfähigkeit wiederholen, solange die Bedingungen gelten (Java `RepeatEffect`).
+    Repeat {
+        sub: Arc<CompiledAbility>,
+        max: Option<Amount>,
+        present: Option<(ValidSpec, Option<Defined>, crate::expr::Compare)>,
+        check: Option<(crate::expr::Expr, crate::expr::Compare)>,
+        optional: bool,
+    },
     /// Hand aufdecken bzw. ansehen (`RevealHand`, `Look$`); optional merken.
     RevealHand {
         who: Defined,
@@ -1924,6 +1937,70 @@ fn compile_depth(
                 random: flag(&mut c, "Random"),
                 optional: flag(&mut c, "Optional"),
                 remember: flag(&mut c, "RememberRevealed"),
+            }
+        }
+        "Debuff" => {
+            let keywords =
+                Keyword::parse_list(c.get("Keywords").unwrap_or("").replace(',', "&").as_str());
+            if keywords.is_empty() || keywords.iter().any(|k| !k.is_supported()) {
+                return Err(c.unsupported("Keywords", c.ab.params.get("Keywords").unwrap_or("")));
+            }
+            Effect::Debuff {
+                what: c.defined(Defined::SelfCard)?,
+                keywords,
+            }
+        }
+        "Repeat" => {
+            let name = c
+                .get("RepeatSubAbility")
+                .ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "RepeatSubAbility",
+                })?;
+            let sv = face
+                .svar(name)
+                .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+            let ab = ScriptAbility::from_svar(sv)
+                .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+                .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+            let sub = compile_depth(face, &ab, depth + 1)?;
+            if sub.chain().iter().any(|a| a.target.is_some()) {
+                return Err(c.unsupported("RepeatSubAbility", "mit Zielen"));
+            }
+            let max = match c.get("MaxRepeat") {
+                Some(v) => Some(c.amount_value("MaxRepeat", v)?),
+                None => None,
+            };
+            let present = match c.get("RepeatPresent") {
+                Some(v) => {
+                    let spec = ValidSpec::parse(v)?;
+                    let def = if c.ab.params.has("RepeatDefined") {
+                        Some(c.defined_key("RepeatDefined", Defined::SelfCard)?)
+                    } else {
+                        None
+                    };
+                    let cmp =
+                        crate::expr::Compare::parse(face, c.get("RepeatCompare").unwrap_or("GE1"))?;
+                    Some((spec, def, cmp))
+                }
+                None => None,
+            };
+            let check = match c.get("RepeatCheckSVar") {
+                Some(v) => Some((
+                    crate::expr::Expr::parse_value(face, v)?,
+                    crate::expr::Compare::parse(face, c.get("RepeatSVarCompare").unwrap_or("GE1"))?,
+                )),
+                None => None,
+            };
+            let optional = c
+                .get("RepeatOptional")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+            Effect::Repeat {
+                sub: Arc::new(sub),
+                max,
+                present,
+                check,
+                optional,
             }
         }
         "RevealHand" => {

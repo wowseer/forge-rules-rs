@@ -332,6 +332,8 @@ pub enum Duration {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ContinuousEffect {
     pub affected: CardId,
+    /// Layer 6: entfernte Keywords (`Debuff`)
+    pub remove_keywords: Vec<Keyword>,
     /// Layer 7c
     pub power: i32,
     pub toughness: i32,
@@ -1081,20 +1083,25 @@ impl GameState {
             ch.colors = if overwrite { c } else { ch.colors.union(c) };
         }
         // Layer 6 (statisch und Pump-Effekte gemeinsam nach Zeitstempel)
-        let mut l6: Vec<(u64, Vec<Keyword>)> = Vec::new();
+        let mut l6: Vec<(u64, Vec<Keyword>, Vec<Keyword>)> = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer6()) {
             if applies(self, s, &ch) {
-                l6.push((s.ts, s.st.add_keywords.clone()));
+                l6.push((s.ts, s.st.add_keywords.clone(), Vec::new()));
             }
         }
-        l6.extend(pumps.iter().map(|e| (e.timestamp, e.keywords.clone())));
+        l6.extend(
+            pumps
+                .iter()
+                .map(|e| (e.timestamp, e.keywords.clone(), e.remove_keywords.clone())),
+        );
         l6.sort_by_key(|x| x.0);
-        for (_, kws) in l6 {
+        for (_, kws, removed) in l6 {
             for k in kws {
                 if !ch.keywords.contains(&k) {
                     ch.keywords.push(k);
                 }
             }
+            ch.keywords.retain(|k| !removed.contains(k));
         }
         // Layer 7a (CDAs), dann 7b
         for cda_pass in [true, false] {

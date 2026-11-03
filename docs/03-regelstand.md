@@ -15,8 +15,8 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Keyword | 198 | 34 | 15 | 4 |
 | Trigger | 137 | 0 | 24 | 11 |
 | Replacement Effect | 35 | 0 | 4 | 5 |
-| Static Ability | 90 | 1 | 8 | 0 |
-| Effect (ApiType) | 188 | 4 | 64 | 16 |
+| Static Ability | 90 | 2 | 8 | 0 |
+| Effect (ApiType) | 188 | 5 | 65 | 16 |
 | Cost | 42 | 7 | 5 | 1 |
 | Turn Structure | 16 | 10 | 6 | 0 |
 | State-Based Action | 23 | 15 | 1 | 3 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **92** | **140** | **81** |
+| **Summe** | **789** | **94** | **141** | **81** |
 
 ## Keyword
 
@@ -157,10 +157,11 @@ Offen (31): AddCounter, AssignDealDamage, Attached, BeginPhase, BeginTurn, Casca
 | CantAttack | 🟡 teilweise | `combat_restrictions::cant_attack` | ValidCard, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlock | ✅ ja | `combat_restrictions::cant_block` |  | staticability/StaticAbilityCantAttackBlock.java |
 | CantBlockBy | 🟡 teilweise | `combat_restrictions::cant_be_blocked_by_small_creatures_via_effect` | ValidAttacker, ValidBlocker, Bedingungen | staticability/StaticAbilityCantAttackBlock.java |
+| MinMaxBlocker | ✅ ja | `debuff_repeat::max_one_blocker` | CR 509.1b/c: Mindest-/Höchstzahl an Blockern je Angreifer | staticability/StaticAbilityCantAttackBlock.java |
 | MustAttack | 🟡 teilweise | `combat_restrictions::must_attack_if_able` | ValidCreature (CR 508.1d) | staticability/StaticAbilityMustAttack.java |
 | CastWithFlash | 🟡 teilweise | `cast_with_flash::creature_with_flash_permission` | ValidCard, Caster, EffectZone (auch All/Hand), Bedingungen, ValidSA Spell | staticability/StaticAbilityCastWithFlash.java |
 
-Offen (81): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackDefender, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, MinMaxBlocker, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
+Offen (80): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost, CantPlayLand, DisableTriggers, Panharmonicon, MustTarget, CanAttackDefender, CanAttackIfHaste, CanBlockIfReach, CanBlockIfShadow, BlockTapped, AttackVigilance, PlayerMustAttack, MustBlock, AssignCombatDamageAsUnblocked, CombatDamageToughness, CombatDamageNegatePower, ColorlessDamageSource, NoCleanupDamage, BlockRestrict, CantGainLife, CantLoseLife, CantChangeLife, CantPayLife, RaiseCost, ReduceCost, SetCost, IgnoreHexproof, IgnoreShroud, AttackRestrict, AssignNoCombatDamage, CanAdapt, CantBeCopied, CantBeBeamedUp, CantBeSuspected, CantBecomeMonarch, CantGainControl, CantAttach, CantCrew, CantDraw, DrawFromBottom, CantDiscard, CantExile, CantPhaseIn, CantPhaseOut, CantPreventDamage, CantPutCounter, CantRegenerate, CantSacrifice, CantTarget, CantTransform, CantVenture, CantChangeDayTime, ActivateAbilityAsIfHaste, IgnoreLandwalk, IgnoreLegendRule, IgnorePlaneswalkerZeroLoyaltyRule, MaxCounter, InfectDamage, WitherDamage, FlipCoinMod, FlipCoinDoubler, PlotZone, NumLoyaltyAct, Activations, Devotion, GainLifeRadiation, SurveilNum, TapPowerValue, UnspentMana, ManaBurn, ManaConvert, UntapOtherPlayer, TurnReversed, PhaseReversed, AttackRequirement, CountersRemain, ManaRestriction
 
 ## Effect (ApiType)
 
@@ -193,6 +194,7 @@ Offen (81): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Counter | 🟡 teilweise | `mass_discard_counter::mana_leak_pay_or_countered` | Zauber neutralisieren, allgemeines UnlessCost | ability/effects/CounterEffect.java |
 | DamageAll | 🟡 teilweise | `mass_discard_counter::damage_all_creatures_and_players` | ValidCards/ValidPlayers | ability/effects/DamageAllEffect.java |
 | DealDamage | 🟡 teilweise | `spells::bolt_face_and_creature_and_fizzle, damage_source::bite_uses_creature_as_source_with_its_keywords` | Grundform | ability/effects/DamageDealEffect.java |
+| Debuff | ✅ ja | `debuff_repeat::debuff_removes_flying_until_end_of_turn` | Keywords bis Zugende verlieren (Layer 6 nach Zeitstempel) | ability/effects/DebuffEffect.java |
 | DelayedTrigger | 🟡 teilweise | `delayed_triggers::flicker_returns_at_next_end_step_following_the_card, delayed_triggers::delayed_trigger_fires_once_at_your_next_upkeep, delayed_triggers::this_turn_delayed_trigger_expires_at_cleanup` | alle Trigger-Modi, einmaliges Auslösen (CR 603.7c), ThisTurn, NextTurn, RememberObjects + DelayTriggerRemembered[LKI] | ability/effects/DelayedTriggerEffect.java |
 | Destroy | 🟡 teilweise | `spells::destroy_respects_indestructible` | Grundform | ability/effects/DestroyEffect.java |
 | DestroyAll | 🟡 teilweise | `mass_discard_counter::wrath_destroys_all_simultaneously_with_dies_triggers` | gleichzeitig mit Rückblick | ability/effects/DestroyAllEffect.java |
@@ -232,6 +234,7 @@ Offen (81): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | PutSticker | ⚪ n/a |  | Unfinity | ability/effects/PutStickerEffect.java |
 | Regenerate | ✅ ja | `library_regen_animate::regenerate_replaces_destruction` | inkl. SBA-Zerstörung, NoRegen bei Destroy/DestroyAll | ability/effects/RegenerateEffect.java |
 | RemoveCounter | 🟡 teilweise | `counters_keywords::counters_filter_grants_flying_and_remove_counter_all, counters_keywords::remove_counter_any_chooses_kind_per_counter, counters_keywords::remove_all_counters_needs_has_counters_target` | CounterType fest/Any/All, CounterNum Zahl/Ausdruck/All, UpTo, Optional, Ziel/Defined | ability/effects/CountersRemoveEffect.java |
+| Repeat | 🟡 teilweise | `debuff_repeat::repeat_until_condition_fails` | RepeatSubAbility (ohne eigene Ziele), MaxRepeat, RepeatPresent/Defined/Compare, RepeatCheckSVar/Compare, RepeatOptional | ability/effects/RepeatEffect.java |
 | RepeatEach | 🟡 teilweise | `expressions::repeat_each_player_with_remembered_player, expressions::repeat_each_card_remembers_each_card_in_turn` | RepeatPlayers, RepeatCards (+Zone), DefinedCards, StartingWith You, ClearRememberedBeforeLoop, DamageMap | ability/effects/RepeatEachEffect.java |
 | Reveal | 🟡 teilweise | `attach_reveal::reveal_creature_from_hand_and_use_it` | Handkarten aufdecken: RevealValid/RevealAllValid, RevealDefined, NumCards, AnyNumber, Random, Optional, RememberRevealed | ability/effects/RevealEffect.java |
 | RevealHand | 🟡 teilweise |  | Hand aufdecken/ansehen (Event Revealed), RememberRevealed | ability/effects/RevealHandEffect.java |
@@ -251,7 +254,7 @@ Offen (81): CantAttackUnless, CantBlockUnless, OptionalAttackCost, OptionalCost,
 | Untap | 🟡 teilweise |  | Grundform | ability/effects/UntapEffect.java |
 | UntapAll | 🟡 teilweise | `mass_effects::animate_all_tap_all_untap_all` | ValidCards, Zielspieler/Defined | ability/effects/UntapAllEffect.java |
 
-Offen (120): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Assimilate, AssignGroup, Balance, BecomesBlocked, BidLife, Blight, Block, Bond, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, ControlSpell, ControlPlayer, Detain, DayTime, Debuff, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, Repeat, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, ReverseTurnOrder, RingTemptsYou, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
+Offen (118): ActivateAbility, AddOrRemoveCounter, AddPhase, AddTurn, Airbend, AlterAttribute, Assimilate, AssignGroup, Balance, BecomesBlocked, BidLife, Blight, Block, Bond, Camouflage, ChangeCombatants, ChangeSpeed, ChangeTargets, ChangeText, ChangeX, ChooseDirection, ChooseEvenOdd, ClaimThePrize, Clash, ClassLevelUp, Cloak, Connive, ControlSpell, ControlPlayer, Detain, DayTime, DigMultiple, Discover, DrainMana, EachDamage, Earthbend, Empower, Encode, EndCombatPhase, EndTurn, Endure, ExchangeLife, ExchangeLifeVariant, ExchangeControl, ExchangeControlVariant, ExchangePower, ExchangeZone, ExchangeTextBox, Explore, FlipOntoBattlefield, GainControlVariant, GainOwnership, GameDrawn, Haunt, HealDamage, Incubate, Learn, LookAt, LosesGame, MakeCard, ManaReflected, Manifest, ManifestDread, Meld, MoveCounter, MultiplePiles, MultiplyCounter, MustBlock, Mutate, PermanentCreature, PermanentNoncreature, Phases, PlayLandVariant, Poison, ProtectionAll, Radiation, Recruit, RearrangeTopOfLibrary, Regeneration, RemoveCounterAll, RemoveFromCombat, RemoveFromGame, RemoveFromMatch, ReorderZone, ReplaceCounter, ReplaceEffect, ReplaceMana, ReplaceDamage, ReplaceToken, ReplaceSplitDamage, RestartGame, ReverseTurnOrder, RingTemptsYou, SetLife, Shuffle, SkipPhase, SkipTurn, StoreSVar, Subgame, SwitchBlock, TakeInitiative, TapOrUntap, TapOrUntapAll, TimeTravel, TwoPiles, Unattach, UnlockDoor, Venture, VillainousChoice, Vote, WinsGame, BlankLine, DamageResolve, ChangeZoneResolve, CompanionChoose, InternalLegendaryRule, InternalIgnoreEffect, InternalRadiation
 
 ## Cost
 

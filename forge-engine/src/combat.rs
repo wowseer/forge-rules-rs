@@ -385,6 +385,36 @@ impl GameState {
                     "{a} hat Bedrohlich und braucht mindestens zwei Blocker"
                 )));
             }
+            // `MinMaxBlocker` (CR 509.1b/c)
+            for o in self.battlefield.iter().chain(self.command.iter()) {
+                let h = self.card(*o);
+                let Some(zone) = h.zone else { continue };
+                for st in &h.compiled().statics {
+                    let crate::statics::CompiledStatic::MinMaxBlocker(r) = st.as_ref() else {
+                        continue;
+                    };
+                    let ctx = crate::expr::EvalCtx {
+                        source: *o,
+                        controller: h.controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                        paid: &[],
+                    };
+                    if !r.effect_zones.contains(&zone)
+                        || !self.card_matches(a, &r.valid, *o, h.controller)
+                        || !self.check_conditions(&r.conditions, &ctx)
+                    {
+                        continue;
+                    }
+                    if r.min.is_some_and(|m| (n as u32) < m) || r.max.is_some_and(|m| n as u32 > m)
+                    {
+                        return Err(InvalidChoice(format!(
+                            "{a}: Anzahl der Blocker ({n}) nicht erlaubt"
+                        )));
+                    }
+                }
+            }
         }
         Ok(())
     }

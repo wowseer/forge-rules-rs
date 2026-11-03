@@ -316,3 +316,6 @@ Keyword;Cascade;ja;storm_cascade::cascade_casts_cheaper_nonland_for_free;CR 702.
 Keyword;Rebound;teilweise;storm_cascade::rebound_recasts_next_upkeep;CR 702.88: aus der Hand gewirkt → Exil, im nächsten eigenen Upkeep gratis wirkbar (ohne verzögerten Trigger auf dem Stapel)
 Keyword;Partner;teilweise;storm_cascade::partner_is_supported;Deckbau-Keyword ohne Spielwirkung (auch Choose a Background, Doctor's companion, Partner:<Gruppe>); Deckprüfung und „Partner with“ fehlen
 Effect (ApiType);Reveal;teilweise;attach_reveal::reveal_creature_from_hand_and_use_it;Handkarten aufdecken: RevealValid/RevealAllValid, RevealDefined, NumCards, AnyNumber, Random, Optional, RememberRevealed
+Effect (ApiType);Debuff;ja;debuff_repeat::debuff_removes_flying_until_end_of_turn;Keywords bis Zugende verlieren (Layer 6 nach Zeitstempel)
+Effect (ApiType);Repeat;teilweise;debuff_repeat::repeat_until_condition_fails;RepeatSubAbility (ohne eigene Ziele), MaxRepeat, RepeatPresent/Defined/Compare, RepeatCheckSVar/Compare, RepeatOptional; Schutzgrenze 100 Wiederholungen
+Static Ability;MinMaxBlocker;ja;debuff_repeat::max_one_blocker;CR 509.1b/c: Mindest-/Höchstzahl an Blockern je Angreifer

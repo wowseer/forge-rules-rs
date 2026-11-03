@@ -1775,6 +1775,70 @@ impl GameState {
                     self.push_event(Event::Revealed { player: p, cards });
                 }
             }
+            Effect::Debuff { what, keywords } => {
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let timestamp = self.timestamp();
+                    self.effects.push(ContinuousEffect {
+                        affected: c,
+                        remove_keywords: keywords.clone(),
+                        duration: Duration::UntilEndOfTurn,
+                        timestamp,
+                        ..Default::default()
+                    });
+                }
+            }
+            Effect::Repeat {
+                sub,
+                max,
+                present,
+                check,
+                optional,
+            } => {
+                let max = max
+                    .as_ref()
+                    .map(|a| self.amount(a, ctx, targets).max(0) as usize);
+                if max == Some(0) {
+                    return Ok(());
+                }
+                // Schutz vor Endlosschleifen ohne Bedingung
+                let cap = max.unwrap_or(100).min(100);
+                for count in 1..=cap {
+                    self.apply_chain_inherit(sub, targets, ctx, ch)?;
+                    if count >= cap || self.winner.is_some() {
+                        break;
+                    }
+                    let ectx = ctx.eval_with(targets);
+                    if let Some((spec, def, cmp)) = present {
+                        let list: Vec<CardId> = match def {
+                            Some(d) => Self::cards_of_any(&self.resolve_defined(*d, targets, ctx)),
+                            None => self.battlefield.clone(),
+                        };
+                        let n = list
+                            .iter()
+                            .filter(|c| self.card_matches(**c, spec, ctx.source, ctx.controller))
+                            .count() as i32;
+                        if !cmp.holds(n, self.eval(&cmp.rhs, &ectx)) {
+                            break;
+                        }
+                    }
+                    if let Some((e, cmp)) = check
+                        && !cmp.holds(self.eval(e, &ectx), self.eval(&cmp.rhs, &ectx))
+                    {
+                        break;
+                    }
+                    if *optional
+                        && !matches!(
+                            ch.ask(Decision::Confirm {
+                                player: ctx.controller,
+                                prompt: "Wiederholen?".into(),
+                            })?,
+                            Choice::Yes
+                        )
+                    {
+                        break;
+                    }
+                }
+            }
             Effect::RevealHand { who, remember } => {
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     let cards = self.player(p).hand.clone();
