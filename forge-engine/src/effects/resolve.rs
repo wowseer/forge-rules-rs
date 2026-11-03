@@ -2150,7 +2150,10 @@ impl GameState {
                 origin,
                 destination,
                 place,
+                shuffle,
+                optional,
             } => {
+                let mut owners: Vec<PlayerId> = Vec::new();
                 let ts = self.resolve_defined(*what, targets, ctx);
                 let cards: Vec<CardId> = ts
                     .iter()
@@ -2164,14 +2167,35 @@ impl GameState {
                     .filter(|c| self.card(*c).zone.is_some_and(|z| origin.contains(&z)))
                     .collect();
                 for c in cards {
+                    if *optional
+                        && !matches!(
+                            ch.ask(Decision::Confirm {
+                                player: ctx.controller,
+                                prompt: "Karte bewegen?".into(),
+                            })?,
+                            Choice::Yes
+                        )
+                    {
+                        continue;
+                    }
+                    let owner = self.card(c).owner;
                     let new = self.put_into_zone(c, *destination, place, ctx.controller);
+                    if !owners.contains(&owner) {
+                        owners.push(owner);
+                    }
                     if place.remember {
                         self.card_mut(ctx.source).remembered.push(new);
+                    }
+                }
+                if *shuffle {
+                    for p in owners {
+                        self.shuffle_library(p);
                     }
                 }
             }
             Effect::ChangeZoneSearch {
                 origin,
+                optional,
                 destination,
                 change_type,
                 num,
@@ -2180,31 +2204,38 @@ impl GameState {
             } => {
                 let p = ctx.controller;
                 let n = self.amount(num, ctx, targets).max(0) as u32;
-                // Kandidaten: eigene Karten in der Ursprungszone (Battlefield: kontrolliert).
-                let pool: Vec<CardId> = match origin {
-                    Zone::Battlefield => self.battlefield_of(p).collect(),
-                    Zone::Exile => self
-                        .exile
-                        .iter()
-                        .copied()
-                        .filter(|c| self.card(*c).owner == p)
-                        .collect(),
-                    Zone::Command => self
-                        .command
-                        .iter()
-                        .copied()
-                        .filter(|c| self.card(*c).owner == p)
-                        .collect(),
-                    Zone::Stack => Vec::new(),
-                    pz => self.player(p).zone(*pz).clone(),
-                };
+                // Kandidaten: eigene Karten in den Ursprungszonen (Battlefield: kontrolliert).
+                let mut pool: Vec<CardId> = Vec::new();
+                for z in origin {
+                    match z {
+                        Zone::Battlefield => pool.extend(self.battlefield_of(p)),
+                        Zone::Exile => pool.extend(
+                            self.exile
+                                .iter()
+                                .copied()
+                                .filter(|c| self.card(*c).owner == p),
+                        ),
+                        Zone::Command => pool.extend(
+                            self.command
+                                .iter()
+                                .copied()
+                                .filter(|c| self.card(*c).owner == p),
+                        ),
+                        Zone::Stack => {}
+                        pz => pool.extend(self.player(p).zone(*pz).iter().copied()),
+                    }
+                }
                 let options: Vec<CardId> = pool
                     .into_iter()
                     .filter(|c| self.card_matches(*c, change_type, ctx.source, p))
                     .collect();
                 let max = n.min(options.len() as u32);
                 // CR 701.19b: nur in verdeckten Zonen darf man „nicht finden“.
-                let min = if origin.is_hidden() { 0 } else { max };
+                let min = if *optional || origin.iter().any(|z| z.is_hidden()) {
+                    0
+                } else {
+                    max
+                };
                 let chosen = if max == 0 {
                     Vec::new()
                 } else {
@@ -2225,7 +2256,7 @@ impl GameState {
                         self.card_mut(ctx.source).remembered.push(new);
                     }
                 }
-                if *shuffle && *origin == Zone::Library {
+                if *shuffle && origin.contains(&Zone::Library) {
                     self.shuffle_library(p);
                 }
             }

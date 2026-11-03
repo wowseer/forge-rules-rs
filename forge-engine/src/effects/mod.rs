@@ -218,10 +218,15 @@ pub enum Effect {
         origin: Vec<crate::zone::Zone>,
         destination: crate::zone::Zone,
         place: ZonePlacement,
+        /// `Shuffle$ True`: danach die Bibliothek(en) der Besitzer mischen
+        shuffle: bool,
+        /// `Optional$ True`: je Karte „darf“ (Controller entscheidet)
+        optional: bool,
     },
-    /// Suche in verdeckter Zone (Bibliothek/Hand) nach `change_type` (CR 701.19).
+    /// Suche in Zonen nach `change_type` (CR 701.19); mehrere Ursprungszonen möglich.
     ChangeZoneSearch {
-        origin: crate::zone::Zone,
+        origin: Vec<crate::zone::Zone>,
+        optional: bool,
         destination: crate::zone::Zone,
         change_type: ValidSpec,
         num: Amount,
@@ -995,10 +1000,10 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         || (origin.iter().all(|z| z.is_hidden())
             && !c.ab.params.has("ValidTgts")
             && !c.ab.params.has("Defined"));
+    let optional = c
+        .get("Optional")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
     if hidden {
-        let [o] = origin.as_slice() else {
-            return Err(c.unsupported("Origin", origin_s));
-        };
         let ct = c.get("ChangeType").unwrap_or("Card");
         // `ChangeNum$ Any`: beliebig viele (CR 701.19b)
         let num = if c.ab.params.get("ChangeNum") == Some("Any") {
@@ -1007,9 +1012,10 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         } else {
             c.amount("ChangeNum", Some(1))?
         };
-        let shuffle = shuffle_param.unwrap_or(*o == Zone::Library);
+        let shuffle = shuffle_param.unwrap_or(origin.contains(&Zone::Library));
         return Ok(Effect::ChangeZoneSearch {
-            origin: *o,
+            origin,
+            optional,
             destination,
             change_type: ValidSpec::parse(ct)?,
             num,
@@ -1017,17 +1023,15 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
             shuffle,
         });
     }
-    if let Some(s) = shuffle_param
-        && s
-    {
-        return Err(c.unsupported("Shuffle", "True"));
-    }
+    let shuffle = shuffle_param.unwrap_or(false);
     let what = c.defined(Defined::Targeted)?;
     Ok(Effect::ChangeZone {
         what,
         origin,
         destination,
         place,
+        shuffle,
+        optional,
     })
 }
 
