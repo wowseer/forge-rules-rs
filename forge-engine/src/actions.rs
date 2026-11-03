@@ -440,7 +440,21 @@ impl GameState {
                         .entry(ident)
                         .or_insert(0) += amount;
                 }
-                self.lose_life(p, amount as i32);
+                // CR 702.90b: Infect → Giftmarken statt Lebensverlust
+                if src.has(&Keyword::Infect) {
+                    self.player_mut(p).poison += amount;
+                } else {
+                    self.lose_life(p, amount as i32);
+                }
+                // CR 702.164c: Toxic bei Kampfschaden an Spielern
+                if combat {
+                    let toxic: u32 = src
+                        .keywords
+                        .iter()
+                        .map(|k| if let Keyword::Toxic(n) = k { *n } else { 0 })
+                        .sum();
+                    self.player_mut(p).poison += toxic;
+                }
             }
             Target::Card(c) => {
                 if self.card(c).zone != Some(Zone::Battlefield) {
@@ -448,10 +462,14 @@ impl GameState {
                 }
                 let ch = self.chars(c);
                 if ch.types.is_creature() {
-                    let o = self.card_mut(c);
-                    o.damage += amount;
+                    // CR 702.80a/702.90c: Wither/Infect → -1/-1-Marken statt Schaden
+                    if src.has(&Keyword::Infect) || src.has(&Keyword::Wither) {
+                        self.add_counters(c, "M1M1", amount);
+                    } else {
+                        self.card_mut(c).damage += amount;
+                    }
                     if src.has(&Keyword::Deathtouch) {
-                        o.deathtouch_damage = true;
+                        self.card_mut(c).deathtouch_damage = true;
                     }
                 }
                 if ch.types.has_core(forge_types::CoreType::Planeswalker) {

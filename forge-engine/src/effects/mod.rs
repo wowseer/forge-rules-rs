@@ -461,6 +461,11 @@ pub enum Effect {
         random: bool,
         remember: bool,
     },
+    /// Hand aufdecken bzw. ansehen (`RevealHand`, `Look$`); optional merken.
+    RevealHand {
+        who: Defined,
+        remember: bool,
+    },
     /// Schutz bis Zugende verleihen (Java `ProtectEffect`); `choose`: der
     /// Controller wählt eine Farbe (`Gains$ Choice | Choices$ AnyColor`).
     Protection {
@@ -1772,6 +1777,15 @@ fn compile_depth(
                 choices: ValidSpec::parse(c.get("Choices").unwrap_or("Player"))?,
                 random: flag(&mut c, "Random"),
                 remember: flag(&mut c, "RememberChosen"),
+            }
+        }
+        "RevealHand" => {
+            c.get("Look");
+            Effect::RevealHand {
+                who: c.defined(Defined::You)?,
+                remember: c
+                    .get("RememberRevealed")
+                    .is_some_and(|v| v.eq_ignore_ascii_case("true")),
             }
         }
         "Protection" => {

@@ -96,6 +96,8 @@ pub enum Prop {
     PlayerChosen,
     /// `ChosenCtrl`: vom gewählten Spieler der Quelle kontrolliert
     ChosenCtrl,
+    /// `Historic` (CR 700.6): Artefakt, legendär oder Saga
+    Historic,
     /// `IsCommander` (CR 903.3)
     IsCommander,
     /// `ExiledWithSource`: von der Quelle ins Exil geschickt (Java `exiledWith`)
@@ -294,6 +296,8 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     match p {
         "IsCommander" => return Ok(Prop::IsCommander),
+        "Historic" => return Ok(Prop::Historic),
+        "nonHistoric" => return Ok(Prop::Not(Box::new(Prop::Historic))),
         "ChosenCtrl" => return Ok(Prop::ChosenCtrl),
         "Chosen" => return Ok(Prop::PlayerChosen),
         "IsNotCommander" | "nonCommander" => return Ok(Prop::Not(Box::new(Prop::IsCommander))),

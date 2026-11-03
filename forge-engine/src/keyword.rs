@@ -39,6 +39,12 @@ pub enum Keyword {
     Affinity(String),
     /// CR 702.33: `Kicker:<Kosten>[:<zweite Kosten>]` (Originaltext der Kosten)
     Kicker(Vec<String>),
+    /// CR 702.90: Schaden als -1/-1-Marken bzw. Giftmarken
+    Infect,
+    /// CR 702.80: Schaden an Kreaturen als -1/-1-Marken
+    Wither,
+    /// CR 702.164: Kampfschaden an Spielern gibt zusätzlich n Giftmarken
+    Toxic(u32),
     /// CR 702.16: Protection
     Protection(ProtectionFrom),
     /// `HIDDEN CARDNAME can't block.` (meist bis Zugende verliehen)
@@ -93,6 +99,11 @@ impl Keyword {
             }
             "HIDDEN This card doesn't untap during your next untap step." => Keyword::NoUntapNext,
             "Convoke" => Keyword::Convoke,
+            "Infect" => Keyword::Infect,
+            "Wither" => Keyword::Wither,
+            t if t.starts_with("Toxic:") && t["Toxic:".len()..].parse::<u32>().is_ok() => {
+                Keyword::Toxic(t["Toxic:".len()..].parse().unwrap_or(1))
+            }
             "Improvise" => Keyword::Improvise,
             "Delve" => Keyword::Delve,
             t if t.starts_with("Protection from ") => {

@@ -1483,6 +1483,17 @@ impl GameState {
                     }
                 }
             }
+            Effect::RevealHand { who, remember } => {
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    let cards = self.player(p).hand.clone();
+                    if *remember {
+                        self.card_mut(ctx.source)
+                            .remembered
+                            .extend(cards.iter().copied());
+                    }
+                    self.push_event(Event::Revealed { player: p, cards });
+                }
+            }
             Effect::Protection {
                 what,
                 fixed,

@@ -103,6 +103,11 @@ impl GameState {
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
             Prop::IsCommander => c.commander.is_some(),
+            Prop::Historic => {
+                ch.types.has_core(forge_types::CoreType::Artifact)
+                    || ch.types.has_super(forge_types::Supertype::Legendary)
+                    || ch.types.has_subtype("Saga")
+            }
             Prop::ChosenCtrl => self.card(source).chosen_player == Some(c.controller),
             Prop::PlayerChosen => false,
             Prop::ExiledWithSource => c.zone == Some(Zone::Exile) && c.exiled_with == Some(source),

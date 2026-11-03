@@ -287,3 +287,7 @@ Effect (ApiType);Branch;teilweise;choose_player_branch::branch_picks_sub_ability
 Effect (ApiType);RollDice;teilweise;roll_dice::kitten_gains_life_equal_to_roll, roll_dice::d20_table_picks_range;CR 706: Sides, Amount, Modifier, ResultSubAbilities (Bereiche, Else), ResultSVar als Laufzeitwert, Event DiceRolled; UseDifferenceBetweenRolls, IgnoreLower, Trigger RolledDie fehlen
 Keyword;Protection;teilweise;protection::cannot_be_targeted_by_black_spell, protection::cannot_be_blocked_by_black_creatures_and_prevents_their_damage, protection::black_aura_falls_off, protection::protection_effect_with_chosen_color;CR 702.16 DEBT: Schaden verhindert, Auren/Ausrüstung fallen ab, nicht blockbar, nicht Ziel; from <Farbe>/each color/everything, Protection:<Filter>; Schutz für Spieler, ChosenColor-Varianten fehlen
 Effect (ApiType);Protection;teilweise;protection::protection_effect_with_chosen_color;Gains feste Farben/Filter oder Choice AnyColor, bis Zugende; weitere Choices fehlen
+Keyword;Infect;ja;infect::infect_and_wither_damage;CR 702.90: Giftmarken an Spieler, -1/-1-Marken an Kreaturen
+Keyword;Wither;ja;infect::infect_and_wither_damage;CR 702.80: -1/-1-Marken an Kreaturen
+Effect (ApiType);RevealHand;teilweise;;Hand aufdecken/ansehen (Event Revealed), RememberRevealed; ohne eigenen Regeltest
+Keyword;Toxic;ja;infect::toxic_adds_poison_on_combat_damage_only;CR 702.164: zusätzlich n Giftmarken bei Kampfschaden an Spielern
