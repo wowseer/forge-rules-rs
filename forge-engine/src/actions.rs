@@ -58,6 +58,7 @@ impl GameState {
             exile_from_stack: false,
             last_x: 0,
             cast_from: None,
+            cast_by: None,
             kicked: 0,
             skip_next_untap: false,
             exiled_with: None,
@@ -195,6 +196,11 @@ impl GameState {
             monstrous: false,
             exile_from_stack: false,
             last_x: 0,
+            cast_by: if from == Some(Zone::Stack) && to == Zone::Battlefield {
+                old.cast_by
+            } else {
+                None
+            },
             cast_from: if from == Some(Zone::Stack) && to == Zone::Battlefield {
                 old.cast_from
             } else {
@@ -491,6 +497,7 @@ impl GameState {
                 }
                 let ch = self.chars(c);
                 if ch.types.is_creature() {
+                    self.this_turn.damaged.push((source, c));
                     // CR 702.80a/702.90c: Wither/Infect → -1/-1-Marken statt Schaden
                     if src.has(&Keyword::Infect) || src.has(&Keyword::Wither) {
                         self.add_counters(c, "M1M1", amount);

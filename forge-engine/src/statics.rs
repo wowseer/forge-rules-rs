@@ -124,6 +124,37 @@ pub enum CompiledStatic {
     MinMaxBlocker(MinMaxBlocker),
     /// `CanAttackDefender`: kann trotz Defender angreifen (CR 702.3b).
     CanAttackDefender(CanAttackDefender),
+    /// `CantTarget`: kann nicht Ziel sein (CR 115.4 u. a.).
+    CantTarget(CantTarget),
+    /// `Panharmonicon`: Trigger lösen ein zusätzliches Mal aus (CR 603.2d).
+    Panharmonicon(Panharmonicon),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CantTarget {
+    pub valid_target: Option<ValidSpec>,
+    /// `ValidSA$`: nur Zauber (`Some(true)`) bzw. nur Fähigkeiten (`Some(false)`)
+    pub spell: Option<bool>,
+    pub activator: Option<ValidSpec>,
+    pub valid_source: Option<ValidSpec>,
+    /// `AffectedZone$`: Zone des Ziels (Standard Battlefield)
+    pub target_zones: Vec<Zone>,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Panharmonicon {
+    /// Quelle des Triggers
+    pub valid_card: ValidSpec,
+    /// `ValidMode$` (leer = alle)
+    pub modes: Vec<String>,
+    /// `ValidCause$`: das auslösende Objekt
+    pub valid_cause: Option<ValidSpec>,
+    /// `Destination$`/`Origin$` bei Zonenwechsel-Triggern
+    pub destination: Option<Zone>,
+    pub effect_zones: Vec<Zone>,
+    pub conditions: Vec<Condition>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -418,6 +449,8 @@ impl CompiledStatic {
             CompiledStatic::CastWithFlash(c) => &mut c.effect_zones,
             CompiledStatic::MinMaxBlocker(c) => &mut c.effect_zones,
             CompiledStatic::CanAttackDefender(c) => &mut c.effect_zones,
+            CompiledStatic::CantTarget(c) => &mut c.effect_zones,
+            CompiledStatic::Panharmonicon(c) => &mut c.effect_zones,
         }
     }
 }
@@ -666,6 +699,85 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         "CantBeCast" => return compile_cant_play(face, s, false),
         "CastWithFlash" => return compile_cast_with_flash(face, s),
         "MinMaxBlocker" => return compile_min_max_blocker(face, s),
+        "CantTarget" => {
+            let mut used: Vec<&str> = NEUTRAL.to_vec();
+            used.extend([
+                "EffectZone",
+                "ValidTarget",
+                "ValidSA",
+                "Activator",
+                "ValidSource",
+                "AffectedZone",
+            ]);
+            let opt = |k: &str| p.get(k).map(ValidSpec::parse).transpose();
+            let spell = match p.get("ValidSA") {
+                None | Some("Spell,Activated") | Some("SpellAbility") => None,
+                Some("Spell") => Some(true),
+                Some("Activated") | Some("Ability") => Some(false),
+                Some(v) => return Err(err("ValidSA", v)),
+            };
+            let target_zones = match p.get("AffectedZone") {
+                Some(z) => zones(z).ok_or_else(|| err("AffectedZone", z))?,
+                None => vec![Zone::Battlefield],
+            };
+            let effect_zones = match p.get("EffectZone") {
+                Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+                None => vec![Zone::Battlefield],
+            };
+            let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+            used.extend(ck);
+            for (k, v) in p.iter() {
+                if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+                    return Err(err(k, v));
+                }
+            }
+            return Ok(CompiledStatic::CantTarget(CantTarget {
+                valid_target: opt("ValidTarget")?,
+                spell,
+                activator: opt("Activator")?,
+                valid_source: opt("ValidSource")?,
+                target_zones,
+                effect_zones,
+                conditions,
+            }));
+        }
+        "Panharmonicon" => {
+            let mut used: Vec<&str> = NEUTRAL.to_vec();
+            used.extend([
+                "EffectZone",
+                "ValidCard",
+                "ValidMode",
+                "ValidCause",
+                "Destination",
+                "Origin",
+            ]);
+            let effect_zones = match p.get("EffectZone") {
+                Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
+                None => vec![Zone::Battlefield],
+            };
+            let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
+            used.extend(ck);
+            for (k, v) in p.iter() {
+                if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+                    return Err(err(k, v));
+                }
+            }
+            let destination = match p.get("Destination") {
+                Some(z) => Some(Zone::parse(z).ok_or_else(|| err("Destination", z))?),
+                None => None,
+            };
+            return Ok(CompiledStatic::Panharmonicon(Panharmonicon {
+                valid_card: ValidSpec::parse(p.get("ValidCard").unwrap_or("Card"))?,
+                modes: p
+                    .get("ValidMode")
+                    .map(|m| m.split(',').map(|x| x.trim().to_string()).collect())
+                    .unwrap_or_default(),
+                valid_cause: p.get("ValidCause").map(ValidSpec::parse).transpose()?,
+                destination,
+                effect_zones,
+                conditions,
+            }));
+        }
         "CanAttackDefender" => {
             let mut used: Vec<&str> = NEUTRAL.to_vec();
             used.extend(["EffectZone", "ValidCard"]);

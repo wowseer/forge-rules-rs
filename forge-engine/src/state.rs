@@ -214,6 +214,8 @@ pub struct CardObj {
     /// Gewirkt aus dieser Zone (auf dem Stapel und als daraus entstandene
     /// bleibende Karte; Java `getCastFrom`).
     pub cast_from: Option<Zone>,
+    /// Wer den Zauber gewirkt hat (wie `cast_from` übertragen).
+    pub cast_by: Option<PlayerId>,
     /// Zuletzt für einen Zauber/eine Fähigkeit dieser Quelle gewähltes X
     /// (für Filter wie `cmcLEX` mit `X = Count$xPaid`).
     pub last_x: u32,
@@ -363,6 +365,8 @@ pub struct TurnHistory {
     pub cast: Vec<CardId>,
     /// Kreaturen, die angegriffen haben, mit ihrem Controller.
     pub attackers: Vec<(PlayerId, CardId)>,
+    /// Schaden an Kreaturen in diesem Zug (Quelle, Ziel) – Filter `DamagedBy`.
+    pub damaged: Vec<(CardId, CardId)>,
     /// `Fog`: aller Kampfschaden dieses Zuges wird verhindert.
     pub prevent_combat_damage: bool,
 }

@@ -164,14 +164,50 @@ fn with_runtime_svars(face: &CardFace) -> std::borrow::Cow<'_, CardFace> {
             }
         }
     }
-    if names.is_empty() {
+    // `StoreSVar | SVar$ X`: X wird zur Laufzeitvariablen (Startwert 0)
+    let mut stored: Vec<String> = Vec::new();
+    for a in &face.abilities {
+        collect_store_svar(&format!("{a:?}"), face, &mut stored);
+    }
+    for (_, v) in &face.svars {
+        collect_store_svar(v, face, &mut stored);
+    }
+    if names.is_empty() && stored.is_empty() {
         return std::borrow::Cow::Borrowed(face);
     }
     let mut f = face.clone();
     for n in names {
         f.svars.push((n.clone(), format!("Count$RuntimeVar.{n}")));
     }
+    for n in stored {
+        f.svars.retain(|(k, _)| *k != n);
+        f.svars.push((n.clone(), format!("Count$RuntimeVar.{n}")));
+    }
     std::borrow::Cow::Owned(f)
+}
+
+/// `… StoreSVar | SVar$ <Name>` in einem Text: Namen sammeln (nur Startwert 0).
+fn collect_store_svar(text: &str, face: &CardFace, out: &mut Vec<String>) {
+    if !text.contains("StoreSVar") {
+        return;
+    }
+    let pm = forge_script::ParamMap::parse(text);
+    let name = match pm.get("SVar") {
+        Some(n) => n.trim().to_string(),
+        None => {
+            // Debug-Ausgabe einer Fähigkeit: nach `"SVar", "<Name>"` suchen
+            let pat = "\"SVar\", \"";
+            let Some(i) = text.find(pat) else { return };
+            text[i + pat.len()..]
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric())
+                .collect()
+        }
+    };
+    let zero = face.svar(&name).is_none_or(|v| v.trim() == "Number$0");
+    if !name.is_empty() && zero && !out.contains(&name) {
+        out.push(name);
+    }
 }
 
 fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace {

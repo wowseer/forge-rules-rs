@@ -861,6 +861,7 @@ impl GameState {
                 tapped,
                 power,
                 toughness,
+                remember,
             } => {
                 let n = self.amount(amount, ctx, targets).max(0) as u32;
                 let p_override = power.as_ref().map(|a| self.amount(a, ctx, targets));
@@ -885,6 +886,9 @@ impl GameState {
                                         face.toughness.as_ref().map(|x| x.base()).unwrap_or(0),
                                     ),
                                 ));
+                            }
+                            if *remember {
+                                self.card_mut(ctx.source).remembered.push(id);
                             }
                             // CR 111.1: Token kommt ins Spiel → ETB-Trigger
                             self.push_event(crate::state::Event::ZoneChange {
@@ -1635,6 +1639,7 @@ impl GameState {
                             tapped: false,
                             power: None,
                             toughness: None,
+                            remember: false,
                         },
                         targets,
                         ctx,
@@ -1784,6 +1789,43 @@ impl GameState {
                             .extend(cards.iter().copied());
                     }
                     self.push_event(Event::Revealed { player: p, cards });
+                }
+            }
+            Effect::StoreSVar { name, value } => {
+                let v = self.eval(value, &ctx.eval_with(targets));
+                self.card_mut(ctx.source)
+                    .runtime_vars
+                    .insert(name.clone(), v);
+            }
+            Effect::Explore { what, num } => {
+                let times = self.amount(num, ctx, targets).max(0);
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    for _ in 0..times {
+                        let p = self.card(c).controller;
+                        let Some(&top) = self.player(p).library.last() else {
+                            break;
+                        };
+                        self.push_event(Event::Revealed {
+                            player: p,
+                            cards: vec![top],
+                        });
+                        if self.chars(top).types.is_land() {
+                            self.move_card(top, Zone::Hand, true);
+                        } else {
+                            if self.card(c).zone == Some(Zone::Battlefield) {
+                                self.add_counters(c, "P1P1", 1);
+                            }
+                            if matches!(
+                                ch.ask(Decision::Confirm {
+                                    player: p,
+                                    prompt: "Erkunden: aufgedeckte Karte in den Friedhof?".into(),
+                                })?,
+                                Choice::Yes
+                            ) {
+                                self.move_card(top, Zone::Graveyard, true);
+                            }
+                        }
+                    }
                 }
             }
             Effect::TapOrUntap { what } => {
@@ -2607,6 +2649,7 @@ impl GameState {
                 optional,
                 zone_owner,
                 mandatory,
+                owner_chooses,
                 destination,
                 change_type,
                 num,
@@ -2623,6 +2666,7 @@ impl GameState {
                     }
                     None => chooser,
                 };
+                let chooser = if *owner_chooses { p } else { chooser };
                 let n = self.amount(num, ctx, targets).max(0) as u32;
                 // Kandidaten: Karten des Spielers in den Ursprungszonen (Battlefield: kontrolliert).
                 let mut pool: Vec<CardId> = Vec::new();

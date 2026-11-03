@@ -55,6 +55,8 @@ pub enum TriggerKind {
         targets_valid: Option<ValidSpec>,
         /// `ActivatorThisTurnCast$`: Anzahl passender Zauber des Wirkenden in diesem Zug
         activator_this_turn: Option<crate::expr::Compare>,
+        /// `Mode$ SpellCastOrCopy`: auch beim Kopieren
+        or_copy: bool,
     },
     /// `Mode$ AttackersDeclared` – Angreifer wurden deklariert (CR 508.1m).
     AttackersDeclared {
@@ -182,6 +184,8 @@ pub enum TriggerKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompiledTrigger {
     pub kind: TriggerKind,
+    /// `Mode$` des Skripts (für `Panharmonicon | ValidMode$`)
+    pub mode: String,
     pub execute: Arc<CompiledAbility>,
     /// Zonen, in denen die Quelle sein muss, damit der Trigger aktiv ist.
     pub active_zones: Vec<Zone>,
@@ -379,6 +383,11 @@ pub enum TriggerEvent {
     TurnFaceUp {
         card: CardId,
     },
+    /// Ein Zauber wurde kopiert (für `SpellCastOrCopy`).
+    SpellCopied {
+        card: CardId,
+        player: PlayerId,
+    },
     Untaps {
         card: CardId,
     },
@@ -509,7 +518,8 @@ pub fn compile_trigger(
             let alone = p.get("Alone").map(|v| v.eq_ignore_ascii_case("true"));
             TriggerKind::Attacks { valid_card, alone }
         }
-        "SpellCast" => TriggerKind::SpellCast {
+        "SpellCast" | "SpellCastOrCopy" => TriggerKind::SpellCast {
+            or_copy: t.mode == "SpellCastOrCopy",
             valid_card: valid("ValidCard", &mut used)?,
             valid_activator: valid("ValidActivatingPlayer", &mut used)?,
             targets_valid: valid("TargetsValid", &mut used)?,
@@ -794,6 +804,7 @@ pub fn compile_trigger(
     }
 
     Ok(CompiledTrigger {
+        mode: t.mode.clone(),
         kind,
         execute,
         active_zones,
@@ -899,6 +910,7 @@ impl GameState {
                     valid_activator,
                     targets_valid,
                     activator_this_turn,
+                    or_copy: _,
                 },
                 TriggerEvent::SpellCast { card, player },
             ) => {
@@ -1512,6 +1524,18 @@ impl GameState {
                     ..Default::default()
                 })
             }
+            (
+                TriggerKind::SpellCast { or_copy: true, .. },
+                TriggerEvent::SpellCopied { card, player },
+            ) => self.trigger_matches(
+                t,
+                source,
+                controller,
+                &TriggerEvent::SpellCast {
+                    card: *card,
+                    player: *player,
+                },
+            ),
             (TriggerKind::TurnFaceUp { valid_card }, TriggerEvent::TurnFaceUp { card }) => {
                 if !self.opt_card(valid_card, *card, source, controller) {
                     return None;
@@ -1736,6 +1760,15 @@ impl GameState {
                 }
             }
         }
+        // CR 603.2d: `Panharmonicon` – zusätzliche Auslösungen
+        let mut extra = Vec::new();
+        for pt in &found {
+            let n = self.panharmonicon_extra(pt, &ev);
+            for _ in 0..n {
+                extra.push(pt.clone());
+            }
+        }
+        found.extend(extra);
         // CR 603.7c: verzögerte Trigger lösen nur einmal aus.
         let mut i = if self.fire_only.is_some() {
             self.delayed_triggers.len()
@@ -1773,6 +1806,45 @@ impl GameState {
             }
         }
         self.pending_triggers.extend(found);
+    }
+
+    /// Anzahl zusätzlicher Auslösungen durch `Panharmonicon`-Statics.
+    fn panharmonicon_extra(&self, pt: &PendingTrigger, ev: &TriggerEvent) -> usize {
+        let cause = pt.info.card;
+        let dest = match ev {
+            TriggerEvent::ChangesZone { to, .. } => Some(*to),
+            _ => None,
+        };
+        let mut n = 0;
+        for &h in self.battlefield.iter().chain(self.command.iter()) {
+            let o = self.card(h);
+            let Some(zone) = o.zone else { continue };
+            for s in &o.compiled().statics {
+                let crate::statics::CompiledStatic::Panharmonicon(r) = s.as_ref() else {
+                    continue;
+                };
+                let ctx = crate::expr::EvalCtx {
+                    source: h,
+                    controller: o.controller,
+                    x: 0,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                if r.effect_zones.contains(&zone)
+                    && (r.modes.is_empty() || r.modes.contains(&pt.trigger.mode))
+                    && self.card_matches(pt.source, &r.valid_card, h, o.controller)
+                    && r.valid_cause.as_ref().is_none_or(|v| {
+                        cause.is_some_and(|c| self.card_matches(c, v, h, o.controller))
+                    })
+                    && r.destination.is_none_or(|d| dest == Some(d))
+                    && self.check_conditions(&r.conditions, &ctx)
+                {
+                    n += 1;
+                }
+            }
+        }
+        n
     }
 
     /// CR 603.8: Zustandstrigger (`Mode$ Always`) lösen aus, wenn ihre Bedingung

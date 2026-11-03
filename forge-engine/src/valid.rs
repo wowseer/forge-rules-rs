@@ -102,6 +102,12 @@ pub enum Prop {
     FaceDown,
     /// `Historic` (CR 700.6): Artefakt, legendär oder Saga
     Historic,
+    /// `EffectSource`: die Karte, die das Effektobjekt (Quelle) erzeugt hat
+    EffectSource,
+    /// `wasCastByYou`
+    WasCastByYou,
+    /// `DamagedBy`: wurde in diesem Zug von der Quelle beschädigt
+    DamagedBy,
     /// `IsCommander` (CR 903.3)
     IsCommander,
     /// `ExiledWithSource`: von der Quelle ins Exil geschickt (Java `exiledWith`)
@@ -300,6 +306,9 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     }
     match p {
         "IsCommander" => return Ok(Prop::IsCommander),
+        "EffectSource" => return Ok(Prop::EffectSource),
+        "wasCastByYou" => return Ok(Prop::WasCastByYou),
+        "DamagedBy" => return Ok(Prop::DamagedBy),
         "Historic" => return Ok(Prop::Historic),
         "faceDown" | "FaceDown" => return Ok(Prop::FaceDown),
         "NamedCard" => return Ok(Prop::NamedCard),

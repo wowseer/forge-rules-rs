@@ -103,6 +103,17 @@ impl GameState {
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
             Prop::IsCommander => c.commander.is_some(),
+            Prop::EffectSource => self
+                .card(source)
+                .effect
+                .and_then(|e| e.host)
+                .is_some_and(|h| self.current_object(h) == id || h == id),
+            Prop::WasCastByYou => c.cast_by == Some(you),
+            Prop::DamagedBy => self
+                .this_turn
+                .damaged
+                .iter()
+                .any(|(s, t)| *t == id && (*s == source || self.current_object(*s) == source)),
             Prop::FaceDown => c.face_down,
             Prop::NamedCard => self
                 .card(source)
@@ -223,6 +234,55 @@ impl GameState {
                 paid: &[],
             },
         )
+    }
+
+    /// Static `CantTarget`: darf `source` (Zauber/Fähigkeit von `you`) `target` nicht anvisieren?
+    fn cant_target(&self, target: Target, source: CardId, you: PlayerId) -> bool {
+        let is_spell = self.card(source).zone == Some(Zone::Stack);
+        self.battlefield
+            .iter()
+            .chain(self.command.iter())
+            .any(|&h| {
+                let o = self.card(h);
+                let Some(zone) = o.zone else { return false };
+                o.compiled().statics.iter().any(|s| {
+                    let crate::statics::CompiledStatic::CantTarget(r) = s.as_ref() else {
+                        return false;
+                    };
+                    let ctx = crate::expr::EvalCtx {
+                        source: h,
+                        controller: o.controller,
+                        x: 0,
+                        targets: &[],
+                        trig: None,
+                        paid: &[],
+                    };
+                    let target_ok = match target {
+                        Target::Card(c) => {
+                            self.card(c)
+                                .zone
+                                .is_some_and(|z| r.target_zones.contains(&z))
+                                && r.valid_target
+                                    .as_ref()
+                                    .is_none_or(|v| self.card_matches(c, v, h, o.controller))
+                        }
+                        Target::Player(p) => r
+                            .valid_target
+                            .as_ref()
+                            .is_some_and(|v| self.player_matches_src(p, v, o.controller, h)),
+                    };
+                    r.effect_zones.contains(&zone)
+                        && target_ok
+                        && r.spell.is_none_or(|s| s == is_spell)
+                        && r.activator
+                            .as_ref()
+                            .is_none_or(|v| self.player_matches_src(you, v, o.controller, h))
+                        && r.valid_source
+                            .as_ref()
+                            .is_none_or(|v| self.card_matches(source, v, h, o.controller))
+                        && self.check_conditions(&r.conditions, &ctx)
+                })
+            })
     }
 
     /// CR 702.16: Ist `card` vor der Quelle `source` geschützt?
@@ -365,6 +425,7 @@ impl GameState {
         match target {
             Target::Player(p) => {
                 self.player(p).is_in_game()
+                    && !self.cant_target(target, source, you)
                     && self.player_matches_src(p, &spec.valid, you, source)
                     && !self.player_has_shroud(p)
                     && !(p != you && self.player_has_hexproof(p))
@@ -373,6 +434,9 @@ impl GameState {
                 let card = self.card(c);
                 let Some(zone) = card.zone else { return false };
                 if !spec.zones.contains(&zone) {
+                    return false;
+                }
+                if self.cant_target(target, source, you) {
                     return false;
                 }
                 // Fluchsicherheit/Verhüllung wirken nur auf bleibende Karten (CR 702.11a, 702.18a).

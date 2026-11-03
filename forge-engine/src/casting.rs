@@ -511,6 +511,9 @@ impl GameState {
             item: item.id,
             original: orig.id,
         });
+        if let StackKind::Spell { card } = item.kind {
+            self.fire(crate::triggers::TriggerEvent::SpellCopied { card, player: p });
+        }
         self.stack.push(item);
         self.fire_becomes_target();
         Ok(())
@@ -1236,6 +1239,7 @@ impl GameState {
         let on_stack = self.move_card(card, Zone::Stack, true);
         self.card_mut(on_stack).controller = p;
         self.card_mut(on_stack).cast_from = cast_from;
+        self.card_mut(on_stack).cast_by = Some(p);
         // X merken: für Werte, die sich beim Ankommen auf X beziehen (etbCounter)
         let remember_x_on = on_stack;
         let id = self.next_stack_id;

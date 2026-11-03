@@ -239,6 +239,8 @@ pub enum Effect {
         zone_owner: Option<Defined>,
         /// `Mandatory$ True`: so viele wie möglich wählen
         mandatory: bool,
+        /// `Chooser$ Targeted`: der durchsuchte Spieler wählt selbst
+        owner_chooses: bool,
         destination: crate::zone::Zone,
         change_type: ValidSpec,
         num: Amount,
@@ -253,6 +255,8 @@ pub enum Effect {
         tapped: bool,
         power: Option<Amount>,
         toughness: Option<Amount>,
+        /// `RememberTokens$`: die Quelle merkt sich die erzeugten Spielsteine
+        remember: bool,
     },
     /// Alle passenden bleibenden Karten bis Zugende verstärken (`PumpAll`).
     PumpAll {
@@ -525,6 +529,16 @@ pub enum Effect {
         random: bool,
         optional: bool,
         remember: bool,
+    },
+    /// `StoreSVar`: Wert in einer Laufzeitvariablen der Quelle speichern.
+    StoreSVar {
+        name: String,
+        value: crate::expr::Expr,
+    },
+    /// CR 701.44: Explore
+    Explore {
+        what: Defined,
+        num: Amount,
     },
     /// Tappen oder enttappen nach Wahl (Java `TapOrUntapEffect`).
     TapOrUntap {
@@ -1022,8 +1036,20 @@ fn parse_zones(
     key: &'static str,
     v: &str,
 ) -> Result<Vec<crate::zone::Zone>, CompileError> {
+    use crate::zone::Zone;
+    if matches!(v.trim(), "All" | "Any") {
+        return Ok(vec![
+            Zone::Battlefield,
+            Zone::Hand,
+            Zone::Graveyard,
+            Zone::Library,
+            Zone::Exile,
+            Zone::Stack,
+            Zone::Command,
+        ]);
+    }
     v.split(',')
-        .map(|z| crate::zone::Zone::parse(z).ok_or_else(|| c.unsupported(key, v)))
+        .map(|z| Zone::parse(z).ok_or_else(|| c.unsupported(key, v)))
         .collect()
 }
 
@@ -1109,8 +1135,8 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         };
         let shuffle = shuffle_param.unwrap_or(origin.contains(&Zone::Library));
         let zone_owner = if c.ab.params.has("DefinedPlayer") {
-            match c.get("Chooser") {
-                None | Some("You") => {}
+            match c.ab.params.get("Chooser") {
+                None | Some("You") | Some("Targeted") | Some("TargetedPlayer") => {}
                 Some(v) => return Err(c.unsupported("Chooser", v)),
             }
             Some(c.defined_key("DefinedPlayer", Defined::You)?)
@@ -1120,11 +1146,13 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
         let mandatory = c
             .get("Mandatory")
             .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+        let owner_chooses = matches!(c.get("Chooser"), Some("Targeted") | Some("TargetedPlayer"));
         return Ok(Effect::ChangeZoneSearch {
             origin,
             optional,
             zone_owner,
             mandatory,
+            owner_chooses,
             destination,
             change_type: ValidSpec::parse(ct)?,
             num,
@@ -1989,6 +2017,37 @@ fn compile_depth(
                 remember: flag(&mut c, "RememberRevealed"),
             }
         }
+        "StoreSVar" => {
+            let name = c
+                .get("SVar")
+                .ok_or(CompileError::MissingParam {
+                    api: api.into(),
+                    key: "SVar",
+                })?
+                .to_string();
+            // nur, wenn die Variable beim Laden zur Laufzeitvariablen wurde
+            if face.svar(&name) != Some(format!("Count$RuntimeVar.{name}").as_str()) {
+                return Err(c.unsupported("SVar", &name));
+            }
+            let expr = c.get("Expression").unwrap_or("0");
+            let value = match c.get("Type") {
+                Some("Number") => crate::expr::Expr::Const(
+                    expr.trim()
+                        .parse()
+                        .map_err(|_| c.unsupported("Expression", expr))?,
+                ),
+                Some("Calculate") => crate::expr::Expr::parse_value(face, expr)?,
+                Some("Count") => crate::expr::Expr::parse_svar(face, &format!("Count${expr}"))?,
+                Some("CountSVar") => crate::expr::Expr::parse_value(face, expr)
+                    .or_else(|_| crate::expr::Expr::parse_svar(face, &format!("SVar${expr}")))?,
+                v => return Err(c.unsupported("Type", v.unwrap_or("fehlt"))),
+            };
+            Effect::StoreSVar { name, value }
+        }
+        "Explore" => Effect::Explore {
+            what: c.defined(Defined::SelfCard)?,
+            num: c.amount("Num", Some(1))?,
+        },
         "TapOrUntap" => Effect::TapOrUntap {
             what: c.defined(Defined::Targeted)?,
         },
@@ -2481,6 +2540,7 @@ fn compile_depth(
             tapped: false,
             power: None,
             toughness: None,
+            remember: false,
         },
         "ManaReflected" => {
             match c.get("ReflectProperty") {
@@ -2580,6 +2640,9 @@ fn compile_depth(
                 tapped,
                 power,
                 toughness,
+                remember: c
+                    .get("RememberTokens")
+                    .is_some_and(|v| v.eq_ignore_ascii_case("true")),
             }
         }
         "ChooseSource" => {
