@@ -103,6 +103,7 @@ impl GameState {
             Prop::AttachedBySource => self.card(source).attached_to == Some(id),
             Prop::Monstrous => c.monstrous,
             Prop::IsCommander => c.commander.is_some(),
+            Prop::FaceDown => c.face_down,
             Prop::Historic => {
                 ch.types.has_core(forge_types::CoreType::Artifact)
                     || ch.types.has_super(forge_types::Supertype::Legendary)

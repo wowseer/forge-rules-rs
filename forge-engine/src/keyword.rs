@@ -39,6 +39,13 @@ pub enum Keyword {
     Affinity(String),
     /// CR 702.33: `Kicker:<Kosten>[:<zweite Kosten>]` (Originaltext der Kosten)
     Kicker(Vec<String>),
+    /// CR 702.37 / 702.168: Morph, Megamorph, Disguise – verdeckt wirkbar,
+    /// für `cost` umdrehbar.
+    Morph {
+        cost: String,
+        mega: bool,
+        disguise: bool,
+    },
     /// CR 702.61: Split second – solange auf dem Stapel keine Zauber/Nicht-Mana-Fähigkeiten
     SplitSecond,
     /// CR 702.127: Aftermath (zweite Hälfte nur aus dem Friedhof, danach ins Exil)
@@ -112,6 +119,19 @@ impl Keyword {
             }
             "Improvise" => Keyword::Improvise,
             "Delve" => Keyword::Delve,
+            t if (t.starts_with("Morph:")
+                || t.starts_with("Megamorph:")
+                || t.starts_with("Disguise:"))
+                && t.split_once(':')
+                    .is_some_and(|(_, c)| crate::cost::Cost::parse(c).is_ok()) =>
+            {
+                let (k, c) = t.split_once(':').unwrap_or_default();
+                Keyword::Morph {
+                    cost: c.to_string(),
+                    mega: k == "Megamorph",
+                    disguise: k == "Disguise",
+                }
+            }
             t if t.starts_with("Protection from ") => {
                 let what = &t["Protection from ".len()..];
                 match what {

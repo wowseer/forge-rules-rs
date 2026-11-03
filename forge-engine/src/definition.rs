@@ -635,6 +635,26 @@ impl CardDb {
     }
 }
 
+/// Kompilierte Fähigkeiten eines verdeckten Objekts (CR 708.2): keine, bzw. bei
+/// Disguise Ward {2} (CR 702.168b).
+pub(crate) fn face_down_compiled(disguise: bool) -> &'static CompiledFace {
+    static PLAIN: std::sync::OnceLock<CompiledFace> = std::sync::OnceLock::new();
+    static DISGUISED: std::sync::OnceLock<CompiledFace> = std::sync::OnceLock::new();
+    let build = |text: &str| {
+        let script = CardScript::parse(text, &forge_types::TypeRegistry::default())
+            .expect("verdeckte Seite parst");
+        let mut unsupported = Vec::new();
+        compile_face(script.main(), &mut unsupported)
+    };
+    if disguise {
+        DISGUISED.get_or_init(|| {
+            build("Name:\nManaCost:no cost\nTypes:Creature\nPT:2/2\nK:Ward:2\nOracle:\n")
+        })
+    } else {
+        PLAIN.get_or_init(|| build("Name:\nManaCost:no cost\nTypes:Creature\nPT:2/2\nOracle:\n"))
+    }
+}
+
 /// Fehler beim Kompilieren als Text (für Berichte).
 pub fn describe(e: &CompileError) -> String {
     e.to_string()

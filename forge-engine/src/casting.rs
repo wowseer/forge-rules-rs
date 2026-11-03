@@ -799,6 +799,32 @@ impl GameState {
                 }
             }
         }
+        // CR 702.37c: Morph/Disguise verdeckt wirken (Hexerei-Zeitpunkt, {3})
+        if self.sorcery_timing(p) && self.potential_mana(p) >= 3 {
+            for &c in &self.player(p).hand {
+                let card = self.card(c);
+                if card.def.is_supported() && card.morph().is_some() && !self.cant_cast(p, c) {
+                    acts.push(Action::CastFaceDown(c));
+                }
+            }
+        }
+        // CR 116.2b: verdeckte eigene Karten umdrehen (jederzeit mit Priorität)
+        for c in self.battlefield_of(p).collect::<Vec<_>>() {
+            let card = self.card(c);
+            if !card.face_down {
+                continue;
+            }
+            if let Some((cost_s, _, _)) = card.morph()
+                && let Ok(cost) = Cost::parse(&cost_s)
+                && cost
+                    .mana
+                    .as_ref()
+                    .is_none_or(|m| m.mana_value() <= self.potential_mana(p))
+                && self.can_pay_nonmana(&cost, c, p)
+            {
+                acts.push(Action::TurnFaceUp(c));
+            }
+        }
         // CR 702.127a: Aftermath-Hälfte aus dem eigenen Friedhof
         for &c in &self.player(p).graveyard {
             let card = self.card(c);
@@ -949,6 +975,40 @@ impl GameState {
                 };
                 let cost = alt.cost.clone();
                 self.cast_spell_free(p, c, None, Some(cost), ch)
+            }
+            Action::CastFaceDown(c) => {
+                // CR 702.37c: als 2/2-Kreatur ohne Namen für {3}
+                let disguise = self.card(c).morph().is_some_and(|m| m.2);
+                let o = self.card_mut(c);
+                o.face_down = true;
+                o.disguised = disguise;
+                let alt = Cost {
+                    mana: Some(ManaCost::generic(3)),
+                    parts: Vec::new(),
+                };
+                self.cast_spell_free(p, c, None, Some(alt), ch)
+            }
+            Action::TurnFaceUp(c) => {
+                let Some((cost_s, mega, _)) = self.card(c).morph() else {
+                    return Err(Interrupt::Cancelled);
+                };
+                let cost = Cost::parse(&cost_s).map_err(|_| Interrupt::Cancelled)?;
+                if let Some(m) = &cost.mana {
+                    self.pay_mana_cost(p, m, 0, Some(c), ch)?;
+                }
+                if !cost.parts.is_empty() {
+                    self.pay_nonmana_costs(p, c, &cost, ch)?;
+                }
+                let o = self.card_mut(c);
+                o.face_down = false;
+                o.disguised = false;
+                // CR 702.37b: Megamorph legt beim Umdrehen eine +1/+1-Marke darauf
+                if mega {
+                    self.add_counters(c, "P1P1", 1);
+                }
+                self.push_event(Event::TurnedFaceUp { card: c });
+                self.fire(crate::triggers::TriggerEvent::TurnFaceUp { card: c });
+                Ok(())
             }
             Action::CastAlt(c, face) => {
                 // Die Seite bleibt beim Wechsel auf den Stapel erhalten.

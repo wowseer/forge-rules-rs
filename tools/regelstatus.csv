@@ -297,3 +297,7 @@ Effect (ApiType);ChooseNumber;teilweise;coin_number_goad::chosen_number_is_used;
 Effect (ApiType);Goad;teilweise;coin_number_goad::goaded_creature_must_attack, coin_number_goad::goaded_prefers_other_player_in_multiplayer;CR 701.38: muss angreifen, möglichst nicht den Goader, endet mit dessen nächstem Zug, Duration Permanent; TargetsForEachPlayer fehlt
 Keyword;Aftermath;ja;split::aftermath_half_only_from_graveyard_then_exiled;CR 702.127: zweite Hälfte nur aus dem Friedhof, erste nicht von dort, danach ins Exil
 Keyword;Split second;ja;split::split_second_locks_out_responses;CR 702.61: solange auf dem Stapel nur Mana-Fähigkeiten
+Keyword;Morph;teilweise;morph::cast_face_down_then_turn_up_with_trigger;CR 702.37: verdeckt für {3} wirken, als Sonderaktion für die Morph-Kosten umdrehen, verdeckt 2/2 ohne Name/Farbe/Fähigkeiten (CR 708.2), beim Verlassen aufgedeckt; verdeckte Informationen für Gegner, Ersatzeffekte TurnFaceUp fehlen
+Keyword;Megamorph;teilweise;morph::megamorph_adds_counter_and_leaving_reveals;CR 702.37b: wie Morph, beim Umdrehen +1/+1-Marke
+Keyword;Disguise;teilweise;;CR 702.168: wie Morph, verdeckt mit Ward {2}; ohne eigenen Regeltest
+Trigger;TurnFaceUp;teilweise;morph::cast_face_down_then_turn_up_with_trigger;ValidCard

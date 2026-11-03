@@ -31,6 +31,10 @@ pub enum Action {
     /// Zauber mit Alternativkosten wirken: Karte + Index in `CompiledFace::statics`
     /// (`AlternativeCost`, CR 118.9).
     CastWithAltCost(CardId, usize),
+    /// CR 702.37c: verdeckt für {3} wirken (Morph/Disguise)
+    CastFaceDown(CardId),
+    /// CR 702.37e / 116.2b: Sonderaktion – verdeckte Karte für ihre Morph-Kosten umdrehen
+    TurnFaceUp(CardId),
 }
 
 /// Option beim Bezahlen von Manakosten.

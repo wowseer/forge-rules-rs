@@ -12,8 +12,8 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
-| Keyword | 198 | 25 | 10 | 4 |
-| Trigger | 137 | 0 | 22 | 11 |
+| Keyword | 198 | 25 | 13 | 4 |
+| Trigger | 137 | 0 | 23 | 11 |
 | Replacement Effect | 35 | 0 | 4 | 5 |
 | Static Ability | 90 | 1 | 8 | 0 |
 | Effect (ApiType) | 188 | 3 | 62 | 16 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **82** | **131** | **81** |
+| **Summe** | **789** | **82** | **135** | **81** |
 
 ## Keyword
 
@@ -42,6 +42,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Defender | ✅ ja | `combat::summoning_sickness_haste_defender` |  | keyword/Keyword.java (SimpleKeyword) |
 | Delve | ✅ ja | `cost_helpers::delve_exiles_graveyard_cards_for_generic` | CR 702.66a: exilierte Friedhofskarten zahlen je {1}, nur generisch | keyword/Keyword.java (SimpleKeyword) |
 | Devoid | ✅ ja | `keywords_misc::devoid_is_colorless_in_all_zones` |  | keyword/Keyword.java (SimpleKeyword) |
+| Disguise | 🟡 teilweise |  | CR 702.168: wie Morph, verdeckt mit Ward {2} | keyword/Keyword.java (KeywordWithCost) |
 | Double agenda | ⚪ n/a |  | Conspiracy-Draft | keyword/Keyword.java (SimpleKeyword) |
 | Double Strike | ✅ ja | `combat::double_strike_deals_damage_twice` |  | keyword/Keyword.java (SimpleKeyword) |
 | Enchant | 🟡 teilweise | `auras_equipment::aura_attaches_on_resolution_and_buffs, aura_control::enchant_with_description_and_defined_enchanted, aura_control::control_aura_steals_until_it_leaves, aura_control::enchanted_controller_upkeep_trigger_and_enchanted_filter` | Aura-Zauber mit Ziel, angelegt beim Auflösen, Fizzle | keyword/Keyword.java (KeywordWithType) |
@@ -58,6 +59,8 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Kicker | 🟡 teilweise | `kicker::kicked_spell_pays_more_and_does_more, kicker::unkicked_spell_and_no_offer_when_unaffordable, kicker::kicked_creature_enters_with_counters_and_triggers, kicker::unkicked_creature_plain` | CR 702.33: ein oder zwei Kicker-Kosten (Mana und Nicht-Mana), Ankündigung 601.2b, gekickt-Status vom Stapel auf die bleibende Karte, Filter kicked/kicked 1/2, Condition Kicked, Count$Kicked, etbCounter mit CheckSVar | keyword/Keyword.java (Kicker) |
 | Lifelink | ✅ ja | `combat::deathtouch_and_lifelink_in_combat` |  | keyword/Keyword.java (SimpleKeyword) |
 | Menace | ✅ ja | `combat::menace_needs_two_blockers` |  | keyword/Keyword.java (SimpleKeyword) |
+| Megamorph | 🟡 teilweise | `morph::megamorph_adds_counter_and_leaving_reveals` | CR 702.37b: wie Morph, beim Umdrehen +1/+1-Marke | keyword/Keyword.java (KeywordWithCost) |
+| Morph | 🟡 teilweise | `morph::cast_face_down_then_turn_up_with_trigger` | CR 702.37: verdeckt für {3} wirken, als Sonderaktion für die Morph-Kosten umdrehen, verdeckt 2/2 ohne Name/Farbe/Fähigkeiten (CR 708.2), beim Verlassen aufgedeckt | keyword/Keyword.java (KeywordWithCost) |
 | Protection | 🟡 teilweise | `protection::cannot_be_targeted_by_black_spell, protection::cannot_be_blocked_by_black_creatures_and_prevents_their_damage, protection::black_aura_falls_off, protection::protection_effect_with_chosen_color` | CR 702.16 DEBT: Schaden verhindert, Auren/Ausrüstung fallen ab, nicht blockbar, nicht Ziel | keyword/Keyword.java (Protection) |
 | Prowess | ✅ ja | `keywords_misc::prowess_pumps_on_noncreature_spell` |  | keyword/Keyword.java (SimpleKeyword) |
 | Reach | ✅ ja | `combat::flying_needs_flying_or_reach_to_block` |  | keyword/Keyword.java (SimpleKeyword) |
@@ -72,7 +75,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Ward | 🟡 teilweise | `triggers::ward_counters_unless_paid` | Ward:<Kosten> mit Mana/PayLife/Discard/Sac | keyword/Keyword.java (Ward) |
 | Wither | ✅ ja | `infect::infect_and_wither_damage` | CR 702.80: -1/-1-Marken an Kreaturen | keyword/Keyword.java (SimpleKeyword) |
 
-Offen (163): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disguise, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exalted, Exploit, Extort, Fabricate, Fading, Fear, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Horsemanship, Impending, Increment, Ingest, Intimidate, Job select, Jump-start, Landwalk, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Megamorph, Miracle, Mobilize, Modular, More Than Meets the Eye, Morph, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Shadow, Skulk, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
+Offen (160): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exalted, Exploit, Extort, Fabricate, Fading, Fear, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Horsemanship, Impending, Increment, Ingest, Intimidate, Job select, Jump-start, Landwalk, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Miracle, Mobilize, Modular, More Than Meets the Eye, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Shadow, Skulk, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
 
 ## Trigger
 
@@ -110,9 +113,10 @@ Offen (163): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, A
 | SpellCast | 🟡 teilweise | `triggers::spell_cast_trigger_resolves_before_spell, triggers::spell_cast_targets_valid_heroic, triggers::attacks_alone_second_spell_damage_dealt_once_changeling` | ValidCard/ValidActivatingPlayer, TargetsValid, ActivatorThisTurnCast | trigger/TriggerSpellAbilityCastOrCopy.java |
 | StickerPlaced | ⚪ n/a |  | Unfinity | trigger/TriggerStickerPlaced.java |
 | Taps | 🟡 teilweise | `triggers::drawn_number_life_gained_and_taps_triggers` | ValidCard, ValidPlayer | trigger/TriggerTaps.java |
+| TurnFaceUp | 🟡 teilweise | `morph::cast_face_down_then_turn_up_with_trigger` | ValidCard | trigger/TriggerTurnFaceUp.java |
 | VisitAttraction | ⚪ n/a |  | Unfinity | trigger/TriggerVisitAttraction.java |
 
-Offen (115): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlockedOnce, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTargetOnce, BlockersDeclared, CaseSolved, Championed, ChangesController, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterAddedOnce, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, DamageAll, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, DiscardedAll, Discover, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, TapsForMana, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, TurnFaceUp, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
+Offen (114): AbilityCast, AbilityResolves, AbilityTriggered, Adapt, Airbend, Always, Attached, AttackerBlockedOnce, AttackerUnblockedOnce, BecomeMonarch, BecomeMonstrous, BecomeRenowned, BecomesCrewed, BecomesPlotted, BecomesSaddled, BecomesTargetOnce, BlockersDeclared, CaseSolved, Championed, ChangesController, ClaimPrize, Clashed, ClassLevelGained, CommitCrime, Connives, CollectEvidence, CounterAddedOnce, CounterPlayerAddedAll, CounterTypeAddedAll, CounterAddedAll, Countered, CounterRemoved, CounterRemovedOnce, Crewed, DamageAll, DamageDoneOnceByController, DamagePreventedOnce, Destroyed, Devoured, DiscardedAll, Discover, DungeonCompleted, Earthbend, Evolved, ExcessDamage, ExcessDamageAll, ElementalBend, Enlisted, Exerted, Exiled, Exploited, Explores, FacesDilemma, Fight, FightOnce, Firebend, FlippedCoin, FlippedCoinOnce, Forage, Foretell, FullyUnlock, GiveGift, Immediate, Investigated, LandPlayed, LifeLost, LifeLostAll, LosesGame, ManaAdded, ManaExpend, ManifestDread, Mentored, Milled, MilledOnce, MilledAll, Mutates, NewGame, PayCumulativeUpkeep, PayEcho, PayLife, PhaseIn, PhaseOut, PhaseOutAll, Proliferate, RingTemptsYou, RolledDie, RolledDieOnce, RoomEntered, Saddled, SacrificedOnce, Scry, SearchedLibrary, Shuffled, Specializes, SpellAbilityCast, SpellAbilityCopy, SpellCastOrCopy, SpellCopy, Stationed, Surveil, TakesInitiative, TapAll, TapsForMana, TokenCreated, TokenCreatedOnce, Trains, Transformed, TurnBegin, Unattached, UnlockDoor, UntapAll, Untaps, Vote, Waterbend
 
 ## Replacement Effect
 

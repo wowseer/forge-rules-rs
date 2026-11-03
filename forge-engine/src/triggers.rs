@@ -141,6 +141,8 @@ pub enum TriggerKind {
         valid_card: Option<ValidSpec>,
         valid_player: Option<ValidSpec>,
     },
+    /// `Mode$ TurnFaceUp` – eine bleibende Karte wird umgedreht (CR 708.8).
+    TurnFaceUp { valid_card: Option<ValidSpec> },
     /// `Mode$ Sacrificed` – eine bleibende Karte wurde geopfert (CR 701.21).
     Sacrificed {
         valid_card: Option<ValidSpec>,
@@ -344,6 +346,9 @@ pub enum TriggerEvent {
         total: u32,
     },
     Taps {
+        card: CardId,
+    },
+    TurnFaceUp {
         card: CardId,
     },
     /// `old` ist das geopferte Objekt (LKI), `player` wer geopfert hat.
@@ -612,6 +617,9 @@ pub fn compile_trigger(
         }
         "LifeGained" => TriggerKind::LifeGained {
             valid_player: valid("ValidPlayer", &mut used)?,
+        },
+        "TurnFaceUp" => TriggerKind::TurnFaceUp {
+            valid_card: valid("ValidCard", &mut used)?,
         },
         "Taps" => TriggerKind::Taps {
             valid_card: valid("ValidCard", &mut used)?,
@@ -1348,6 +1356,17 @@ impl GameState {
                 Some(TriggerInfo {
                     player: Some(*player),
                     amount: Some(*amount as i32),
+                    ..Default::default()
+                })
+            }
+            (TriggerKind::TurnFaceUp { valid_card }, TriggerEvent::TurnFaceUp { card }) => {
+                if !self.opt_card(valid_card, *card, source, controller) {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*card),
+                    card_lki: Some(*card),
+                    player: Some(self.card(*card).controller),
                     ..Default::default()
                 })
             }

@@ -43,6 +43,8 @@ impl GameState {
             chosen_player: None,
             runtime_vars: Default::default(),
             goaded_by: Vec::new(),
+            face_down: false,
+            disguised: false,
             effect: None,
             attached_to: None,
             regen_shields: 0,
@@ -174,6 +176,10 @@ impl GameState {
             chosen_color: None,
             chosen_player: None,
             runtime_vars: Default::default(),
+            face_down: old.face_down
+                && (to == Zone::Stack || (from == Some(Zone::Stack) && to == Zone::Battlefield)),
+            disguised: old.disguised
+                && (to == Zone::Stack || (from == Some(Zone::Stack) && to == Zone::Battlefield)),
             goaded_by: Vec::new(),
             effect: None,
             attached_to: None,

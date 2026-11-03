@@ -96,6 +96,8 @@ pub enum Prop {
     PlayerChosen,
     /// `ChosenCtrl`: vom gewählten Spieler der Quelle kontrolliert
     ChosenCtrl,
+    /// `faceDown` (CR 708)
+    FaceDown,
     /// `Historic` (CR 700.6): Artefakt, legendär oder Saga
     Historic,
     /// `IsCommander` (CR 903.3)
@@ -297,6 +299,8 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     match p {
         "IsCommander" => return Ok(Prop::IsCommander),
         "Historic" => return Ok(Prop::Historic),
+        "faceDown" | "FaceDown" => return Ok(Prop::FaceDown),
+        "faceUp" | "FaceUp" => return Ok(Prop::Not(Box::new(Prop::FaceDown))),
         "nonHistoric" => return Ok(Prop::Not(Box::new(Prop::Historic))),
         "ChosenCtrl" => return Ok(Prop::ChosenCtrl),
         "Chosen" => return Ok(Prop::PlayerChosen),

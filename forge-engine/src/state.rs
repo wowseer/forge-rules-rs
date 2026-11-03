@@ -161,6 +161,10 @@ pub struct CardObj {
     pub chosen_cards: Vec<CardId>,
     /// Gewählter Typ (`ChooseType`, Java `Card.chosenType`).
     pub chosen_type: Option<String>,
+    /// CR 708: verdeckt (Morph/Disguise); als 2/2-Kreatur ohne Name und Fähigkeiten.
+    pub face_down: bool,
+    /// verdeckt per Disguise (Ward {2}, CR 702.168b)
+    pub disguised: bool,
     /// CR 701.38: von diesen Spielern „gegoadet“ (Spieler, dauerhaft?)
     pub goaded_by: Vec<(PlayerId, bool)>,
     /// Laufzeitwerte (`ResultSVar$`), z. B. Würfelergebnis.
@@ -283,7 +287,27 @@ impl CardObj {
     }
 
     pub fn compiled(&self) -> &CompiledFace {
+        // CR 708.2: verdeckte Objekte haben keine Fähigkeiten (Disguise: Ward {2})
+        if self.face_down {
+            return if self.disguised {
+                crate::definition::face_down_compiled(true)
+            } else {
+                crate::definition::face_down_compiled(false)
+            };
+        }
         self.def.compiled(self.face)
+    }
+
+    /// Morph-/Disguise-Keyword der eigentlichen Karte (auch verdeckt).
+    pub fn morph(&self) -> Option<(String, bool, bool)> {
+        self.def.compiled(0).keywords.iter().find_map(|k| match k {
+            crate::keyword::Keyword::Morph {
+                cost,
+                mega,
+                disguise,
+            } => Some((cost.clone(), *mega, *disguise)),
+            _ => None,
+        })
     }
 
     pub fn counter(&self, kind: &str) -> u32 {
@@ -473,6 +497,10 @@ pub enum Flow {
 /// Protokoll für Tests, Replays und den Abgleich mit der Java-Engine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    /// Verdeckte Karte umgedreht (CR 708.8).
+    TurnedFaceUp {
+        card: CardId,
+    },
     /// Münzwurf (CR 705); `won` aus Sicht des Werfenden.
     CoinFlipped {
         player: PlayerId,
@@ -813,6 +841,17 @@ impl GameState {
                 .or_else(|| face.toughness.as_ref().map(|t| t.base())),
             keywords: compiled.keywords.clone(),
         };
+        // CR 708.2a: verdeckt → 2/2-Kreatur ohne Namen, Farbe, Manakosten, Untertypen
+        if c.face_down && matches!(c.zone, Some(Zone::Battlefield) | Some(Zone::Stack)) {
+            ch.name = String::new();
+            ch.types = forge_types::CardType::default();
+            ch.types.core_types.insert(forge_types::CoreType::Creature);
+            ch.colors = forge_types::ColorSet::default();
+            ch.mana_cost = None;
+            ch.power = Some(2);
+            ch.toughness = Some(2);
+            ch.keywords = compiled.keywords.clone();
+        }
         // CR 709.4: Split-Karte außerhalb des Stapels hat die kombinierten Werte
         // beider Hälften (Manakosten, Farben, Typen). Auf dem Stapel nur die gewirkte.
         if c.def.script.split_mode == forge_script::SplitMode::Split

@@ -259,6 +259,8 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Wax Lite\nAlternateMode:Split\nManaCost:G\nTypes:Instant\nA:SP$ Pump | ValidTgts$ Creature | NumAtt$ +4 | NumDef$ +4 | SpellDescription$ x\nOracle:\n\nALTERNATE\n\nName:Wane Lite\nManaCost:W\nTypes:Instant\nA:SP$ Destroy | ValidTgts$ Enchantment | SpellDescription$ x\nOracle:\n",
     "Name:Dusk Lite\nAlternateMode:Split\nManaCost:2 W W\nTypes:Sorcery\nA:SP$ DestroyAll | ValidCards$ Creature.powerGE3 | SpellDescription$ x\nOracle:\n\nALTERNATE\n\nName:Dawn Lite\nManaCost:3 W W\nTypes:Sorcery\nK:Aftermath\nA:SP$ GainLife | LifeAmount$ 3 | SpellDescription$ x\nOracle:\n",
     "Name:Sudden Lite\nManaCost:1 R\nTypes:Instant\nK:Split second\nA:SP$ DealDamage | ValidTgts$ Any | NumDmg$ 2 | SpellDescription$ x\nOracle:\n",
+    "Name:Morph Lite\nManaCost:3 U U\nTypes:Creature Bird\nPT:4/4\nK:Flying\nK:Morph:2 U\nT:Mode$ TurnFaceUp | ValidCard$ Card.Self | Execute$ TrigDraw | TriggerDescription$ x\nSVar:TrigDraw:DB$ Draw | NumCards$ 1\nOracle:\n",
+    "Name:Mega Lite\nManaCost:2 G\nTypes:Creature Bear\nPT:3/3\nK:Megamorph:G\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",
