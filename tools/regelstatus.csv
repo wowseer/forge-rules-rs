@@ -61,7 +61,7 @@ Cost;Sac;ja;spells::sacrifice_self_cost, sacrifice_unless::spell_additional_sacr
 Cost;Discard;teilweise;;Discard<n/Typ>; Hand/Random fehlen
 Cost;PayLife;ja;spells::phyrexian_mana_with_life;
 Cost;PayShards;n/a;;Adventure-Modus
-Effect (ApiType);DealDamage;teilweise;spells::bolt_face_and_creature_and_fizzle, damage_source::bite_uses_creature_as_source_with_its_keywords;Grundform; DamageSource (andere Quelle mit ihren Keywords); siehe docs/generated/unterstuetzung.md
+Effect (ApiType);DealDamage;teilweise;spells::bolt_face_and_creature_and_fizzle, damage_source::bite_uses_creature_as_source_with_its_keywords, divided::divided_damage_between_two_targets;Grundform; DividedAsYouChoose (CR 601.2d); DamageSource (andere Quelle mit ihren Keywords); siehe docs/generated/unterstuetzung.md
 Effect (ApiType);Draw;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
 Effect (ApiType);GainLife;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
 Effect (ApiType);LoseLife;teilweise;spells::draw_gain_lose_life_and_pump;Grundform
@@ -70,7 +70,7 @@ Effect (ApiType);Pump;teilweise;spells::draw_gain_lose_life_and_pump;NumAtt/NumD
 Effect (ApiType);Mana;teilweise;spells::manual_mana_payment_and_cancel;
 Effect (ApiType);Tap;teilweise;;Grundform
 Effect (ApiType);Untap;teilweise;;Grundform
-Effect (ApiType);PutCounter;teilweise;sba::cr_704_5q_plus_and_minus_counters_annihilate, counters_keywords::adapt_only_without_p1p1_counters, counters_keywords::monstrosity_once_and_filter, counters_keywords::bolster_picks_least_toughness_with_choice_on_tie, counters_keywords::support_up_to_n_targets_one_counter_each;Grundform; Adapt (CR 701.46), Monstrosity (CR 701.37), Bolster (CR 701.39), Support (CR 701.41); CounterTypes$, DividedAsYouChoose, Trigger BecomeMonstrous fehlen
+Effect (ApiType);PutCounter;teilweise;sba::cr_704_5q_plus_and_minus_counters_annihilate, counters_keywords::adapt_only_without_p1p1_counters, counters_keywords::monstrosity_once_and_filter, counters_keywords::bolster_picks_least_toughness_with_choice_on_tie, counters_keywords::support_up_to_n_targets_one_counter_each, divided::single_target_gets_everything_and_counters_split;Grundform; DividedAsYouChoose; Adapt (CR 701.46), Monstrosity (CR 701.37), Bolster (CR 701.39), Support (CR 701.41); CounterTypes$, DividedAsYouChoose, Trigger BecomeMonstrous fehlen
 Effect (ApiType);Abandon;n/a;;Archenemy
 Effect (ApiType);SetInMotion;n/a;;Archenemy
 Effect (ApiType);AdvanceCrank;n/a;;Unstable

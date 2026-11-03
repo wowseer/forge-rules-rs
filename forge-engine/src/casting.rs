@@ -1042,6 +1042,67 @@ impl GameState {
         }
     }
 
+    /// CR 601.2d: Aufteilung (`DividedAsYouChoose$`) je Fähigkeit der Kette festlegen;
+    /// jedes Ziel erhält mindestens 1.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn choose_division(
+        &mut self,
+        p: PlayerId,
+        source: CardId,
+        ab: &CompiledAbility,
+        targets: &[Vec<Target>],
+        x: u32,
+        trig: Option<crate::triggers::TriggerInfo>,
+        ch: &mut Choices,
+    ) -> Res<Vec<Vec<(Target, u32)>>> {
+        let mut out = Vec::new();
+        for (i, a) in ab.chain().iter().enumerate() {
+            let ts = targets.get(i).cloned().unwrap_or_default();
+            let amount = match &a.effect {
+                crate::effects::Effect::DealDamage { amount, .. }
+                | crate::effects::Effect::PutCounter { amount, .. } => Some(amount),
+                _ => None,
+            };
+            let (true, Some(amount)) = (a.target.as_ref().is_some_and(|t| t.divided), amount)
+            else {
+                out.push(Vec::new());
+                continue;
+            };
+            if ts.is_empty() {
+                out.push(Vec::new());
+                continue;
+            }
+            let rctx = ResolveCtx {
+                source,
+                controller: p,
+                x,
+                trig: trig.clone(),
+                paid: Vec::new(),
+            };
+            let total = self.amount(amount, &rctx, &ts).max(0) as u32;
+            let mut remaining = total;
+            let mut div = Vec::new();
+            for (k, t) in ts.iter().enumerate() {
+                let left = (ts.len() - k) as u32;
+                let v = if left == 1 {
+                    remaining
+                } else if remaining <= left {
+                    remaining.min(1)
+                } else {
+                    let max = remaining - (left - 1);
+                    match ch.ask(Decision::ChooseX { player: p, max })? {
+                        Choice::Number(n) => n.clamp(1, max),
+                        _ => 1,
+                    }
+                };
+                remaining -= v;
+                div.push((*t, v));
+            }
+            out.push(div);
+        }
+        Ok(out)
+    }
+
     /// CR 601.2c: Ziele für jede Fähigkeit der Kette wählen.
     pub(crate) fn choose_targets(
         &mut self,
@@ -1195,6 +1256,11 @@ impl GameState {
             Some(ab) => self.choose_targets(p, on_stack, ab, ch)?,
             None => Vec::new(),
         };
+        // 601.2d: Aufteilung
+        let division = match &spell_ab {
+            Some(ab) => self.choose_division(p, on_stack, ab, &targets, x, None, ch)?,
+            None => Vec::new(),
+        };
         // 601.2f: Kostenänderungen (zuerst Erhöhungen, dann Senkungen)
         let mut mana_cost = self.adjusted_spell_cost(p, on_stack, &mana_cost);
         // 601.2g–h (Convoke/Improvise/Delve vor dem Mana, Java `CostAdjustment.adjust`)
@@ -1225,6 +1291,7 @@ impl GameState {
             targets,
             x,
             paid,
+            division,
         });
         if self.card(on_stack).cast_from == Some(Zone::Command)
             && self.card(on_stack).commander.is_some()
@@ -1293,6 +1360,7 @@ impl GameState {
         self.card_mut(source).last_x = x;
         let ab = self.choose_modes(p, source, &ab, ch)?;
         let targets = self.choose_targets(p, source, &ab, ch)?;
+        let division = self.choose_division(p, source, &ab, &targets, x, None, ch)?;
         let paid = self.pay_nonmana_costs(p, source, &cost, ch)?;
         if cost.mana.is_some() {
             self.pay_mana_cost(p, &mana, x, Some(source), ch)?;
@@ -1316,6 +1384,7 @@ impl GameState {
             targets,
             x,
             paid,
+            division,
         });
         self.push_event(Event::Activated {
             player: p,

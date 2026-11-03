@@ -42,7 +42,7 @@ impl ResolveCtx {
 }
 
 impl GameState {
-    fn amount(&self, a: &Amount, ctx: &ResolveCtx, targets: &[Target]) -> i32 {
+    pub(crate) fn amount(&self, a: &Amount, ctx: &ResolveCtx, targets: &[Target]) -> i32 {
         match a {
             Amount::Fixed(n) => *n,
             Amount::XPaid => ctx.x as i32,
@@ -294,6 +294,12 @@ impl GameState {
                 };
                 self.begin_damage_batch();
                 for t in self.resolve_defined(*to, targets, ctx) {
+                    // CR 601.2d: aufgeteilte Menge je Ziel
+                    let n = self
+                        .current_division
+                        .iter()
+                        .find(|(x, _)| *x == t)
+                        .map_or(n, |(_, v)| *v);
                     self.deal_damage(src, t, n);
                 }
                 self.end_damage_batch();
@@ -460,6 +466,11 @@ impl GameState {
                         CounterMode::Monstrosity if self.card(c).monstrous => continue,
                         _ => {}
                     }
+                    let n = self
+                        .current_division
+                        .iter()
+                        .find(|(x, _)| *x == Target::Card(c))
+                        .map_or(n, |(_, v)| *v);
                     self.add_counters(c, counter, n);
                     if *mode == CounterMode::Monstrosity {
                         self.card_mut(c).monstrous = true;
@@ -2794,6 +2805,11 @@ impl GameState {
             let own = targets.get(i).map(Vec::as_slice).unwrap_or(&[]);
             // Ziele der Elternfähigkeit (für `Defined$ ParentTarget`)
             self.parent_targets = inherited.to_vec();
+            self.current_division = if a.target.as_ref().is_some_and(|t| t.divided) {
+                self.stack_division.get(i).cloned().unwrap_or_default()
+            } else {
+                Vec::new()
+            };
             let t = if a.target.is_some() {
                 inherited = own;
                 own
@@ -2905,7 +2921,11 @@ impl GameState {
                     Choice::No
                 );
             if let (Some(ab), false) = (&item.ability, declined) {
-                self.apply_chain(ab, &legal_targets, &ctx, ch)?;
+                self.stack_division = item.division.clone();
+                let r = self.apply_chain(ab, &legal_targets, &ctx, ch);
+                self.stack_division.clear();
+                self.current_division.clear();
+                r?;
             }
             self.push_event(Event::Resolved { item: item.id });
         }

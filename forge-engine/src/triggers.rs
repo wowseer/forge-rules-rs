@@ -1785,6 +1785,8 @@ impl GameState {
                 // CR 603.3c: Modi beim Stapeln wählen
                 let ab = self.choose_modes(p, t.source, &ab, ch)?;
                 let targets = self.choose_targets(p, t.source, &ab, ch)?;
+                let division =
+                    self.choose_division(p, t.source, &ab, &targets, 0, Some(t.info.clone()), ch)?;
                 let id = self.next_stack_id;
                 self.next_stack_id += 1;
                 self.stack.push(StackItem {
@@ -1805,6 +1807,7 @@ impl GameState {
                     controller: p,
                     ability: Some(ab),
                     targets,
+                    division,
                     x: 0,
                     paid: Vec::new(),
                 });

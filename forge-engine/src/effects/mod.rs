@@ -81,6 +81,8 @@ pub struct TargetSpec {
     pub prompt: Option<String>,
     /// Zonen, in denen Karten-Ziele liegen müssen (Standard: Battlefield).
     pub zones: Vec<crate::zone::Zone>,
+    /// `DividedAsYouChoose$`: Menge beim Wirken auf die Ziele aufteilen (CR 601.2d)
+    pub divided: bool,
 }
 
 /// Was eine Mana-Fähigkeit erzeugt (`Produced$`).
@@ -1341,6 +1343,7 @@ fn compile_depth(
                 max,
                 prompt: c.get("TgtPrompt").map(str::to_string),
                 zones,
+                divided: c.get("DividedAsYouChoose").is_some(),
             })
         }
         None => None,

@@ -421,6 +421,8 @@ pub struct StackItem {
     pub x: u32,
     /// Als Kosten bezahlte Objekte (`Sacrificed$…`, `Discarded$…`, `Exiled$…`).
     pub paid: Vec<Paid>,
+    /// Aufteilung je Fähigkeit der Kette (Ziel, Menge), CR 601.2d.
+    pub division: Vec<Vec<(crate::decision::Target, u32)>>,
 }
 
 /// Art einer Kostenzahlung mit Objekt (Java `CostPart.getHashForLKIList`).
@@ -651,6 +653,10 @@ pub struct GameState {
     pub control_effects: Vec<ControlEffect>,
     /// Ziele der Elternfähigkeit während des Auflösens (`Defined$ ParentTarget`).
     pub parent_targets: Vec<crate::decision::Target>,
+    /// Aufteilungen des gerade aufgelösten Stapelobjekts (je Kettenindex).
+    pub stack_division: Vec<Vec<(crate::decision::Target, u32)>>,
+    /// Aufteilung der gerade ausgeführten Fähigkeit (Ziel → Menge).
+    pub current_division: Vec<(crate::decision::Target, u32)>,
     /// Gleichzeitig zugefügter Schaden (Quelle, Ziel, Menge, Kampf) für
     /// `DamageDoneOnce`; `None` = jeder Schaden ist ein eigenes Ereignis.
     pub damage_batch: Option<Vec<(CardId, crate::decision::Target, u32, bool)>>,
@@ -1317,6 +1323,8 @@ impl GameState {
             delayed_triggers: Vec::new(),
             control_effects: Vec::new(),
             parent_targets: Vec::new(),
+            stack_division: Vec::new(),
+            current_division: Vec::new(),
             zone_batch: None,
             zone_batch_depth: 0,
             effect_source: None,

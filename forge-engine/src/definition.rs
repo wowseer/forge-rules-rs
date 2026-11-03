@@ -396,6 +396,7 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             api: "Attach".into(),
             cost: None,
             target: Some(crate::effects::TargetSpec {
+                divided: false,
                 valid: valid.clone(),
                 min: 1,
                 max: 1,
@@ -730,6 +731,7 @@ fn equip_ability(kw: &str) -> Option<CompiledAbility> {
         api: "Attach".into(),
         cost: Some(cost),
         target: Some(crate::effects::TargetSpec {
+            divided: false,
             valid: crate::valid::ValidSpec::parse(valid).ok()?,
             min: 1,
             max: 1,
