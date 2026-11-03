@@ -169,6 +169,8 @@ pub struct CardObj {
     pub goaded_by: Vec<(PlayerId, bool)>,
     /// Laufzeitwerte (`ResultSVar$`), z. B. Würfelergebnis.
     pub runtime_vars: BTreeMap<String, i32>,
+    /// Genannter Kartenname (`NameCard`, Java `Card.namedCard`).
+    pub named_card: Option<String>,
     /// Gewählter Spieler (`ChoosePlayer`, Java `Card.chosenPlayer`).
     pub chosen_player: Option<PlayerId>,
     /// Gewählte Farbe (`ChooseColor`, Java `Card.chosenColors`).

@@ -88,7 +88,7 @@ impl Controller for SimpleAi {
             }
             Decision::PayLifeForPhyrexian { .. } => Choice::No,
             Decision::ChooseColor { options, .. } => Choice::Color(options[0]),
-            Decision::ChooseType { .. } => Choice::Number(0),
+            Decision::ChooseType { .. } | Decision::NameCard { .. } => Choice::Number(0),
             Decision::DeclareAttackers {
                 candidates,
                 defenders,

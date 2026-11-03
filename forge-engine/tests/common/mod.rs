@@ -265,6 +265,7 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Amass Zombie Lite\nManaCost:B\nTypes:Sorcery\nA:SP$ Amass | Type$ Zombie | Num$ 1 | SpellDescription$ x\nOracle:\n",
     "Name:Flare Lite\nManaCost:2 R\nTypes:Enchantment\nT:Mode$ TapsForMana | ValidCard$ Land | Execute$ TrigMana | TriggerZones$ Battlefield | Static$ True | TriggerDescription$ x\nSVar:TrigMana:DB$ ManaReflected | ColorOrType$ Type | ReflectProperty$ Produced | Defined$ TriggeredActivator\nOracle:\n",
     "Name:Source Bite Lite\nManaCost:G\nTypes:Instant\nA:SP$ Pump | ValidTgts$ Creature.YouCtrl | SubAbility$ DBDmg | SpellDescription$ x\nSVar:DBDmg:DB$ DealDamage | ValidTgts$ Creature.OppCtrl | NumDmg$ X | DamageSource$ ParentTarget\nSVar:X:ParentTargeted$CardPower\nOracle:\n",
+    "Name:Needle Lite\nManaCost:1\nTypes:Artifact\nK:ETBReplacement:Other:DBName\nSVar:DBName:DB$ NameCard | Defined$ You | ValidCards$ Card.nonLand | SpellDescription$ x\nS:Mode$ CantBeActivated | ValidCard$ Card.NamedCard | ValidSA$ Activated.!ManaAbility | Description$ x\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",
@@ -555,7 +556,7 @@ pub fn default_choice(d: &Decision) -> Choice {
             Choice::Cards(options[..*min as usize].to_vec())
         }
         Decision::ChooseColor { options, .. } => Choice::Color(options[0]),
-        Decision::ChooseType { .. } => Choice::Number(0),
+        Decision::ChooseType { .. } | Decision::NameCard { .. } => Choice::Number(0),
         Decision::ChooseX { .. } => Choice::Number(0),
         Decision::ChooseTargets {
             candidates, min, ..

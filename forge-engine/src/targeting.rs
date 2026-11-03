@@ -104,6 +104,11 @@ impl GameState {
             Prop::Monstrous => c.monstrous,
             Prop::IsCommander => c.commander.is_some(),
             Prop::FaceDown => c.face_down,
+            Prop::NamedCard => self
+                .card(source)
+                .named_card
+                .as_ref()
+                .is_some_and(|n| !ch.name.is_empty() && *n == ch.name),
             Prop::Historic => {
                 ch.types.has_core(forge_types::CoreType::Artifact)
                     || ch.types.has_super(forge_types::Supertype::Legendary)

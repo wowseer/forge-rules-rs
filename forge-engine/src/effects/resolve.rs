@@ -1445,6 +1445,9 @@ impl GameState {
                     if clear_chosen[3] {
                         o.chosen_type = None;
                     }
+                    if clear_chosen[4] {
+                        o.named_card = None;
+                    }
                 }
             }
             Effect::ChoosePlayer {
@@ -1518,6 +1521,43 @@ impl GameState {
                 };
                 for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
                     self.player_mut(p).mana_pool.add(pick, false);
+                }
+            }
+            Effect::NameCard { who, valid, random } => {
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    // Namen aller Karten im Spiel (Abweichung: Java bietet den ganzen
+                    // Kartenpool an), sortiert und ohne Dopplungen
+                    let mut names: Vec<String> = self
+                        .live_cards()
+                        .filter(|c| {
+                            let o = self.card(*c);
+                            o.zone.is_some()
+                                && !o.token
+                                && o.effect.is_none()
+                                && valid
+                                    .as_ref()
+                                    .is_none_or(|v| self.card_matches(*c, v, ctx.source, p))
+                        })
+                        .map(|c| self.card(c).def.face(0).name.clone())
+                        .filter(|n| !n.is_empty())
+                        .collect();
+                    names.sort();
+                    names.dedup();
+                    if names.is_empty() {
+                        continue;
+                    }
+                    let i = if *random {
+                        self.rng.below(names.len() as u64) as usize
+                    } else {
+                        match ch.ask(Decision::NameCard {
+                            player: p,
+                            options: names.clone(),
+                        })? {
+                            Choice::Number(i) if (i as usize) < names.len() => i as usize,
+                            _ => 0,
+                        }
+                    };
+                    self.card_mut(ctx.source).named_card = Some(names[i].clone());
                 }
             }
             Effect::Amass { num, kind } => {

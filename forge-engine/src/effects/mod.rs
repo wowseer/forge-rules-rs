@@ -453,8 +453,8 @@ pub enum Effect {
     Cleanup {
         what: Defined,
         clear_remembered: bool,
-        /// `ClearChosenCard/Player/Color/Type$`
-        clear_chosen: [bool; 4],
+        /// `ClearChosenCard/Player/Color/Type$`, `ClearNamedCard$`
+        clear_chosen: [bool; 5],
     },
     /// Spieler wählen (Java `ChoosePlayerEffect`) → `CardObj::chosen_player` der Quelle.
     ChoosePlayer {
@@ -467,6 +467,13 @@ pub enum Effect {
     /// auslösende Quelle erzeugt hat (z. B. Mana Flare).
     ManaReflectProduced {
         who: Defined,
+    },
+    /// Kartennamen nennen (Java `ChooseCardNameEffect`); Auswahl aus den Namen der
+    /// Karten im Spiel, die `valid` erfüllen.
+    NameCard {
+        who: Defined,
+        valid: Option<ValidSpec>,
+        random: bool,
     },
     /// CR 701.47: Amass <Typ> n
     Amass {
@@ -1783,7 +1790,7 @@ fn compile_depth(
         "Cleanup" => {
             let clear_remembered = c.get("ClearRemembered").is_some();
             // Zustände, die die Engine (noch) nicht erzeugt: Leeren ohne Wirkung.
-            for k in ["ClearImprinted", "ClearNamedCard", "ClearCoinFlips", "Log"] {
+            for k in ["ClearImprinted", "ClearCoinFlips", "Log"] {
                 c.get(k);
             }
             let flag = |c: &mut Ctx, k: &'static str| c.get(k).is_some();
@@ -1792,6 +1799,7 @@ fn compile_depth(
                 flag(&mut c, "ClearChosenPlayer"),
                 flag(&mut c, "ClearChosenColor"),
                 flag(&mut c, "ClearChosenType"),
+                flag(&mut c, "ClearNamedCard"),
             ];
             Effect::Cleanup {
                 what: c.defined(Defined::SelfCard)?,
@@ -2299,6 +2307,18 @@ fn compile_depth(
             c.get("ColorOrType");
             Effect::ManaReflectProduced {
                 who: c.defined(Defined::You)?,
+            }
+        }
+        "NameCard" => {
+            for k in ["ValidDescription", "AILogic"] {
+                c.get(k);
+            }
+            Effect::NameCard {
+                who: c.defined(Defined::You)?,
+                valid: c.get("ValidCards").map(ValidSpec::parse).transpose()?,
+                random: c
+                    .get("AtRandom")
+                    .is_some_and(|v| v.eq_ignore_ascii_case("true")),
             }
         }
         "Amass" => Effect::Amass {

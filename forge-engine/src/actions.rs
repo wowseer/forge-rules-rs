@@ -41,6 +41,7 @@ impl GameState {
             chosen_type: None,
             chosen_color: None,
             chosen_player: None,
+            named_card: None,
             runtime_vars: Default::default(),
             goaded_by: Vec::new(),
             face_down: false,
@@ -175,6 +176,7 @@ impl GameState {
             chosen_type: None,
             chosen_color: None,
             chosen_player: None,
+            named_card: None,
             runtime_vars: Default::default(),
             face_down: old.face_down
                 && (to == Zone::Stack || (from == Some(Zone::Stack) && to == Zone::Battlefield)),

@@ -100,6 +100,11 @@ pub enum Decision {
         player: PlayerId,
         options: Vec<Color>,
     },
+    /// Kartennamen nennen (`NameCard`); Antwort `Choice::Number(index)`.
+    NameCard {
+        player: PlayerId,
+        options: Vec<String>,
+    },
     /// Typ wählen (`ChooseType`); Antwort `Choice::Number(index)`.
     ChooseType {
         player: PlayerId,
@@ -261,6 +266,7 @@ impl Decision {
             | Decision::PayLifeForPhyrexian { player, .. }
             | Decision::ChooseColor { player, .. }
             | Decision::ChooseType { player, .. }
+            | Decision::NameCard { player, .. }
             | Decision::DeclareAttackers { player, .. }
             | Decision::DeclareBlockers { player, .. }
             | Decision::AssignCombatDamage { player, .. }
@@ -329,7 +335,10 @@ impl Decision {
                 }
             }
             (Decision::PayLifeForPhyrexian { .. }, Choice::Yes | Choice::No) => Ok(()),
-            (Decision::ChooseType { options, .. }, Choice::Number(i)) => {
+            (
+                Decision::ChooseType { options, .. } | Decision::NameCard { options, .. },
+                Choice::Number(i),
+            ) => {
                 if (*i as usize) < options.len() {
                     Ok(())
                 } else {
