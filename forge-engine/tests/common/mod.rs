@@ -347,9 +347,31 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Electromancer Lite\nManaCost:R\nTypes:Creature Goblin Wizard\nPT:1/1\nS:Mode$ ReduceCost | ValidCard$ Instant,Sorcery | Type$ Spell | Activator$ You | Amount$ 1 | Description$ Instant and sorcery spells you cast cost {1} less to cast.\nOracle:\n",
     "Name:Thalia Lite\nManaCost:1 W\nTypes:Legendary Creature Human Soldier\nPT:2/1\nK:First Strike\nS:Mode$ RaiseCost | ValidCard$ Card.nonCreature | Type$ Spell | Amount$ 1 | Description$ Noncreature spells cost {1} more to cast.\nOracle:\n",
     "Name:Mind Rot Lite\nManaCost:2 B\nTypes:Sorcery\nA:SP$ LoseLife | ValidTgts$ Player | LifeAmount$ 2 | Defined$ Targeted | SpellDescription$ x\nOracle:\n",
+    "Name:Pinger B5\nManaCost:2 R\nTypes:Creature Human Wizard\nPT:1/1\nA:AB$ DealDamage | Cost$ 1 | ValidTgts$ Player | NumDmg$ 1 | SpellDescription$ x\nT:Mode$ DamageDone | ValidSource$ Card.Self | ValidTarget$ Player | Execute$ TrigDestroy | TriggerDescription$ x\nSVar:TrigDestroy:DB$ Destroy | ValidTgts$ Creature.ControlledBy TriggeredTarget | TgtPrompt$ x\nOracle:\n",
+    "Name:Purge Player B5\nManaCost:1 B\nTypes:Sorcery\nA:SP$ DestroyAll | ValidTgts$ Player | ValidCards$ Creature.TargetedPlayerCtrl | SpellDescription$ x\nOracle:\n",
+    "Name:Death Pact B5\nManaCost:B\nTypes:Instant\nA:SP$ DelayedTrigger | ValidTgts$ Creature | Mode$ ChangesZone | RememberObjects$ Targeted | ValidCard$ Card.IsTriggerRemembered | Origin$ Battlefield | Destination$ Graveyard | ThisTurn$ True | Execute$ TrigDraw | SpellDescription$ x\nSVar:TrigDraw:DB$ Draw | NumCards$ 2\nOracle:\n",
+    "Name:Name Pump B5\nManaCost:G\nTypes:Instant\nA:SP$ Pump | ValidTgts$ Creature | NumAtt$ +1 | SubAbility$ DBPumpAll | SpellDescription$ x\nSVar:DBPumpAll:DB$ PumpAll | ValidCards$ Targeted.Creature+sameName+Other | NumAtt$ +2\nOracle:\n",
+    "Name:Discover B5\nManaCost:2 G\nTypes:Sorcery\nA:SP$ Discover | Num$ 3 | SpellDescription$ x\nOracle:\n",
+    "Name:Reapproach B5\nManaCost:W\nTypes:Instant\nA:SP$ GainLife | LifeAmount$ 2 | SubAbility$ DBBack | SpellDescription$ x\nSVar:DBBack:DB$ ChangeZone | Origin$ Stack | Destination$ Library | Defined$ Parent\nOracle:\n",
+    "Name:Twin Bolt B5\nManaCost:R\nTypes:Instant\nA:SP$ DealDamage | ValidTgts$ Any | NumDmg$ 2 | DamageMap$ True | SubAbility$ DBDamageResolve | SpellDescription$ x\nSVar:DBDamageResolve:DB$ DamageResolve\nOracle:\n",
+    "Name:Flip B5\nManaCost:1 G\nTypes:Creature Human\nPT:1/1\nA:AB$ SetState | Cost$ 1 | Defined$ Self | Mode$ Transform | SpellDescription$ x\nAlternateMode:DoubleFaced\nOracle:\n\nALTERNATE\n\nName:Flipped B5\nManaCost:no cost\nColors:green\nTypes:Creature Werewolf\nPT:3/3\nT:Mode$ Transformed | ValidCard$ Card.Self | Execute$ TrigGain | TriggerDescription$ x\nSVar:TrigGain:DB$ GainLife | LifeAmount$ 3\nOracle:\n",
+    "Name:Once B5\nManaCost:1 W\nTypes:Enchantment\nT:Mode$ ChangesZone | Destination$ Battlefield | ValidCard$ Creature.YouCtrl | ActivationLimit$ 1 | Execute$ TrigGain | TriggerDescription$ x\nSVar:TrigGain:DB$ GainLife | LifeAmount$ 1\nOracle:\n",
+    "Name:Two Soldiers B5\nManaCost:W\nTypes:Sorcery\nA:SP$ Token | TokenAmount$ 2 | TokenScript$ w_1_1_soldier | SpellDescription$ x\nOracle:\n",
+    "Name:Lose Ab B5\nManaCost:U\nTypes:Instant\nA:SP$ Animate | ValidTgts$ Creature | RemoveAllAbilities$ True | SpellDescription$ x\nOracle:\n",
+    "Name:Dual B5\nManaCost:no cost\nTypes:Land Plains Island\nOracle:\n",
+    "Name:Moon B5\nManaCost:2 R\nTypes:Enchantment\nS:Mode$ Continuous | Affected$ Land.nonBasic | RemoveLandTypes$ True | AddType$ Mountain | Description$ x\nOracle:\n",
+    "Name:Buyback Bolt B5\nManaCost:R\nTypes:Instant\nK:Buyback:3\nA:SP$ DealDamage | ValidTgts$ Any | NumDmg$ 1 | SpellDescription$ x\nOracle:\n",
+    "Name:Germ Blade B5\nManaCost:1\nTypes:Artifact Equipment\nK:Living Weapon\nK:Equip:2\nS:Mode$ Continuous | AffectedDefined$ Equipped | Affected$ Creature | AddPower$ 2 | AddToughness$ 2 | Description$ x\nOracle:\n",
+    "Name:Mimic B5\nManaCost:1 U\nTypes:Creature Shapeshifter\nPT:1/1\nA:AB$ Clone | Cost$ 1 | ValidTgts$ Creature.Other | Duration$ UntilEndOfTurn | SpellDescription$ x\nOracle:\n",
+    "Name:Host Pump B5\nManaCost:1 W\nTypes:Creature Human\nPT:1/1\nA:AB$ Effect | Cost$ 1 | StaticAbilities$ STPump | Duration$ UntilHostLeavesPlayOrEOT | SpellDescription$ x\nSVar:STPump:Mode$ Continuous | Affected$ Creature.YouCtrl+nonHuman | AddPower$ 1 | Description$ x\nOracle:\n",
+    "Name:Dig Any B5\nManaCost:U\nTypes:Sorcery\nA:SP$ Dig | DigNum$ 3 | ChangeNum$ Any | DestinationZone2$ Graveyard | SpellDescription$ x\nOracle:\n",
 ];
 
 pub const TOKENS: &[(&str, &str)] = &[
+    (
+        "b_0_0_phyrexian_germ",
+        "Name:Phyrexian Germ Token\nManaCost:no cost\nColors:black\nTypes:Creature Phyrexian Germ\nPT:0/0\nOracle:\n",
+    ),
     (
         "b_0_0_orc_army",
         "Name:Orc Army Token\nManaCost:no cost\nColors:black\nTypes:Creature Orc Army\nPT:0/0\nOracle:\n",

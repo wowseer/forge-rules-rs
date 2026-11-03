@@ -39,6 +39,8 @@ pub enum Keyword {
     Affinity(String),
     /// CR 702.33: `Kicker:<Kosten>[:<zweite Kosten>]` (Originaltext der Kosten)
     Kicker(Vec<String>),
+    /// CR 702.27: `Buyback:<Kosten>`
+    Buyback(String),
     /// CR 702.37 / 702.168: Morph, Megamorph, Disguise – verdeckt wirkbar,
     /// für `cost` umdrehbar.
     Morph {
@@ -232,6 +234,11 @@ impl Keyword {
                         .map(str::to_string)
                         .collect(),
                 )
+            }
+            t if t.starts_with("Buyback:")
+                && crate::cost::Cost::parse(&t["Buyback:".len()..]).is_ok() =>
+            {
+                Keyword::Buyback(t["Buyback:".len()..].to_string())
             }
             t if t.starts_with("Affinity:")
                 && crate::valid::ValidSpec::parse(&t["Affinity:".len()..]).is_ok() =>

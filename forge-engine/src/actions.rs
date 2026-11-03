@@ -63,6 +63,7 @@ impl GameState {
             cast_from: None,
             cast_by: None,
             kicked: 0,
+            buyback: false,
             skip_next_untap: false,
             exiled_with: None,
             exiled_until: None,
@@ -222,6 +223,7 @@ impl GameState {
             },
             exiled_until: None,
             skip_next_untap: false,
+            buyback: false,
             kicked: if from == Some(Zone::Stack) && to == Zone::Battlefield {
                 old.kicked
             } else {
@@ -345,8 +347,11 @@ impl GameState {
             .copied()
             .filter(|c| {
                 self.card(*c).effect.is_some_and(|e| {
-                    e.duration == crate::state::EffectDuration::UntilHostLeavesPlay
-                        && e.host == Some(host)
+                    matches!(
+                        e.duration,
+                        crate::state::EffectDuration::UntilHostLeavesPlay
+                            | crate::state::EffectDuration::UntilHostLeavesPlayOrEot
+                    ) && e.host == Some(host)
                 })
             })
             .collect();
@@ -805,6 +810,9 @@ impl GameState {
         let o = self.card_mut(c);
         o.face = 1 - o.face.min(1);
         o.timestamp = ts;
+        if self.card(c).zone == Some(Zone::Battlefield) {
+            self.fire(crate::triggers::TriggerEvent::Transformed { card: c });
+        }
         true
     }
 

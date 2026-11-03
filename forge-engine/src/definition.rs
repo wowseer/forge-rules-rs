@@ -78,18 +78,33 @@ fn chapter_triggers(
     Ok((n, out))
 }
 
+/// Standardlandtypen in fester Reihenfolge.
+pub const BASIC_LAND_TYPES: [(&str, Color); 5] = [
+    ("Plains", Color::White),
+    ("Island", Color::Blue),
+    ("Swamp", Color::Black),
+    ("Mountain", Color::Red),
+    ("Forest", Color::Green),
+];
+
+/// CR 305.6: intrinsische Mana-Fähigkeit je Standardlandtyp (geteilte Objekte,
+/// damit `GameState::activated` sie per Zeiger erkennt).
+pub fn intrinsic_mana() -> &'static [Arc<CompiledAbility>; 5] {
+    static CELL: std::sync::OnceLock<[Arc<CompiledAbility>; 5]> = std::sync::OnceLock::new();
+    CELL.get_or_init(|| BASIC_LAND_TYPES.map(|(t, c)| make_intrinsic_mana(t, c)))
+}
+
 fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
-    // CR 305.6: Standardlandtypen haben eine intrinsische Mana-Fähigkeit.
-    [
-        ("Plains", Color::White),
-        ("Island", Color::Blue),
-        ("Swamp", Color::Black),
-        ("Mountain", Color::Red),
-        ("Forest", Color::Green),
-    ]
-    .into_iter()
-    .filter(|(t, _)| face.types.has_subtype(t))
-    .map(|(t, c)| {
+    BASIC_LAND_TYPES
+        .iter()
+        .zip(intrinsic_mana().iter())
+        .filter(|((t, _), _)| face.types.has_subtype(t))
+        .map(|(_, a)| a.clone())
+        .collect()
+}
+
+fn make_intrinsic_mana(t: &str, c: Color) -> Arc<CompiledAbility> {
+    {
         Arc::new(CompiledAbility {
             kind: AbilityKind::Activated,
             api: "Mana".into(),
@@ -113,8 +128,7 @@ fn basic_land_mana(face: &CardFace) -> Vec<Arc<CompiledAbility>> {
             activation_limit: None,
             game_activation_limit: None,
         })
-    })
-    .collect()
+    }
 }
 
 /// Filtervariablen (`cmcLEX`) müssen als auswertbare SVar der Karte vorliegen.
@@ -341,6 +355,33 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(&format!(
                 "Mode$ SpellCast | ValidCard$ Card.Self | TriggerZones$ Stack | Execute$ {name} | TriggerDescription$ {k}"
             )));
+            match st
+                .map_err(|_| ())
+                .and_then(|st| crate::triggers::compile_trigger(&f, &st).map_err(|_| ()))
+            {
+                Ok(t) => out.triggers.push(Arc::new(t)),
+                Err(()) => unsupported.push(format!("Keyword: {k}")),
+            }
+            continue;
+        }
+        // CR 702.92: Living Weapon (Java: ETB-Trigger, 0/0-Keimling erschaffen, anlegen)
+        if k == "Living Weapon" {
+            let mut f = face.clone();
+            f.svars.push((
+                "LivingWeaponGerm".into(),
+                "DB$ Token | TokenScript$ b_0_0_phyrexian_germ | TokenOwner$ You | RememberTokens$ True | SubAbility$ LivingWeaponAttach".into(),
+            ));
+            f.svars.push((
+                "LivingWeaponAttach".into(),
+                "DB$ Attach | Defined$ Remembered | SubAbility$ LivingWeaponClear".into(),
+            ));
+            f.svars.push((
+                "LivingWeaponClear".into(),
+                "DB$ Cleanup | ClearRemembered$ True".into(),
+            ));
+            let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(
+                "Mode$ ChangesZone | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ LivingWeaponGerm | TriggerDescription$ Living Weapon",
+            ));
             match st
                 .map_err(|_| ())
                 .and_then(|st| crate::triggers::compile_trigger(&f, &st).map_err(|_| ()))

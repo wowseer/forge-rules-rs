@@ -221,6 +221,8 @@ pub struct CardObj {
     /// CR 702.33: bezahlte Kicker-Kosten (Bit 0 = erste, Bit 1 = zweite);
     /// wie `cast_from` vom Stapel auf die bleibende Karte übertragen.
     pub kicked: u8,
+    /// CR 702.27: Rückkaufkosten bezahlt (Zauber geht beim Auflösen auf die Hand)
+    pub buyback: bool,
     /// Gewirkt aus dieser Zone (auf dem Stapel und als daraus entstandene
     /// bleibende Karte; Java `getCastFrom`).
     pub cast_from: Option<Zone>,
@@ -273,6 +275,8 @@ pub struct CopyInfo {
     pub orig_face: usize,
     pub orig_base_pt: Option<(i32, i32)>,
     pub mods: CopyMods,
+    /// `Clone | Duration$ UntilEndOfTurn`: endet im Cleanup (CR 514.2)
+    pub until_eot: bool,
 }
 
 /// Dauer eines Effektobjekts (`Duration$` von `Effect`, CR 611.2).
@@ -287,6 +291,8 @@ pub enum EffectDuration {
     UntilTheEndOfYourNextTurn,
     /// solange die Quelle (`EffectInfo::host`) im Spiel ist
     UntilHostLeavesPlay,
+    /// … höchstens bis Zugende (`UntilHostLeavesPlayOrEOT`)
+    UntilHostLeavesPlayOrEot,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -346,6 +352,8 @@ pub struct ContinuousEffect {
     pub affected: CardId,
     /// Layer 6: entfernte Keywords (`Debuff`)
     pub remove_keywords: Vec<Keyword>,
+    /// Layer 6: verliert alle Fähigkeiten (`RemoveAllAbilities$`)
+    pub remove_all_abilities: bool,
     /// Layer 7c
     pub power: i32,
     pub toughness: i32,
@@ -354,6 +362,8 @@ pub struct ContinuousEffect {
     /// Layer 4: hinzugefügte Typen; `remove_creature_types` entfernt vorher alle Kreaturtypen
     pub add_types: Vec<String>,
     pub remove_creature_types: bool,
+    /// Layer 4: `RemoveLandTypes$` – entfernt vorher alle Landtypen
+    pub remove_land_types: bool,
     /// Layer 5: (Farben, überschreiben statt hinzufügen)
     pub colors: Option<(forge_types::ColorSet, bool)>,
     /// Layer 7b
@@ -381,6 +391,8 @@ pub struct TurnHistory {
     pub damaged: Vec<(CardId, CardId)>,
     /// `Fog`: aller Kampfschaden dieses Zuges wird verhindert.
     pub prevent_combat_damage: bool,
+    /// Ausgelöste Trigger mit `ActivationLimit$` (Quelle, Trigger-Kennung).
+    pub trigger_counts: Vec<(CardId, usize)>,
 }
 
 /// Kontrollwechsel (Layer 2, CR 613.1b) durch `GainControl`.
@@ -619,6 +631,8 @@ pub struct Characteristics {
     pub granted_abilities: Vec<Arc<crate::effects::CompiledAbility>>,
     /// Durch Statics verliehene Trigger (`AddTrigger$`, Layer 6)
     pub granted_triggers: Vec<Arc<crate::triggers::CompiledTrigger>>,
+    /// Hat alle (eigenen) Fähigkeiten verloren (`RemoveAllAbilities$`, CR 613.1f)
+    pub lost_abilities: bool,
 }
 
 impl Characteristics {
@@ -848,19 +862,44 @@ impl GameState {
 
     /// Aktivierte Fähigkeiten von `c`: eigene und verliehene (Index = `Action::Activate`).
     pub fn activated(&self, c: CardId) -> Vec<Arc<crate::effects::CompiledAbility>> {
-        let mut v = self.card(c).compiled().activated.clone();
-        if self.card(c).zone == Some(Zone::Battlefield) {
-            v.extend(self.chars(c).granted_abilities);
+        if self.card(c).zone != Some(Zone::Battlefield) {
+            return self.card(c).compiled().activated.clone();
         }
+        let ch = self.chars(c);
+        let mut v = if ch.lost_abilities {
+            Vec::new()
+        } else {
+            self.card(c).compiled().activated.clone()
+        };
+        // CR 305.7: intrinsische Mana-Fähigkeiten folgen den aktuellen Landtypen.
+        let intrinsic = crate::definition::intrinsic_mana();
+        v.retain(|a| !intrinsic.iter().any(|i| Arc::ptr_eq(i, a)));
+        // (vor Layer 6 gewährt – „verliert alle Fähigkeiten“ entfernt sie)
+        if ch.types.is_land() && !ch.lost_abilities {
+            let own: Vec<_> = crate::definition::BASIC_LAND_TYPES
+                .iter()
+                .zip(intrinsic)
+                .filter(|((t, _), _)| ch.types.has_subtype(t))
+                .map(|(_, a)| a.clone())
+                .collect();
+            v.splice(0..0, own);
+        }
+        v.extend(ch.granted_abilities);
         v
     }
 
     /// Trigger von `c`: eigene und verliehene.
     pub fn all_triggers(&self, c: CardId) -> Vec<Arc<crate::triggers::CompiledTrigger>> {
-        let mut v = self.card(c).compiled().triggers.clone();
-        if self.card(c).zone == Some(Zone::Battlefield) {
-            v.extend(self.chars(c).granted_triggers);
+        if self.card(c).zone != Some(Zone::Battlefield) {
+            return self.card(c).compiled().triggers.clone();
         }
+        let ch = self.chars(c);
+        let mut v = if ch.lost_abilities {
+            Vec::new()
+        } else {
+            self.card(c).compiled().triggers.clone()
+        };
+        v.extend(ch.granted_triggers);
         v
     }
 
@@ -898,6 +937,7 @@ impl GameState {
             keywords: compiled.keywords.clone(),
             granted_abilities: Vec::new(),
             granted_triggers: Vec::new(),
+            lost_abilities: false,
         };
         // CR 701.60c: verdächtig → Bedrohlich und kann nicht blocken
         if c.suspected && c.zone == Some(Zone::Battlefield) {
@@ -1078,7 +1118,7 @@ impl GameState {
         };
 
         // Layer 4 (statisch und Effekte nach Zeitstempel)
-        let mut l4: Vec<(u64, Vec<String>, bool)> = Vec::new();
+        let mut l4: Vec<(u64, Vec<String>, bool, bool)> = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer4()) {
             if applies(self, s, &ch) {
                 // `AddType$ ChosenType`: der von der Quelle gewählte Typ
@@ -1094,17 +1134,35 @@ impl GameState {
                             }
                         })
                         .collect();
-                l4.push((s.ts, types, false));
+                l4.push((s.ts, types, false, s.st.remove_land_types));
             }
         }
         l4.extend(
             pumps
                 .iter()
-                .filter(|e| !e.add_types.is_empty() || e.remove_creature_types)
-                .map(|e| (e.timestamp, e.add_types.clone(), e.remove_creature_types)),
+                .filter(|e| {
+                    !e.add_types.is_empty() || e.remove_creature_types || e.remove_land_types
+                })
+                .map(|e| {
+                    (
+                        e.timestamp,
+                        e.add_types.clone(),
+                        e.remove_creature_types,
+                        e.remove_land_types,
+                    )
+                }),
         );
         l4.sort_by_key(|x| x.0);
-        for (_, types, remove_ct) in l4 {
+        for (_, types, remove_ct, remove_lt) in l4 {
+            if remove_lt {
+                let reg = crate::valid::type_registry();
+                ch.types.subtypes.retain(|t| match reg {
+                    Some(r) => r.kind_of(t) != Some(forge_types::SubtypeKind::Land),
+                    None => !crate::definition::BASIC_LAND_TYPES
+                        .iter()
+                        .any(|(b, _)| b == t),
+                });
+            }
             if remove_ct && let Some(reg) = crate::valid::type_registry() {
                 ch.types
                     .subtypes
@@ -1141,25 +1199,54 @@ impl GameState {
             ch.colors = if overwrite { c } else { ch.colors.union(c) };
         }
         // Layer 6 (statisch und Pump-Effekte gemeinsam nach Zeitstempel)
-        let mut l6: Vec<(u64, Vec<Keyword>, Vec<Keyword>)> = Vec::new();
-        let mut granted_ab = Vec::new();
-        let mut granted_tr = Vec::new();
+        struct L6 {
+            ts: u64,
+            add: Vec<Keyword>,
+            removed: Vec<Keyword>,
+            wipe: bool,
+            abilities: Vec<Arc<crate::effects::CompiledAbility>>,
+            triggers: Vec<Arc<crate::triggers::CompiledTrigger>>,
+        }
+        let mut l6: Vec<L6> = Vec::new();
         for s in statics.iter_mut().filter(|s| s.st.has_layer6()) {
             if applies(self, s, &ch) {
-                l6.push((s.ts, s.st.add_keywords.clone(), Vec::new()));
-                granted_ab.extend(s.st.add_abilities.iter().cloned());
-                granted_tr.extend(s.st.add_triggers.iter().cloned());
+                l6.push(L6 {
+                    ts: s.ts,
+                    add: s.st.add_keywords.clone(),
+                    removed: Vec::new(),
+                    wipe: s.st.remove_all_abilities,
+                    abilities: s.st.add_abilities.clone(),
+                    triggers: s.st.add_triggers.clone(),
+                });
             }
         }
-        ch.granted_abilities.extend(granted_ab);
-        ch.granted_triggers.extend(granted_tr);
-        l6.extend(
-            pumps
-                .iter()
-                .map(|e| (e.timestamp, e.keywords.clone(), e.remove_keywords.clone())),
-        );
-        l6.sort_by_key(|x| x.0);
-        for (_, kws, removed) in l6 {
+        l6.extend(pumps.iter().map(|e| L6 {
+            ts: e.timestamp,
+            add: e.keywords.clone(),
+            removed: e.remove_keywords.clone(),
+            wipe: e.remove_all_abilities,
+            abilities: Vec::new(),
+            triggers: Vec::new(),
+        }));
+        l6.sort_by_key(|x| x.ts);
+        for L6 {
+            add: kws,
+            removed,
+            wipe,
+            abilities,
+            triggers,
+            ..
+        } in l6
+        {
+            // CR 613.1f: „verliert alle Fähigkeiten“ – auch zuvor verliehene
+            if wipe {
+                ch.keywords.clear();
+                ch.granted_abilities.clear();
+                ch.granted_triggers.clear();
+                ch.lost_abilities = true;
+            }
+            ch.granted_abilities.extend(abilities);
+            ch.granted_triggers.extend(triggers);
             for k in kws {
                 if !ch.keywords.contains(&k) {
                     ch.keywords.push(k);
@@ -1327,7 +1414,26 @@ impl GameState {
             orig_face,
             orig_base_pt,
             mods: prev.then(mods),
+            until_eot: false,
         }));
+    }
+
+    /// Kopiereffekte „bis Zugende“ enden: eigene Werte zurück.
+    pub fn end_eot_copies(&mut self) {
+        let ids: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .copied()
+            .filter(|c| self.card(*c).copy.as_ref().is_some_and(|cp| cp.until_eot))
+            .collect();
+        for c in ids {
+            let o = self.card_mut(c);
+            if let Some(cp) = o.copy.take() {
+                o.def = cp.orig_def;
+                o.face = cp.orig_face;
+                o.base_pt = cp.orig_base_pt;
+            }
+        }
     }
 
     pub fn is_creature(&self, id: CardId) -> bool {

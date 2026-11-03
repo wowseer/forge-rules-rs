@@ -1171,6 +1171,9 @@ impl GameState {
                 all.push(Vec::new());
                 continue;
             };
+            let _fctx = crate::targeting::FilterCtxGuard::with_targets(
+                all.iter().flatten().copied().collect(),
+            );
             let candidates = self.target_candidates(spec, source, p);
             let (smin, smax) = self.target_bounds(spec, source, p);
             let max = smax.min(candidates.len() as u32);
@@ -1291,6 +1294,31 @@ impl GameState {
             }
         }
         self.card_mut(on_stack).kicked = kicked;
+        // CR 702.27a: Rückkauf ankündigen (wie Kicker)
+        let buyback = self.chars(on_stack).keywords.iter().find_map(|k| match k {
+            Keyword::Buyback(v) => Some(v.clone()),
+            _ => None,
+        });
+        if let Some(text) = buyback
+            && let Ok(bc) = Cost::parse(&text)
+            && mana_cost.mana_value() + bc.mana.as_ref().map_or(0, |m| m.mana_value())
+                <= self.potential_mana(p)
+            && self.can_pay_nonmana(&bc, on_stack, p)
+            && matches!(
+                ch.ask(Decision::Confirm {
+                    player: p,
+                    prompt: format!("Rückkauf {text} bezahlen?"),
+                })?,
+                Choice::Yes
+            )
+        {
+            if let Some(m) = bc.mana {
+                mana_cost.generic += m.generic;
+                mana_cost.shards.extend(m.shards);
+            }
+            kicker_parts.extend(bc.parts);
+            self.card_mut(on_stack).buyback = true;
+        }
         // 601.2b: X wählen
         let x = if mana_cost.x_count() > 0 {
             let max = self.potential_mana(p);

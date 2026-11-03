@@ -190,6 +190,13 @@ impl GameState {
                 .map(Target::Card)
                 .into_iter()
                 .collect(),
+            Defined::Parent => {
+                if self.card(ctx.source).zone == Some(Zone::Stack) {
+                    vec![Target::Card(ctx.source)]
+                } else {
+                    Vec::new()
+                }
+            }
             Defined::ParentTarget => {
                 if self.parent_targets.is_empty() {
                     targets.to_vec()
@@ -1642,13 +1649,18 @@ impl GameState {
                     self.card_mut(ctx.source).named_card = Some(names[i].clone());
                 }
             }
-            Effect::Cascade => {
+            Effect::DamageResolve => self.end_damage_batch(),
+            Effect::Cascade { discover } => {
                 let p = ctx.controller;
-                let mv = self
-                    .chars(ctx.source)
-                    .mana_cost
-                    .as_ref()
-                    .map_or(0, |m| m.mana_value());
+                // Kaskade: Manawert < eigener; Discover n: Manawert ≤ n (= < n+1)
+                let mv = match discover {
+                    Some(n) => (self.amount(n, ctx, targets).max(0) + 1) as u32,
+                    None => self
+                        .chars(ctx.source)
+                        .mana_cost
+                        .as_ref()
+                        .map_or(0, |m| m.mana_value()),
+                };
                 let mut exiled: Vec<CardId> = Vec::new();
                 let mut hit = None;
                 while let Some(&top) = self.player(p).library.last() {
@@ -1676,6 +1688,13 @@ impl GameState {
                     )
                 {
                     self.play_by_effect(p, h, true, false, ch)?;
+                }
+                // CR 701.57a: nicht gewirkte entdeckte Karte auf die Hand
+                if discover.is_some()
+                    && let Some(h) = hit
+                    && self.card(h).zone == Some(Zone::Exile)
+                {
+                    self.move_card(h, Zone::Hand, true);
                 }
                 // CR 702.85a: übrige (nicht gewirkte) in zufälliger Reihenfolge unter die Bibliothek
                 let mut rest: Vec<CardId> = exiled
@@ -2290,6 +2309,7 @@ impl GameState {
                 cloner,
                 optional,
                 mods,
+                until_eot,
             } => {
                 let Some(of) = self
                     .pick_clone_source(source, targets, ctx, ch)?
@@ -2312,6 +2332,9 @@ impl GameState {
                 for c in self.cards_of(&self.resolve_defined(*cloner, targets, ctx)) {
                     if self.card(c).zone == Some(Zone::Battlefield) && c != of {
                         self.become_copy(c, of, mods);
+                        if *until_eot && let Some(cp) = self.card_mut(c).copy.as_mut() {
+                            cp.until_eot = true;
+                        }
                     }
                 }
             }
@@ -2343,6 +2366,7 @@ impl GameState {
                                     orig_face: face,
                                     orig_base_pt: base_pt,
                                     mods: prev.then(mods),
+                                    until_eot: false,
                                 }));
                             }
                             made.push(id);
@@ -2663,6 +2687,8 @@ impl GameState {
                 toughness,
                 types,
                 remove_creature_types,
+                remove_all_abilities,
+                remove_land_types,
                 keywords,
                 colors,
                 colors_chosen,
@@ -2694,6 +2720,8 @@ impl GameState {
                             })
                             .collect(),
                         remove_creature_types: *remove_creature_types,
+                        remove_all_abilities: *remove_all_abilities,
+                        remove_land_types: *remove_land_types,
                         colors,
                         set_power: sp,
                         set_toughness: st,
@@ -3079,6 +3107,11 @@ impl GameState {
             trig,
             paid: item.paid.clone(),
         };
+        let _fctx = crate::targeting::FilterCtxGuard::set(crate::targeting::FilterCtx {
+            trig: ctx.trig.clone(),
+            targets: item.targets.iter().flatten().copied().collect(),
+            ..Default::default()
+        });
 
         // CR 608.2b: Ziele erneut prüfen.
         let mut legal_targets: Vec<Vec<Target>> = Vec::new();
@@ -3161,6 +3194,10 @@ impl GameState {
         let StackKind::Spell { card } = item.kind else {
             return;
         };
+        // Hat der Zauber sich selbst bewegt (`Defined$ Parent`), bleibt er dort.
+        if self.card(card).zone != Some(Zone::Stack) {
+            return;
+        }
         // CR 715.3d: aufgelöster Abenteuer-Zauber geht ins Exil, „auf Abenteuer“.
         if !fizzled
             && self.card(card).face == 1
@@ -3197,6 +3234,9 @@ impl GameState {
             // CR 702.88a: aus der Hand gewirkt → ins Exil statt in den Friedhof
             let new = self.move_card(card, Zone::Exile, true);
             self.card_mut(new).rebound = true;
+        } else if !fizzled && self.card(card).buyback {
+            // CR 702.27a: zurückgekauft → auf die Hand des Besitzers
+            self.move_card(card, Zone::Hand, true);
         } else {
             self.move_card(card, Zone::Graveyard, true);
         }

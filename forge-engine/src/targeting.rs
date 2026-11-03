@@ -14,6 +14,49 @@ thread_local! {
         Default::default();
     /// Angenommenes X für Filtervariablen während Wirkbarkeitsprüfungen.
     static ASSUMED_X: std::cell::Cell<Option<u32>> = const { std::cell::Cell::new(None) };
+    /// Kontext für ziel- und triggerbezogene Filter (`ControlledBy TriggeredTarget`,
+    /// `TargetedPlayerCtrl`, `IsTriggerRemembered`), gesetzt beim Stapeln und Auflösen.
+    static FILTER_CTX: std::cell::RefCell<std::rc::Rc<FilterCtx>> = Default::default();
+}
+
+/// Ziel-/Triggerwissen der gerade geprüften Fähigkeit (Java: die `SpellAbility`,
+/// gegen die `CardProperty` prüft).
+#[derive(Debug, Clone, Default)]
+pub struct FilterCtx {
+    pub trig: Option<crate::triggers::TriggerInfo>,
+    /// Bisher gewählte Ziele der Fähigkeit (alle Teile der Kette).
+    pub targets: Vec<Target>,
+    /// Vom verzögerten Trigger gemerkte Objekte (beim Auslösen).
+    pub trig_remembered: Vec<Target>,
+}
+
+/// Setzt den Filterkontext bis zum Ende des Gültigkeitsbereichs.
+pub struct FilterCtxGuard(Option<std::rc::Rc<FilterCtx>>);
+
+impl FilterCtxGuard {
+    pub fn set(ctx: FilterCtx) -> FilterCtxGuard {
+        let prev = FILTER_CTX.with(|c| c.replace(std::rc::Rc::new(ctx)));
+        FilterCtxGuard(Some(prev))
+    }
+
+    /// Aktueller Kontext mit anderen Zielen.
+    pub fn with_targets(targets: Vec<Target>) -> FilterCtxGuard {
+        let mut ctx = filter_ctx().as_ref().clone();
+        ctx.targets = targets;
+        FilterCtxGuard::set(ctx)
+    }
+}
+
+impl Drop for FilterCtxGuard {
+    fn drop(&mut self) {
+        if let Some(prev) = self.0.take() {
+            FILTER_CTX.with(|c| *c.borrow_mut() = prev);
+        }
+    }
+}
+
+pub fn filter_ctx() -> std::rc::Rc<FilterCtx> {
+    FILTER_CTX.with(|c| c.borrow().clone())
 }
 
 impl GameState {
@@ -24,7 +67,7 @@ impl GameState {
         base: &CardBase,
     ) -> bool {
         match base {
-            CardBase::Card => true,
+            CardBase::Card | CardBase::Rel(_) => true,
             CardBase::Emblem => self.card(id).effect.is_some() && ch.name.starts_with("Emblem"),
             CardBase::Permanent => {
                 self.card(id).zone == Some(Zone::Battlefield) && ch.types.is_permanent()
@@ -166,6 +209,21 @@ impl GameState {
                 })
             }
             Prop::HasCounters => c.counters.values().any(|n| *n > 0),
+            Prop::ControlledBy(r) => self.player_ref(*r, source).contains(&c.controller),
+            Prop::OwnedBy(r) => self.player_ref(*r, source).contains(&c.owner),
+            Prop::IsTriggerRemembered => {
+                let f = filter_ctx();
+                f.trig_remembered
+                    .iter()
+                    .chain(f.trig.iter().flat_map(|t| t.delay_remembered.iter()))
+                    .any(|t| {
+                        matches!(t, Target::Card(x) if *x == id || self.current_object(*x) == id)
+                    })
+            }
+            Prop::SameName => {
+                let name = &self.chars(source).name;
+                !name.is_empty() && ch.name == *name
+            }
             Prop::Counters { kind, op, value } => crate::expr::Compare {
                 op: *op,
                 rhs: crate::expr::Expr::Const(*value),
@@ -210,6 +268,77 @@ impl GameState {
                     .holds(v, *value)
                 })
             }
+        }
+    }
+
+    /// Spieler eines `ControlledBy <…>`-Bezugs (aus dem Filterkontext und der Quelle).
+    fn player_ref(&self, r: crate::valid::PlayerRef, source: CardId) -> Vec<PlayerId> {
+        use crate::valid::PlayerRef as R;
+        let f = filter_ctx();
+        let ctrl_of = |t: &Target| match t {
+            Target::Card(c) => Some(self.card(*c).controller),
+            _ => None,
+        };
+        let player_of = |t: &Target| match t {
+            Target::Player(p) => Some(*p),
+            _ => None,
+        };
+        match r {
+            R::TriggeredTarget => f
+                .trig
+                .as_ref()
+                .and_then(|t| t.target)
+                .and_then(|t| player_of(&t))
+                .into_iter()
+                .collect(),
+            R::TriggeredPlayer => f.trig.as_ref().and_then(|t| t.player).into_iter().collect(),
+            R::TriggeredCardController => f
+                .trig
+                .as_ref()
+                .and_then(|t| t.card.or(t.card_lki))
+                .map(|c| self.card(c).controller)
+                .into_iter()
+                .collect(),
+            R::Targeted => f.targets.iter().filter_map(player_of).collect(),
+            R::TargetedController => f.targets.iter().filter_map(ctrl_of).collect(),
+            R::TargetedOrController => f
+                .targets
+                .iter()
+                .filter_map(|t| player_of(t).or_else(|| ctrl_of(t)))
+                .collect(),
+            R::Remembered => self.card(source).remembered_players.clone(),
+            R::RememberedController => self
+                .card(source)
+                .remembered
+                .iter()
+                .map(|c| self.card(self.current_object(*c)).controller)
+                .collect(),
+            R::ChosenPlayer => self.card(source).chosen_player.into_iter().collect(),
+            R::ParentTarget => self
+                .parent_targets
+                .iter()
+                .filter_map(|t| player_of(t).or_else(|| ctrl_of(t)))
+                .collect(),
+        }
+    }
+
+    /// Bezugsobjekt eines relativen Filters (`Remembered.sameName`).
+    fn rel_source(&self, r: crate::valid::RelBase, source: CardId) -> Option<CardId> {
+        use crate::valid::RelBase as R;
+        match r {
+            R::Remembered => self
+                .card(source)
+                .remembered
+                .first()
+                .map(|c| self.current_object(*c)),
+            R::Targeted => filter_ctx().targets.iter().find_map(|t| match t {
+                Target::Card(c) => Some(*c),
+                _ => None,
+            }),
+            R::Triggered => filter_ctx()
+                .trig
+                .as_ref()
+                .and_then(|t| t.card.or(t.card_lki)),
         }
     }
 
@@ -374,6 +503,13 @@ impl GameState {
     ) -> bool {
         spec.alternatives.iter().any(|a| match a {
             Alternative::Card { base, props } => {
+                let source = match base {
+                    CardBase::Rel(r) => match self.rel_source(*r, source) {
+                        Some(s) => s,
+                        None => return false,
+                    },
+                    _ => source,
+                };
                 self.card_base_matches(id, ch, base)
                     && props
                         .iter()

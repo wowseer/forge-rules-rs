@@ -32,6 +32,8 @@ pub enum Amount {
 pub enum Defined {
     You,
     SelfCard,
+    /// `Parent`: der auflösende Zauberspruch selbst (nur solange er auf dem Stapel liegt)
+    Parent,
     Targeted,
     TargetedController,
     EachPlayer,
@@ -289,6 +291,8 @@ pub enum Effect {
         /// `Optional$`: „du darfst“
         optional: bool,
         mods: crate::state::CopyMods,
+        /// `Duration$ UntilEndOfTurn`
+        until_eot: bool,
     },
     /// Token-Kopien erzeugen (`CopyPermanent`, CR 707.2, 111.10).
     CopyPermanent {
@@ -387,6 +391,10 @@ pub enum Effect {
         toughness: Option<Amount>,
         types: Vec<String>,
         remove_creature_types: bool,
+        /// `RemoveAllAbilities$ True` (Layer 6)
+        remove_all_abilities: bool,
+        /// `RemoveLandTypes$ True` (Layer 4)
+        remove_land_types: bool,
         keywords: Vec<Keyword>,
         colors: Option<(forge_types::ColorSet, bool)>,
         /// `Colors$ ChosenColor`: die von der Quelle gewählte Farbe (Überschreiben wie `colors`)
@@ -500,7 +508,13 @@ pub enum Effect {
     },
     /// CR 702.85a: Cascade – exilieren bis Nichtland mit geringerem Manawert,
     /// gratis wirken dürfen, Rest zufällig unter die Bibliothek.
-    Cascade,
+    /// `discover: Some(n)` (CR 701.57a): Manawert ≤ n; nicht gewirkt → auf die Hand.
+    Cascade {
+        discover: Option<Amount>,
+    },
+    /// `DamageResolve`: gesammelten Schaden (`DamageMap$`) abschließen – Schaden wird
+    /// sofort zugefügt, hier enden nur die „einmal“-Schadenstrigger.
+    DamageResolve,
     /// CR 701.47: Amass <Typ> n
     Amass {
         num: Amount,
@@ -921,6 +935,8 @@ const NEUTRAL_PARAMS: &[&str] = &[
     "AiAttackController",
     "AIManaPref",
     "IsPresent",
+    // Schaden wird ohnehin während der Auflösung gesammelt zugefügt (siehe `DamageResolve`).
+    "DamageMap",
 ];
 
 struct Ctx<'a> {
@@ -991,6 +1007,7 @@ impl<'a> Ctx<'a> {
                 "You" => Defined::You,
                 "Self" => Defined::SelfCard,
                 "ParentTarget" => Defined::ParentTarget,
+                "Parent" => Defined::Parent,
                 "Targeted" | "TargetedPlayer" | "TargetedCard" => Defined::Targeted,
                 "TargetedController" => Defined::TargetedController,
                 "Player" => Defined::EachPlayer,
@@ -1036,7 +1053,7 @@ fn parse_produced(s: &str) -> Option<ManaProduce> {
     if s == "Any" {
         return Some(ManaProduce::OneOf(Color::ALL.to_vec()));
     }
-    if s == "ChosenColor" {
+    if s == "ChosenColor" || s == "Chosen" {
         return Some(ManaProduce::ChosenColor);
     }
     if let Some(rest) = s.strip_prefix("Combo ") {
@@ -1287,6 +1304,7 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
     let duration = match c.get("Duration") {
         None | Some("EndOfTurn") => EffectDuration::EndOfTurn,
         Some("Permanent") => EffectDuration::Permanent,
+        Some("UntilHostLeavesPlayOrEOT") => EffectDuration::UntilHostLeavesPlayOrEot,
         Some("UntilYourNextTurn") => EffectDuration::UntilYourNextTurn,
         Some("UntilTheEndOfYourNextTurn") => EffectDuration::UntilTheEndOfYourNextTurn,
         Some("UntilHostLeavesPlay") => EffectDuration::UntilHostLeavesPlay,
@@ -2348,9 +2366,11 @@ fn compile_depth(
         }
         "Effect" => compile_effect_object(&mut c, face)?,
         "Clone" => {
-            if let Some(v) = c.get("Duration") {
-                return Err(c.unsupported("Duration", v));
-            }
+            let until_eot = match c.get("Duration") {
+                None | Some("Permanent") => false,
+                Some("UntilEndOfTurn") => true,
+                Some(v) => return Err(c.unsupported("Duration", v)),
+            };
             let source = clone_source(&mut c)?;
             let cloner = if c.ab.params.has("CloneTarget") {
                 c.defined_key("CloneTarget", Defined::SelfCard)?
@@ -2366,6 +2386,7 @@ fn compile_depth(
                 cloner,
                 optional,
                 mods: copy_mods(&mut c)?,
+                until_eot,
             }
         }
         "CopyPermanent" => {
@@ -2518,8 +2539,11 @@ fn compile_depth(
         "Dig" => {
             use crate::zone::Zone;
             let dig = c.amount("DigNum", None)?;
+            // `ChangeNum$ Any`: beliebig viele (auch keine)
+            let any_number = c.ab.params.get("ChangeNum") == Some("Any");
             let change = match c.get("ChangeNum") {
                 Some("All") => None,
+                Some("Any") => Some(Amount::Fixed(i32::MAX)),
                 Some(v) => Some(c.amount_value("ChangeNum", v)?),
                 None => Some(Amount::Fixed(1)),
             };
@@ -2545,7 +2569,8 @@ fn compile_depth(
             let dest2_bottom = pos("LibraryPosition2")?;
             let optional = c
                 .get("Optional")
-                .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+                .is_some_and(|v| v.eq_ignore_ascii_case("true"))
+                || any_number;
             for k in [
                 "Reveal",
                 "NoReveal",
@@ -2635,7 +2660,11 @@ fn compile_depth(
                     .is_some_and(|v| v.eq_ignore_ascii_case("true")),
             }
         }
-        "Cascade" => Effect::Cascade,
+        "Cascade" => Effect::Cascade { discover: None },
+        "DamageResolve" => Effect::DamageResolve,
+        "Discover" => Effect::Cascade {
+            discover: Some(c.amount("Num", None)?),
+        },
         "Amass" => Effect::Amass {
             num: c.amount("Num", Some(1))?,
             kind: c
@@ -2918,6 +2947,12 @@ fn compile_animate(c: &mut Ctx, what: Defined) -> Result<Effect, CompileError> {
     let remove_creature_types = c
         .get("RemoveCreatureTypes")
         .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let remove_all_abilities = c
+        .get("RemoveAllAbilities")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let remove_land_types = c
+        .get("RemoveLandTypes")
+        .is_some_and(|v| v.eq_ignore_ascii_case("true"));
     let keywords = c
         .get("Keywords")
         .map(Keyword::parse_list)
@@ -2948,6 +2983,8 @@ fn compile_animate(c: &mut Ctx, what: Defined) -> Result<Effect, CompileError> {
         toughness,
         types,
         remove_creature_types,
+        remove_all_abilities,
+        remove_land_types,
         keywords,
         colors,
         colors_chosen,

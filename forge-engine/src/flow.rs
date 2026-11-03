@@ -296,13 +296,15 @@ impl GameState {
                 }
                 self.effects
                     .retain(|e| e.duration != Duration::UntilEndOfTurn);
+                self.end_eot_copies();
                 let _ = self.expire_control_effects(true);
                 // „ThisTurn“-verzögerte Trigger enden (Java clearThisTurnDelayedTrigger).
                 let turn = self.turn;
                 self.delayed_triggers
                     .retain(|d| d.until_turn.is_none_or(|u| u > turn));
                 self.end_effect_objects(|info, ap_is_owner, turn| match info.duration {
-                    crate::state::EffectDuration::EndOfTurn => true,
+                    crate::state::EffectDuration::EndOfTurn
+                    | crate::state::EffectDuration::UntilHostLeavesPlayOrEot => true,
                     crate::state::EffectDuration::UntilTheEndOfYourNextTurn => {
                         ap_is_owner && turn > info.created_turn
                     }

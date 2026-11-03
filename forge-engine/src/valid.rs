@@ -26,6 +26,53 @@ pub enum CardBase {
     Word(String),
     /// Emblem (CR 114): Effektobjekt, dessen Name mit „Emblem“ beginnt (Java `isEmblem`).
     Emblem,
+    /// `Remembered.…`, `Targeted.…`, `Triggered….…`: beliebige Karte; die Eigenschaften
+    /// beziehen sich auf das genannte Objekt als Quelle (Java `AbilityUtils`
+    /// ersetzt die Quelle, z. B. `Remembered.sameName`).
+    Rel(RelBase),
+}
+
+/// Bezugsobjekt eines relativen Filters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelBase {
+    Remembered,
+    Targeted,
+    Triggered,
+}
+
+/// Spielerbezug in `ControlledBy <…>`/`OwnedBy <…>` (Java `getDefinedPlayers`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlayerRef {
+    TriggeredTarget,
+    /// `TriggeredPlayer`, `TriggeredDefendingPlayer`
+    TriggeredPlayer,
+    TriggeredCardController,
+    /// angezielte Spieler
+    Targeted,
+    TargetedController,
+    TargetedOrController,
+    Remembered,
+    RememberedController,
+    ChosenPlayer,
+    ParentTarget,
+}
+
+impl PlayerRef {
+    fn parse(s: &str) -> Option<PlayerRef> {
+        Some(match s {
+            "TriggeredTarget" => PlayerRef::TriggeredTarget,
+            "TriggeredPlayer" | "TriggeredDefendingPlayer" => PlayerRef::TriggeredPlayer,
+            "TriggeredCardController" => PlayerRef::TriggeredCardController,
+            "Targeted" | "TargetedPlayer" => PlayerRef::Targeted,
+            "TargetedController" => PlayerRef::TargetedController,
+            "TargetedOrController" => PlayerRef::TargetedOrController,
+            "Remembered" | "Player.IsRemembered" => PlayerRef::Remembered,
+            "RememberedController" => PlayerRef::RememberedController,
+            "ChosenPlayer" => PlayerRef::ChosenPlayer,
+            "ParentTarget" => PlayerRef::ParentTarget,
+            _ => return None,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,6 +137,13 @@ pub enum Prop {
     },
     /// `HasCounters`: mindestens eine Marke irgendeiner Art
     HasCounters,
+    /// `ControlledBy <Spieler>` / `OwnedBy <Spieler>`; `TargetedPlayerCtrl`
+    ControlledBy(PlayerRef),
+    OwnedBy(PlayerRef),
+    /// `IsTriggerRemembered`: vom (verzögerten) Trigger gemerkt
+    IsTriggerRemembered,
+    /// `sameName`/`sharesNameWith`: gleicher Name wie die Quelle
+    SameName,
     /// `IsMonstrous`/`monstrous` (CR 701.37b)
     Monstrous,
     /// Spieler: der von der Quelle gewählte Spieler (`Player.Chosen`)
@@ -306,6 +360,25 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     if p == "HasCounters" {
         return Ok(Prop::HasCounters);
     }
+    if let Some(r) = p.strip_prefix("ControlledBy ") {
+        return PlayerRef::parse(r)
+            .map(Prop::ControlledBy)
+            .ok_or_else(|| ValidError::Unsupported(p.to_string()));
+    }
+    if let Some(r) = p.strip_prefix("OwnedBy ") {
+        return PlayerRef::parse(r)
+            .map(Prop::OwnedBy)
+            .ok_or_else(|| ValidError::Unsupported(p.to_string()));
+    }
+    match p {
+        "TargetedPlayerCtrl" => return Ok(Prop::ControlledBy(PlayerRef::Targeted)),
+        "TargetedPlayerOwn" => return Ok(Prop::OwnedBy(PlayerRef::Targeted)),
+        "IsTriggerRemembered" => return Ok(Prop::IsTriggerRemembered),
+        "IsNotTriggerRemembered" => return Ok(Prop::Not(Box::new(Prop::IsTriggerRemembered))),
+        "sameName" | "sharesNameWith" => return Ok(Prop::SameName),
+        "notSameName" | "differentName" => return Ok(Prop::Not(Box::new(Prop::SameName))),
+        _ => {}
+    }
     // `RedSource`, `ChosenColorSource`: Quelle der Farbe (Objekte sind ihre eigene Quelle)
     if let Some(col) = p.strip_suffix("Source") {
         if col == "ChosenColor" {
@@ -515,6 +588,20 @@ impl ValidSpec {
                     base: CardBase::Emblem,
                     props,
                 },
+                "Remembered" | "RememberedCard" => Alternative::Card {
+                    base: CardBase::Rel(RelBase::Remembered),
+                    props,
+                },
+                "Targeted" | "TargetedCard" => Alternative::Card {
+                    base: CardBase::Rel(RelBase::Targeted),
+                    props,
+                },
+                "Triggered" | "TriggeredCard" | "TriggeredAttacker" | "TriggeredBlocker" => {
+                    Alternative::Card {
+                        base: CardBase::Rel(RelBase::Triggered),
+                        props,
+                    }
+                }
                 b if is_type_word(b) => Alternative::Card {
                     base: card_base(b),
                     props,
@@ -582,6 +669,7 @@ mod tests {
         assert!(ValidSpec::parse("Creature.powerGE3").is_ok());
         assert!(ValidSpec::parse("Creature.enchanted").is_ok());
         assert!(ValidSpec::parse("Creature.modified").is_ok());
-        assert!(ValidSpec::parse("Creature.sameName").is_err());
+        assert!(ValidSpec::parse("Creature.sameName").is_ok());
+        assert!(ValidSpec::parse("Creature.ControlledBy Spawner").is_err());
     }
 }

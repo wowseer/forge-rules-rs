@@ -173,6 +173,8 @@ pub enum TriggerKind {
     },
     /// `Mode$ TurnFaceUp` – eine bleibende Karte wird umgedreht (CR 708.8).
     TurnFaceUp { valid_card: Option<ValidSpec> },
+    /// `Mode$ Transformed` – eine bleibende Karte wird transformiert (CR 701.28).
+    Transformed { valid_card: Option<ValidSpec> },
     /// `Mode$ Sacrificed` – eine bleibende Karte wurde geopfert (CR 701.21).
     Sacrificed {
         valid_card: Option<ValidSpec>,
@@ -206,6 +208,8 @@ pub struct CompiledTrigger {
     pub description: String,
     /// Kapitelfähigkeit einer Saga (`K:Chapter`, CR 714.2).
     pub chapter: bool,
+    /// `ActivationLimit$ N`: löst höchstens N-mal je Zug aus (je Objekt).
+    pub limit: Option<u32>,
 }
 
 /// Filter für Zaubersprüche/Fähigkeiten (`ValidSource$ SpellAbility.OppCtrl`).
@@ -388,6 +392,9 @@ pub enum TriggerEvent {
     TurnFaceUp {
         card: CardId,
     },
+    Transformed {
+        card: CardId,
+    },
     /// Ein Zauber wurde kopiert (für `SpellCastOrCopy`).
     SpellCopied {
         card: CardId,
@@ -463,6 +470,7 @@ const TRIGGER_NEUTRAL: &[&str] = &[
     "NoResolvingCheck",
     "PrecostDesc",
     "OptionalDecider",
+    "ActivationLimit",
 ];
 
 pub fn compile_trigger(
@@ -727,6 +735,9 @@ pub fn compile_trigger(
         "TurnFaceUp" => TriggerKind::TurnFaceUp {
             valid_card: valid("ValidCard", &mut used)?,
         },
+        "Transformed" => TriggerKind::Transformed {
+            valid_card: valid("ValidCard", &mut used)?,
+        },
         "Taps" => TriggerKind::Taps {
             valid_card: valid("ValidCard", &mut used)?,
             valid_player: valid("ValidPlayer", &mut used)?,
@@ -836,6 +847,13 @@ pub fn compile_trigger(
             .is_some_and(|v| v.eq_ignore_ascii_case("true")),
         description: p.get("TriggerDescription").unwrap_or("").to_string(),
         chapter: false,
+        limit: match p.get("ActivationLimit") {
+            None => None,
+            Some(v) => Some(
+                v.parse::<u32>()
+                    .map_err(|_| unsupported("ActivationLimit", v))?,
+            ),
+        },
     })
 }
 
@@ -1574,7 +1592,8 @@ impl GameState {
                     player: *player,
                 },
             ),
-            (TriggerKind::TurnFaceUp { valid_card }, TriggerEvent::TurnFaceUp { card }) => {
+            (TriggerKind::TurnFaceUp { valid_card }, TriggerEvent::TurnFaceUp { card })
+            | (TriggerKind::Transformed { valid_card }, TriggerEvent::Transformed { card }) => {
                 if !self.opt_card(valid_card, *card, source, controller) {
                     return None;
                 }
@@ -1800,6 +1819,20 @@ impl GameState {
                         self.check_conditions(&t.conditions, &ectx)
                     })
                 {
+                    // `ActivationLimit$`: „triggers only once each turn“
+                    if let Some(limit) = t.limit {
+                        let key = (src, Arc::as_ptr(t) as usize);
+                        let n = self
+                            .this_turn
+                            .trigger_counts
+                            .iter()
+                            .filter(|k| **k == key)
+                            .count();
+                        if n as u32 >= limit {
+                            continue;
+                        }
+                        self.this_turn.trigger_counts.push(key);
+                    }
                     found.push(PendingTrigger {
                         trigger: t.clone(),
                         source: src,
@@ -1826,6 +1859,10 @@ impl GameState {
         };
         while i < self.delayed_triggers.len() {
             let d = &self.delayed_triggers[i];
+            let _fctx = crate::targeting::FilterCtxGuard::set(crate::targeting::FilterCtx {
+                trig_remembered: d.remembered.clone(),
+                ..Default::default()
+            });
             let active = self.turn >= d.from_turn && d.until_turn.is_none_or(|u| self.turn <= u);
             let hit = active
                 .then(|| self.trigger_matches(&d.trigger, d.source, d.controller, &ev))
@@ -1963,6 +2000,10 @@ impl GameState {
                 }
             }
             for t in mine {
+                let _fctx = crate::targeting::FilterCtxGuard::set(crate::targeting::FilterCtx {
+                    trig: Some(t.info.clone()),
+                    ..Default::default()
+                });
                 let ab = t.trigger.execute.clone();
                 // CR 603.3d: ohne legale Ziele (bzw. wählbare Modi) wird der Trigger entfernt.
                 if !self.has_targets_for(&ab, t.source, p) {

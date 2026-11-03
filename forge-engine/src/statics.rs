@@ -40,6 +40,10 @@ pub struct ContinuousStatic {
     pub add_abilities: Vec<std::sync::Arc<crate::effects::CompiledAbility>>,
     /// Layer 6: verliehene Trigger (`AddTrigger$`)
     pub add_triggers: Vec<std::sync::Arc<crate::triggers::CompiledTrigger>>,
+    /// Layer 6: `RemoveAllAbilities$ True`
+    pub remove_all_abilities: bool,
+    /// Layer 4: `RemoveLandTypes$ True`
+    pub remove_land_types: bool,
     /// Layer 7b (bzw. 7a bei `CharacteristicDefining$ True`)
     pub set_power: Option<Expr>,
     pub set_toughness: Option<Expr>,
@@ -77,7 +81,7 @@ pub struct MayPlay {
 
 impl ContinuousStatic {
     pub fn has_layer4(&self) -> bool {
-        !self.add_types.is_empty()
+        !self.add_types.is_empty() || self.remove_land_types
     }
     pub fn has_layer5(&self) -> bool {
         self.set_color.is_some() || self.set_color_chosen
@@ -86,6 +90,7 @@ impl ContinuousStatic {
         !self.add_keywords.is_empty()
             || !self.add_abilities.is_empty()
             || !self.add_triggers.is_empty()
+            || self.remove_all_abilities
     }
     pub fn has_layer7b(&self) -> bool {
         self.set_power.is_some() || self.set_toughness.is_some()
@@ -929,6 +934,11 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
     }
     get("AddAbility");
     get("AddTrigger");
+    // KI-Hinweise bzw. SVars verliehener Fähigkeiten (kompiliert aus der Quelle)
+    get("AddSVar");
+    let remove_all_abilities =
+        get("RemoveAllAbilities").is_some_and(|v| v.eq_ignore_ascii_case("true"));
+    let remove_land_types = get("RemoveLandTypes").is_some_and(|v| v.eq_ignore_ascii_case("true"));
     let add_keywords = match get("AddKeyword") {
         Some(k) => {
             let kws = Keyword::parse_list(k);
@@ -1022,6 +1032,8 @@ pub fn compile_static(face: &CardFace, s: &ScriptStatic) -> Result<CompiledStati
         may_play,
         add_abilities,
         add_triggers,
+        remove_all_abilities,
+        remove_land_types,
         description: p.get("Description").unwrap_or("").to_string(),
     }))
 }
