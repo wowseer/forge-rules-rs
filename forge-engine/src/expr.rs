@@ -97,6 +97,8 @@ pub enum Expr {
     Party,
     /// `Count$RememberedSize`: gemerkte Objekte (Karten und Spieler) der Quelle.
     RememberedSize,
+    /// `Count$YourCounters<Art>`: Marken des Spielers (Energie, Erfahrung …)
+    YourCounters(String),
     /// Zur Laufzeit gesetzter Wert der Quelle (`ResultSVar$`, z. B. Würfelergebnis).
     RuntimeVar(String),
     /// `Count$Monarch.<ja>.<nein>`: bist du der Monarch?
@@ -542,6 +544,9 @@ impl Expr {
                 from,
                 spec: ValidSpec::parse(v).ok()?,
             });
+        }
+        if let Some(kind) = main.strip_prefix("YourCounters") {
+            return Some(Expr::YourCounters(kind.to_ascii_uppercase()));
         }
         if let Some(name) = main.strip_prefix("RuntimeVar.") {
             return Some(Expr::RuntimeVar(name.to_string()));
@@ -1064,6 +1069,14 @@ impl GameState {
                     b
                 }
                 best(0, &fits, &mut [false; 4])
+            }
+            Expr::YourCounters(k) => {
+                let pl = self.player(ctx.controller);
+                if k == "POISON" {
+                    pl.poison as i32
+                } else {
+                    pl.counters.get(k).copied().unwrap_or(0) as i32
+                }
             }
             Expr::RuntimeVar(n) => self
                 .card(ctx.source)

@@ -458,6 +458,19 @@ impl GameState {
                     }
                 } else {
                     let ts = self.resolve_defined(*what, targets, ctx);
+                    // Spieler-Marken (Energie, Gift, Erfahrung …)
+                    for pl in Self::players_of(&ts) {
+                        let n = self.replace_counter_amount(Target::Player(pl), counter, n);
+                        if counter == "POISON" {
+                            self.player_mut(pl).poison += n;
+                        } else {
+                            *self
+                                .player_mut(pl)
+                                .counters
+                                .entry(counter.clone())
+                                .or_insert(0) += n;
+                        }
+                    }
                     self.cards_of(&ts)
                 };
                 for c in cards {
@@ -862,18 +875,29 @@ impl GameState {
                 power,
                 toughness,
                 remember,
+                attacking,
             } => {
                 let n = self.amount(amount, ctx, targets).max(0) as u32;
                 let p_override = power.as_ref().map(|a| self.amount(a, ctx, targets));
                 let t_override = toughness.as_ref().map(|a| self.amount(a, ctx, targets));
                 let owners = Self::players_of(&self.resolve_defined(*owner, targets, ctx));
                 for p in owners {
-                    for _ in 0..n {
+                    // CR 614.1a: Verdopplungen (Doubling Season u. a.) anhand des
+                    // ersten erzeugten Spielsteins bestimmt
+                    let mut total = n;
+                    let mut multiplied = false;
+                    let mut i = 0;
+                    while i < total {
+                        i += 1;
                         for s in scripts {
                             let Some(def) = self.token_defs.get(s).cloned() else {
                                 continue;
                             };
                             let id = self.create_card(def, p, Zone::Battlefield, true);
+                            if !multiplied {
+                                multiplied = true;
+                                total = n * self.token_multiplier(id, p);
+                            }
                             let face = self.card(id).face().clone();
                             let o = self.card_mut(id);
                             o.tapped = *tapped;
@@ -889,6 +913,30 @@ impl GameState {
                             }
                             if *remember {
                                 self.card_mut(ctx.source).remembered.push(id);
+                            }
+                            // CR 506.3: angreifend ins Spiel – greift an, was die Quelle
+                            // angreift (sonst den ersten Gegner)
+                            if *attacking && self.combat.is_some() {
+                                let target = self
+                                    .combat
+                                    .as_ref()
+                                    .and_then(|cb| {
+                                        cb.attackers.iter().find(|a| a.card == ctx.source)
+                                    })
+                                    .map(|a| (a.defender, a.target))
+                                    .or_else(|| {
+                                        self.opponents(p).first().map(|o| (*o, Target::Player(*o)))
+                                    });
+                                if let (Some((defender, target)), Some(cb)) =
+                                    (target, self.combat.as_mut())
+                                {
+                                    cb.attackers.push(crate::state::AttackerInfo {
+                                        card: id,
+                                        defender,
+                                        target,
+                                        blocked: false,
+                                    });
+                                }
                             }
                             // CR 111.1: Token kommt ins Spiel → ETB-Trigger
                             self.push_event(crate::state::Event::ZoneChange {
@@ -1640,6 +1688,7 @@ impl GameState {
                             power: None,
                             toughness: None,
                             remember: false,
+                            attacking: false,
                         },
                         targets,
                         ctx,
@@ -1789,6 +1838,60 @@ impl GameState {
                             .extend(cards.iter().copied());
                     }
                     self.push_event(Event::Revealed { player: p, cards });
+                }
+            }
+            Effect::MultiplyCounter {
+                what,
+                kind,
+                multiplier,
+            } => {
+                let m = self.amount(multiplier, ctx, targets).max(1) as u32;
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let kinds: Vec<(String, u32)> = self
+                        .card(c)
+                        .counters
+                        .iter()
+                        .filter(|(k, n)| **n > 0 && kind.as_ref().is_none_or(|t| t == *k))
+                        .map(|(k, n)| (k.clone(), *n))
+                        .collect();
+                    for (k, n) in kinds {
+                        self.add_counters(c, &k, n * (m - 1));
+                    }
+                }
+            }
+            Effect::Connive { what, num } => {
+                let n = self.amount(num, ctx, targets).max(0) as u32;
+                for c in self.cards_of(&self.resolve_defined(*what, targets, ctx)) {
+                    let p = self.card(c).controller;
+                    for _ in 0..n {
+                        self.draw(p);
+                    }
+                    let hand = self.player(p).hand.clone();
+                    let k = n.min(hand.len() as u32);
+                    if k == 0 {
+                        continue;
+                    }
+                    let chosen = match ch.ask(Decision::ChooseCards {
+                        player: p,
+                        reason: crate::decision::CardChoiceReason::Discard,
+                        options: hand.clone(),
+                        min: k,
+                        max: k,
+                    })? {
+                        Choice::Cards(v) => v,
+                        _ => hand[..k as usize].to_vec(),
+                    };
+                    let mut nonland = 0;
+                    for d in chosen.into_iter().filter(|d| hand.contains(d)) {
+                        if !self.chars(d).types.is_land() {
+                            nonland += 1;
+                        }
+                        self.discard(d);
+                    }
+                    // CR 701.50a: je abgeworfener Nichtlandkarte eine +1/+1-Marke
+                    if nonland > 0 && self.card(c).zone == Some(Zone::Battlefield) {
+                        self.add_counters(c, "P1P1", nonland);
+                    }
                 }
             }
             Effect::StoreSVar { name, value } => {
@@ -2617,6 +2720,10 @@ impl GameState {
                     })
                     .filter(|c| self.card(*c).zone.is_some_and(|z| origin.contains(&z)))
                     .collect();
+                if place.remember_targets {
+                    let ts: Vec<CardId> = Self::cards_of_any(targets);
+                    self.card_mut(ctx.source).remembered.extend(ts);
+                }
                 for c in cards {
                     if *optional
                         && !matches!(

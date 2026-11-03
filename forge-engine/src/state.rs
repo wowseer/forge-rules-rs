@@ -78,6 +78,8 @@ pub struct Player {
     pub name: String,
     pub life: i32,
     pub poison: u32,
+    /// Weitere Spieler-Marken (ENERGY, EXPERIENCE, RAD …), CR 122.1.
+    pub counters: BTreeMap<String, u32>,
     /// Oberste Karte = letztes Element.
     pub library: Vec<CardId>,
     pub hand: Vec<CardId>,
@@ -1349,6 +1351,7 @@ impl GameState {
                 name,
                 life: rules.starting_life,
                 poison: 0,
+                counters: BTreeMap::new(),
                 library: Vec::new(),
                 hand: Vec::new(),
                 graveyard: Vec::new(),

@@ -824,6 +824,10 @@ impl GameState {
         if n == 0 {
             return;
         }
+        let n = self.replace_counter_amount(crate::decision::Target::Card(c), kind, n);
+        if n == 0 {
+            return;
+        }
         let before = self.card(c).counter(kind);
         *self
             .card_mut(c)

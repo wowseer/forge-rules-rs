@@ -37,6 +37,10 @@ pub struct CompiledFace {
     pub untap_replacements: Vec<Arc<crate::replacements::UntapReplacement>>,
     /// „kann nicht neutralisiert werden“ (`R:Event$ Counter | Layer$ CantHappen`)
     pub cant_counter: Vec<Arc<crate::replacements::CantCounterReplacement>>,
+    /// `R:Event$ AddCounter`
+    pub counter_replacements: Vec<Arc<crate::replacements::CounterReplacement>>,
+    /// `R:Event$ CreateToken`
+    pub token_replacements: Vec<Arc<crate::replacements::TokenReplacement>>,
     /// `K:ETBReplacement:Other:<SVar>[:Optional]`: beim Ankommen auszuführen
     /// (Wahl von Typ/Farb usw.); `true` = optional.
     pub etb_other: Vec<(Arc<CompiledAbility>, bool)>,
@@ -227,6 +231,8 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         final_chapter: None,
         untap_replacements: Vec::new(),
         cant_counter: Vec::new(),
+        counter_replacements: Vec::new(),
+        token_replacements: Vec::new(),
         etb_other: Vec::new(),
     };
     let mut equip: Vec<Arc<CompiledAbility>> = Vec::new();
@@ -521,6 +527,20 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
         if r.mode == "Untap" {
             match crate::replacements::compile_untap_replacement(face, r) {
                 Ok(c) => out.untap_replacements.push(Arc::new(c)),
+                Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
+            }
+            continue;
+        }
+        if r.mode == "AddCounter" {
+            match crate::replacements::compile_counter_replacement(face, r) {
+                Ok(c) => out.counter_replacements.push(Arc::new(c)),
+                Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
+            }
+            continue;
+        }
+        if r.mode == "CreateToken" {
+            match crate::replacements::compile_token_replacement(face, r) {
+                Ok(c) => out.token_replacements.push(Arc::new(c)),
                 Err(e) => unsupported.push(format!("Replacement: {} ({e})", r.mode)),
             }
             continue;

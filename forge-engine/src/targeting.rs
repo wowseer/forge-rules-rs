@@ -109,6 +109,17 @@ impl GameState {
                 .and_then(|e| e.host)
                 .is_some_and(|h| self.current_object(h) == id || h == id),
             Prop::WasCastByYou => c.cast_by == Some(you),
+            Prop::Modified => {
+                c.counters.values().any(|n| *n > 0)
+                    || self.battlefield.iter().any(|&a| {
+                        let ao = self.card(a);
+                        ao.attached_to == Some(id)
+                            && (self.chars(a).types.has_subtype("Equipment")
+                                || (self.chars(a).types.has_subtype("Aura")
+                                    && ao.controller == c.controller))
+                    })
+            }
+            Prop::ThisTurnEntered => self.this_turn.moves.iter().any(|m| m.1 == id),
             Prop::DamagedBy => self
                 .this_turn
                 .damaged

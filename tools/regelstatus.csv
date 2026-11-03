@@ -335,3 +335,8 @@ Effect (ApiType);StoreSVar;teilweise;mechanics_batch2::store_svar_and_remember_t
 Static Ability;CantTarget;teilweise;mechanics_batch2::cant_target_my_creatures_with_opponent_spells;ValidTarget (Karten/Spieler), ValidSA Spell/Activated, Activator, ValidSource, AffectedZone
 Static Ability;Panharmonicon;teilweise;mechanics_batch2::panharmonicon_doubles_etb_triggers;CR 603.2d: ValidMode, ValidCard, ValidCause, Destination
 Trigger;SpellCastOrCopy;ja;mechanics_batch2::spell_cast_or_copy_and_damaged_by;wie SpellCast, zusätzlich beim Kopieren
+Replacement Effect;AddCounter;teilweise;mechanics_batch3::hardened_scales_and_doubling_season;ReplaceCounter mit ReplaceCount$CounterNum-Ausdruck, ValidCard/ValidPlayer, ValidCounterType, EffectOnly; Reihenfolge nach Zeitstempel statt Wahl des Betroffenen
+Replacement Effect;CreateToken;teilweise;mechanics_batch3::hardened_scales_and_doubling_season;ReplaceToken Type Amount (Verdopplung), ValidToken, ValidPlayer, EffectOnly; andere ReplaceToken-Arten fehlen
+Effect (ApiType);MultiplyCounter;ja;mechanics_batch3::multiply_and_connive;Marken einer oder aller Arten vervielfachen (Multiplier, Standard 2)
+Effect (ApiType);Connive;ja;mechanics_batch3::multiply_and_connive;CR 701.50: ziehen, abwerfen, je Nichtland +1/+1-Marke
+Trigger;LandPlayed;ja;mechanics_batch3::landfall_trigger_and_extra_land_play;ValidCard, Origin

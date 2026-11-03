@@ -143,6 +143,11 @@ pub enum TriggerKind {
         valid_card: Option<ValidSpec>,
         valid_player: Option<ValidSpec>,
     },
+    /// `Mode$ LandPlayed` – ein Land wurde gespielt (CR 305.1).
+    LandPlayed {
+        valid_card: Option<ValidSpec>,
+        origin: Option<Vec<Zone>>,
+    },
     /// `Mode$ Untaps` – eine bleibende Karte wird enttappt.
     Untaps { valid_card: Option<ValidSpec> },
     /// `Mode$ Always` – Zustandstrigger (CR 603.8), Bedingungen in `conditions`.
@@ -390,6 +395,11 @@ pub enum TriggerEvent {
     },
     Untaps {
         card: CardId,
+    },
+    LandPlayed {
+        card: CardId,
+        player: PlayerId,
+        from: Option<Zone>,
     },
     CounterAddedOnce {
         card: CardId,
@@ -672,6 +682,16 @@ pub fn compile_trigger(
         "LifeGained" => TriggerKind::LifeGained {
             valid_player: valid("ValidPlayer", &mut used)?,
         },
+        "LandPlayed" => {
+            used.extend(["Origin", "Static"]);
+            TriggerKind::LandPlayed {
+                valid_card: valid("ValidCard", &mut used)?,
+                origin: match p.get("Origin") {
+                    Some(z) => zones(z).map_err(|e| unsupported("Origin", &e))?,
+                    None => None,
+                },
+            }
+        }
         "Untaps" => TriggerKind::Untaps {
             valid_card: valid("ValidCard", &mut used)?,
         },
@@ -1452,6 +1472,24 @@ impl GameState {
                 Some(TriggerInfo {
                     player: Some(*player),
                     amount: Some(*amount as i32),
+                    ..Default::default()
+                })
+            }
+            (
+                TriggerKind::LandPlayed { valid_card, origin },
+                TriggerEvent::LandPlayed { card, player, from },
+            ) => {
+                if !self.opt_card(valid_card, *card, source, controller)
+                    || origin
+                        .as_ref()
+                        .is_some_and(|o| from.is_none_or(|f| !o.contains(&f)))
+                {
+                    return None;
+                }
+                Some(TriggerInfo {
+                    card: Some(*card),
+                    card_lki: Some(*card),
+                    player: Some(*player),
                     ..Default::default()
                 })
             }

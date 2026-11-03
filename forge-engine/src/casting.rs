@@ -89,6 +89,9 @@ impl GameState {
             CostPart::DiscardRandom { amount } => {
                 self.player(p).hand.iter().filter(|c| **c != source).count() as u32 >= *amount
             }
+            CostPart::PayEnergy { amount } => {
+                self.player(p).counters.get("ENERGY").copied().unwrap_or(0) >= *amount
+            }
             CostPart::TapTotalPower { power, valid } => {
                 self.tap_type_options(cost, valid, source, p)
                     .iter()
@@ -531,7 +534,7 @@ impl GameState {
         let ch = self.chars(c);
         if ch.types.is_land() {
             let pl = self.player(p);
-            return valid_sa.is_none() && pl.lands_played_this_turn < pl.land_plays_per_turn;
+            return valid_sa.is_none() && pl.lands_played_this_turn < self.land_plays(p);
         }
         if valid_sa.is_some_and(|v| !self.card_matches(c, v, source, p)) || self.cant_cast(p, c) {
             return false;
@@ -558,11 +561,17 @@ impl GameState {
         ch: &mut Choices,
     ) -> Res<Option<CardId>> {
         if self.chars(c).types.is_land() {
+            let from = self.card(c).zone;
             let new = self.move_card_as(c, Zone::Battlefield, true, Some(p));
             self.player_mut(p).lands_played_this_turn += 1;
             self.push_event(Event::LandPlayed {
                 player: p,
                 card: new,
+            });
+            self.fire(crate::triggers::TriggerEvent::LandPlayed {
+                card: new,
+                player: p,
+                from,
             });
             return Ok(Some(new));
         }
@@ -771,7 +780,7 @@ impl GameState {
         }
         let mut acts = vec![Action::Pass];
         let pl = self.player(p);
-        let land_ok = self.sorcery_timing(p) && pl.lands_played_this_turn < pl.land_plays_per_turn;
+        let land_ok = self.sorcery_timing(p) && pl.lands_played_this_turn < self.land_plays(p);
         for &c in &pl.hand {
             let card = self.card(c);
             if !card.def.is_supported() {
@@ -959,11 +968,17 @@ impl GameState {
                 if self.card(c).zone != Some(Zone::Hand) {
                     self.use_may_play(p, c, false);
                 }
+                let from = self.card(c).zone;
                 let new = self.move_card_as(c, Zone::Battlefield, true, Some(p));
                 self.player_mut(p).lands_played_this_turn += 1;
                 self.push_event(Event::LandPlayed {
                     player: p,
                     card: new,
+                });
+                self.fire(crate::triggers::TriggerEvent::LandPlayed {
+                    card: new,
+                    player: p,
+                    from,
                 });
                 Ok(())
             }
@@ -1603,6 +1618,14 @@ impl GameState {
                             note(PaidKind::Sacrificed, c);
                         }
                     }
+                }
+                CostPart::PayEnergy { amount } => {
+                    let e = self
+                        .player_mut(p)
+                        .counters
+                        .entry("ENERGY".into())
+                        .or_insert(0);
+                    *e = e.saturating_sub(*amount);
                 }
                 CostPart::DiscardRandom { amount } => {
                     let mut hand: Vec<CardId> = self

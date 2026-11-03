@@ -212,6 +212,157 @@ pub fn compile_untap_replacement(
     })
 }
 
+/// `R:Event$ AddCounter`: mehr Marken (Hardened Scales, Doubling Season …).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CounterReplacement {
+    pub valid_card: Option<ValidSpec>,
+    pub valid_player: Option<ValidSpec>,
+    pub counter_type: Option<String>,
+    /// nur bei Marken aus Effekten
+    pub effect_only: bool,
+    /// neue Anzahl; `Count$xPaid` steht für die ursprüngliche
+    pub amount: Expr,
+    pub active_zones: Option<Vec<Zone>>,
+}
+
+pub fn compile_counter_replacement(
+    face: &CardFace,
+    r: &ScriptReplacement,
+) -> Result<CounterReplacement, CompileError> {
+    let p = &r.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: "Replacement AddCounter".into(),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend([
+        "ActiveZones",
+        "ValidCard",
+        "ValidPlayer",
+        "ValidCounterType",
+        "EffectOnly",
+        "ReplaceWith",
+    ]);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    let name = p
+        .get("ReplaceWith")
+        .ok_or_else(|| err("ReplaceWith", "fehlt"))?;
+    let sv = face
+        .svar(name)
+        .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+    let ab = ScriptAbility::from_svar(sv)
+        .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+        .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+    if ab.api != "ReplaceCounter" {
+        return Err(err("ReplaceWith", sv));
+    }
+    let var = ab
+        .params
+        .get("Amount")
+        .ok_or_else(|| err("Amount", "fehlt"))?;
+    let x = face
+        .svar(var)
+        .ok_or_else(|| CompileError::MissingSvar(var.to_string()))?;
+    if !x.trim_start().starts_with("ReplaceCount$CounterNum") {
+        return Err(err("Amount", x));
+    }
+    let amount = Expr::parse_svar(
+        face,
+        &x.replacen("ReplaceCount$CounterNum", "Count$xPaid", 1),
+    )?;
+    let opt = |k: &str| {
+        p.get(k)
+            .map(ValidSpec::parse)
+            .transpose()
+            .map_err(CompileError::Valid)
+    };
+    Ok(CounterReplacement {
+        valid_card: opt("ValidCard")?,
+        valid_player: opt("ValidPlayer")?,
+        counter_type: p
+            .get("ValidCounterType")
+            .or(ab.params.get("ValidCounterType"))
+            .map(|t| t.to_ascii_uppercase()),
+        effect_only: p.is_true("EffectOnly"),
+        amount,
+        active_zones: match p.get("ActiveZones") {
+            Some(z) => Some(zones(z).ok_or_else(|| err("ActiveZones", z))?),
+            None => None,
+        },
+    })
+}
+
+/// `R:Event$ CreateToken` mit `ReplaceToken | Type$ Amount`: doppelt so viele Spielsteine.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TokenReplacement {
+    pub valid_token: Option<ValidSpec>,
+    pub valid_player: Option<ValidSpec>,
+    pub effect_only: bool,
+    pub active_zones: Option<Vec<Zone>>,
+}
+
+pub fn compile_token_replacement(
+    face: &CardFace,
+    r: &ScriptReplacement,
+) -> Result<TokenReplacement, CompileError> {
+    let p = &r.params;
+    let err = |k: &str, v: &str| CompileError::UnsupportedParam {
+        api: "Replacement CreateToken".into(),
+        key: k.into(),
+        value: v.into(),
+    };
+    let mut used: Vec<&str> = NEUTRAL.to_vec();
+    used.extend([
+        "ActiveZones",
+        "ValidToken",
+        "ValidPlayer",
+        "EffectOnly",
+        "ReplaceWith",
+    ]);
+    for (k, v) in p.iter() {
+        if !used.iter().any(|u| u.eq_ignore_ascii_case(k)) {
+            return Err(err(k, v));
+        }
+    }
+    let name = p
+        .get("ReplaceWith")
+        .ok_or_else(|| err("ReplaceWith", "fehlt"))?;
+    let sv = face
+        .svar(name)
+        .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?;
+    let ab = ScriptAbility::from_svar(sv)
+        .ok_or_else(|| CompileError::MissingSvar(name.to_string()))?
+        .map_err(|_| CompileError::MissingSvar(name.to_string()))?;
+    let only_known = ab.params.keys().all(|k| {
+        ["DB", "Type", "SpellDescription", "StackDescription"]
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case(k))
+    });
+    if ab.api != "ReplaceToken" || ab.params.get("Type") != Some("Amount") || !only_known {
+        return Err(err("ReplaceWith", sv));
+    }
+    let opt = |k: &str| {
+        p.get(k)
+            .map(ValidSpec::parse)
+            .transpose()
+            .map_err(CompileError::Valid)
+    };
+    Ok(TokenReplacement {
+        valid_token: opt("ValidToken")?,
+        valid_player: opt("ValidPlayer")?,
+        effect_only: p.is_true("EffectOnly"),
+        active_zones: match p.get("ActiveZones") {
+            Some(z) => Some(zones(z).ok_or_else(|| err("ActiveZones", z))?),
+            None => None,
+        },
+    })
+}
+
 /// `R:Event$ Counter | Layer$ CantHappen`: „kann nicht neutralisiert werden“
 /// (CR 101.2, Java `ReplaceCounter`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -273,6 +424,91 @@ pub fn compile_cant_counter_replacement(
 }
 
 impl GameState {
+    /// CR 614.1a: Ersatzeffekte für das Legen von Marken (je Effekt einmal,
+    /// nach Zeitstempel; Verlauf der Wahl des Betroffenen vereinfacht).
+    pub(crate) fn replace_counter_amount(
+        &self,
+        target: crate::decision::Target,
+        kind: &str,
+        n: u32,
+    ) -> u32 {
+        use crate::decision::Target;
+        if n == 0 {
+            return 0;
+        }
+        let mut hosts: Vec<(u64, CardId)> = self
+            .live_cards()
+            .map(|id| self.card(id))
+            .filter(|c| c.zone.is_some() && !c.compiled().counter_replacements.is_empty())
+            .map(|c| (c.timestamp, c.id))
+            .collect();
+        hosts.sort();
+        let mut n = n as i32;
+        for (_, host) in hosts {
+            let h = self.card(host);
+            let hz = h.zone.expect("gefiltert");
+            for r in &h.compiled().counter_replacements {
+                if r.active_zones.as_ref().is_some_and(|z| !z.contains(&hz))
+                    || r.counter_type.as_ref().is_some_and(|t| t != kind)
+                    || (r.effect_only && self.effect_source.is_none())
+                {
+                    continue;
+                }
+                let ok = match target {
+                    Target::Card(c) => {
+                        r.valid_player.is_none()
+                            && r.valid_card
+                                .as_ref()
+                                .is_none_or(|v| self.card_matches(c, v, host, h.controller))
+                    }
+                    Target::Player(p) => {
+                        r.valid_card.is_none()
+                            && r.valid_player
+                                .as_ref()
+                                .is_some_and(|v| self.player_matches_src(p, v, h.controller, host))
+                    }
+                };
+                if !ok {
+                    continue;
+                }
+                let ctx = EvalCtx {
+                    source: host,
+                    controller: h.controller,
+                    x: n.max(0) as u32,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                n = self.eval(&r.amount, &ctx);
+            }
+        }
+        n.max(0) as u32
+    }
+
+    /// Wie oft ein Spielstein für `owner` erzeugt wird (Verdopplungen, CR 614.1a).
+    pub(crate) fn token_multiplier(&self, token: CardId, owner: crate::ids::PlayerId) -> u32 {
+        let mut mult = 1;
+        for host in self.live_cards().collect::<Vec<_>>() {
+            let h = self.card(host);
+            let Some(hz) = h.zone else { continue };
+            for r in &h.compiled().token_replacements {
+                if r.active_zones.as_ref().is_some_and(|z| !z.contains(&hz))
+                    || (r.effect_only && self.effect_source.is_none())
+                    || r.valid_token
+                        .as_ref()
+                        .is_some_and(|v| !self.card_matches(token, v, host, h.controller))
+                    || r.valid_player
+                        .as_ref()
+                        .is_some_and(|v| !self.player_matches_src(owner, v, h.controller, host))
+                {
+                    continue;
+                }
+                mult *= 2;
+            }
+        }
+        mult
+    }
+
     /// CR 101.2: Kann der Zauber `spell` (auf dem Stapel) nicht neutralisiert werden?
     pub fn cant_be_countered(&self, spell: CardId) -> bool {
         if self.card(spell).zone != Some(Zone::Stack) {

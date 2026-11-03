@@ -285,6 +285,25 @@ impl GameState {
         Some(size.max(0) as u32)
     }
 
+    /// Landspiele je Zug inkl. `AdjustLandPlays` (CR 305.2).
+    pub fn land_plays(&self, p: PlayerId) -> u32 {
+        let mut n = self.player(p).land_plays_per_turn as i32;
+        for (src, ctrl, s) in self.player_statics(p) {
+            if let Some(e) = &s.adjust_land_plays {
+                let ctx = crate::expr::EvalCtx {
+                    source: src,
+                    controller: ctrl,
+                    x: 0,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                n += self.eval(e, &ctx);
+            }
+        }
+        n.max(0) as u32
+    }
+
     /// Spieler hat Fluchsicherheit/Verhüllung (CR 702.11d, 702.18d).
     pub fn player_has_hexproof(&self, p: PlayerId) -> bool {
         self.player_statics(p).iter().any(|(_, _, s)| s.hexproof)

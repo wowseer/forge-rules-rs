@@ -59,6 +59,8 @@ pub enum Keyword {
     DeckBuilding(String),
     /// CR 702.88: Rebound
     Rebound,
+    /// „You may choose not to untap CARDNAME during your untap step.“ (CR 502.3)
+    MayNotUntap,
     /// CR 702.93 Undying, 702.79 Persist, 702.45 Bushido n, 702.25 Flanking
     /// (als Trigger übersetzt, siehe `definition.rs`)
     Undying,
@@ -145,6 +147,7 @@ impl Keyword {
             "Exalted" => Keyword::Exalted,
             "Rebound" => Keyword::Rebound,
             "Undying" => Keyword::Undying,
+            "You may choose not to untap CARDNAME during your untap step." => Keyword::MayNotUntap,
             "Persist" => Keyword::Persist,
             "Flanking" => Keyword::Flanking,
             t if t.starts_with("Bushido:") && t["Bushido:".len()..].parse::<u32>().is_ok() => {

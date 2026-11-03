@@ -39,6 +39,8 @@ pub enum CostPart {
     TapType { amount: u32, valid: ValidSpec },
     /// `Discard<n/Random>`: n zufällige Handkarten abwerfen
     DiscardRandom { amount: u32 },
+    /// `PayEnergy<n>` (CR 107.14)
+    PayEnergy { amount: u32 },
     /// `tapXType<Any/Filter+withTotalPowerGEn>` (Crew, CR 702.122): beliebig viele
     /// ungetappte eigene Kreaturen mit Gesamtstärke ≥ n tappen.
     TapTotalPower { power: u32, valid: ValidSpec },
@@ -90,6 +92,7 @@ impl fmt::Display for Cost {
                 }
                 CostPart::TapType { amount, valid } => format!("tapXType<{amount}/{valid:?}>"),
                 CostPart::DiscardRandom { amount } => format!("Discard<{amount}/Random>"),
+                CostPart::PayEnergy { amount } => format!("PayEnergy<{amount}>"),
                 CostPart::TapTotalPower { power, valid } => {
                     format!("tapXType<Any/{valid:?}+withTotalPowerGE{power}>")
                 }
@@ -239,6 +242,9 @@ impl Cost {
                             ("Discard", [n, "CARDNAME", ..]) if n.trim() == "1" => {
                                 CostPart::DiscardSelf
                             }
+                            ("PayEnergy", [n, ..]) => CostPart::PayEnergy {
+                                amount: amount(n, &tok)?,
+                            },
                             ("Discard", [n, "Random", ..]) => CostPart::DiscardRandom {
                                 amount: amount(n, &tok)?,
                             },

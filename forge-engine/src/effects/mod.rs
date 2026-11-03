@@ -257,6 +257,8 @@ pub enum Effect {
         toughness: Option<Amount>,
         /// `RememberTokens$`: die Quelle merkt sich die erzeugten Spielsteine
         remember: bool,
+        /// `TokenAttacking$ True`: kommt angreifend ins Spiel (CR 506.3)
+        attacking: bool,
     },
     /// Alle passenden bleibenden Karten bis Zugende verstärken (`PumpAll`).
     PumpAll {
@@ -530,6 +532,17 @@ pub enum Effect {
         optional: bool,
         remember: bool,
     },
+    /// Marken vervielfachen (`MultiplyCounter`, Standard verdoppeln).
+    MultiplyCounter {
+        what: Defined,
+        kind: Option<String>,
+        multiplier: Amount,
+    },
+    /// CR 701.50: Connive
+    Connive {
+        what: Defined,
+        num: Amount,
+    },
     /// `StoreSVar`: Wert in einer Laufzeitvariablen der Quelle speichern.
     StoreSVar {
         name: String,
@@ -756,6 +769,8 @@ pub struct ZonePlacement {
     pub until_host_leaves: bool,
     /// `WithCountersType$`: kommt mit einer Marke dieser Art ins Spiel
     pub with_counter: Option<String>,
+    /// `RememberTargets$ True`: die Quelle merkt sich die Ziele (vor dem Bewegen)
+    pub remember_targets: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1092,6 +1107,9 @@ fn compile_change_zone(c: &mut Ctx, api: &str) -> Result<Effect, CompileError> {
             Some(v) => return Err(c.unsupported("Duration", v)),
         },
         with_counter: c.get("WithCountersType").map(|t| t.to_ascii_uppercase()),
+        remember_targets: c
+            .get("RememberTargets")
+            .is_some_and(|v| v.eq_ignore_ascii_case("true")),
     };
     // reine Text-/Hinweisparameter
     for k in ["ChangeTypeDesc", "SelectPrompt", "ShuffleNonMandatory"] {
@@ -1201,6 +1219,8 @@ fn compile_effect_object(c: &mut Ctx, face: &CardFace) -> Result<Effect, Compile
         final_chapter: None,
         untap_replacements: Vec::new(),
         cant_counter: Vec::new(),
+        counter_replacements: Vec::new(),
+        token_replacements: Vec::new(),
         etb_other: Vec::new(),
     };
     let svar = |n: &str| {
@@ -2017,6 +2037,18 @@ fn compile_depth(
                 remember: flag(&mut c, "RememberRevealed"),
             }
         }
+        "MultiplyCounter" => Effect::MultiplyCounter {
+            what: c.defined(Defined::SelfCard)?,
+            kind: c.get("CounterType").map(|t| t.to_ascii_uppercase()),
+            multiplier: c.amount("Multiplier", Some(2))?,
+        },
+        "Connive" => {
+            c.get("ValidTgtsDesc");
+            Effect::Connive {
+                what: c.defined(Defined::SelfCard)?,
+                num: c.amount("ConniveNum", Some(1))?,
+            }
+        }
         "StoreSVar" => {
             let name = c
                 .get("SVar")
@@ -2541,6 +2573,7 @@ fn compile_depth(
             power: None,
             toughness: None,
             remember: false,
+            attacking: false,
         },
         "ManaReflected" => {
             match c.get("ReflectProperty") {
@@ -2642,6 +2675,9 @@ fn compile_depth(
                 toughness,
                 remember: c
                     .get("RememberTokens")
+                    .is_some_and(|v| v.eq_ignore_ascii_case("true")),
+                attacking: c
+                    .get("TokenAttacking")
                     .is_some_and(|v| v.eq_ignore_ascii_case("true")),
             }
         }

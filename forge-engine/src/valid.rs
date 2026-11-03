@@ -102,6 +102,10 @@ pub enum Prop {
     FaceDown,
     /// `Historic` (CR 700.6): Artefakt, legendär oder Saga
     Historic,
+    /// `modified` (CR 700.9): Marken, Ausrüstung oder eigene Aura
+    Modified,
+    /// `ThisTurnEntered`: kam in diesem Zug in seine Zone
+    ThisTurnEntered,
     /// `EffectSource`: die Karte, die das Effektobjekt (Quelle) erzeugt hat
     EffectSource,
     /// `wasCastByYou`
@@ -307,6 +311,8 @@ fn parse_prop(p: &str) -> Result<Prop, ValidError> {
     match p {
         "IsCommander" => return Ok(Prop::IsCommander),
         "EffectSource" => return Ok(Prop::EffectSource),
+        "modified" => return Ok(Prop::Modified),
+        "ThisTurnEntered" => return Ok(Prop::ThisTurnEntered),
         "wasCastByYou" => return Ok(Prop::WasCastByYou),
         "DamagedBy" => return Ok(Prop::DamagedBy),
         "Historic" => return Ok(Prop::Historic),
@@ -563,6 +569,7 @@ mod tests {
         assert_eq!(ValidSpec::parse("Any").unwrap().alternatives.len(), 4);
         assert!(ValidSpec::parse("Creature.powerGE3").is_ok());
         assert!(ValidSpec::parse("Creature.enchanted").is_ok());
-        assert!(ValidSpec::parse("Creature.modified").is_err());
+        assert!(ValidSpec::parse("Creature.modified").is_ok());
+        assert!(ValidSpec::parse("Creature.sameName").is_err());
     }
 }

@@ -221,6 +221,8 @@ pub struct PlayerStatic {
     pub set_max_hand: Option<HandSize>,
     /// `RaiseMaxHandSize$` (auch negativ)
     pub raise_max_hand: Option<Expr>,
+    /// `AdjustLandPlays$ n`: zusätzliche Landspiele je Zug (CR 305.2)
+    pub adjust_land_plays: Option<Expr>,
     /// `AddKeyword$ Hexproof|Shroud` (CR 702.11d, 702.18d)
     pub hexproof: bool,
     pub shroud: bool,
@@ -314,6 +316,7 @@ fn compile_player_static(
         "SetMaxHandSize",
         "RaiseMaxHandSize",
         "AddKeyword",
+        "AdjustLandPlays",
     ]);
     let effect_zones = match p.get("EffectZone") {
         Some(z) => zones(z).ok_or_else(|| err("EffectZone", z))?,
@@ -338,6 +341,10 @@ fn compile_player_static(
             }
         }
     }
+    let adjust_land_plays = p
+        .get("AdjustLandPlays")
+        .map(|v| Expr::parse_value(face, v))
+        .transpose()?;
     let (conditions, ck) = parse_conditions(face, p, CondStyle::Requirement)?;
     used.extend(ck);
     for (k, v) in p.iter() {
@@ -345,7 +352,12 @@ fn compile_player_static(
             return Err(err(k, v));
         }
     }
-    if set_max_hand.is_none() && raise_max_hand.is_none() && !hexproof && !shroud {
+    if set_max_hand.is_none()
+        && raise_max_hand.is_none()
+        && adjust_land_plays.is_none()
+        && !hexproof
+        && !shroud
+    {
         return Err(err("Affected", p.get("Affected").unwrap_or("")));
     }
     Ok(CompiledStatic::Player(PlayerStatic {
@@ -354,6 +366,7 @@ fn compile_player_static(
         conditions,
         set_max_hand,
         raise_max_hand,
+        adjust_land_plays,
         hexproof,
         shroud,
     }))
