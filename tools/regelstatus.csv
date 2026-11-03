@@ -304,3 +304,10 @@ Trigger;TurnFaceUp;teilweise;morph::cast_face_down_then_turn_up_with_trigger;Val
 Effect (ApiType);Amass;ja;amass::amass_creates_army_then_grows_and_gains_type;CR 701.47: ohne Army zuerst 0/0-Army-Spielstein, +1/+1-Marken auf eine gewählte Army, Typ zusätzlich
 Trigger;TapsForMana;teilweise;taps_for_mana::flare_doubles_land_mana_immediately, taps_for_mana::flare_mana_used_when_auto_paying;CR 605.1b: sofort ohne Stapel nach Mana-Fähigkeiten mit {T} (auch beim automatischen Bezahlen), ValidCard, Activator, Bedingungen; erzeugtes Mana im Trigger-Kontext
 Effect (ApiType);NameCard;teilweise;name_card::named_card_abilities_are_blocked;Defined, ValidCards, AtRandom, Filter NamedCard, Cleanup ClearNamedCard; Auswahl nur aus Namen der Karten im Spiel (Java: ganzer Kartenpool)
+Keyword;Landwalk;ja;evasion::evasion_rules;CR 702.14: nicht blockbar, wenn der Verteidiger ein passendes Land kontrolliert (Landwalk:<Filter>)
+Keyword;Fear;ja;evasion::evasion_rules;CR 702.36: nur von Artefakt- und/oder schwarzen Kreaturen blockbar
+Keyword;Intimidate;ja;evasion::evasion_rules;CR 702.13: nur von Artefaktkreaturen oder Kreaturen mit gemeinsamer Farbe blockbar
+Keyword;Shadow;ja;evasion::evasion_rules;CR 702.28: blockt und wird geblockt nur von Shadow
+Keyword;Horsemanship;ja;evasion::evasion_rules;CR 702.31: nur von Kreaturen mit Horsemanship blockbar
+Keyword;Skulk;ja;evasion::evasion_rules;CR 702.118: nicht von Kreaturen mit größerer Stärke blockbar
+Keyword;Exalted;ja;evasion::exalted_pumps_lone_attacker;CR 702.83: je Instanz +1/+1, wenn eine Kreatur allein angreift

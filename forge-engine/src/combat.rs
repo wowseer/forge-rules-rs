@@ -110,6 +110,45 @@ impl GameState {
         v
     }
 
+    /// Ausweichfähigkeiten (CR 702.14, 702.13, 702.28, 702.31, 702.36, 702.118).
+    fn evasion_allows_block(&self, blocker: CardId, attacker: CardId) -> bool {
+        let a = self.chars(attacker);
+        let b = self.chars(blocker);
+        // Shadow: nur Shadow gegen Shadow (in beide Richtungen)
+        if a.has(&Keyword::Shadow) != b.has(&Keyword::Shadow) {
+            return false;
+        }
+        if a.has(&Keyword::Horsemanship) && !b.has(&Keyword::Horsemanship) {
+            return false;
+        }
+        let b_artifact = b.types.has_core(forge_types::CoreType::Artifact);
+        if a.has(&Keyword::Fear) && !b_artifact && !b.colors.contains(forge_types::Color::Black) {
+            return false;
+        }
+        if a.has(&Keyword::Intimidate)
+            && !b_artifact
+            && a.colors.intersection(b.colors).is_colorless()
+        {
+            return false;
+        }
+        if a.has(&Keyword::Skulk) && b.power.unwrap_or(0) > a.power.unwrap_or(0) {
+            return false;
+        }
+        // Landwalk: kein Block, wenn der Verteidiger ein solches Land kontrolliert
+        let defender = self.card(blocker).controller;
+        for k in &a.keywords {
+            if let Keyword::Landwalk(spec) = k
+                && let Ok(v) = crate::valid::ValidSpec::parse(spec)
+                && self.battlefield_of(defender).any(|l| {
+                    self.chars(l).types.is_land() && self.card_matches(l, &v, attacker, defender)
+                })
+            {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Darf `p` die Karte `c` wie mit Flash wirken (`CastWithFlash`)?
     pub fn may_cast_with_flash(&self, p: PlayerId, c: CardId) -> bool {
         self.cards.iter().any(|o| {
@@ -302,6 +341,9 @@ impl GameState {
 
     /// Kann `blocker` `attacker` blocken (Einzelprüfung)? CR 702.9b Flying.
     pub fn can_block(&self, blocker: CardId, attacker: CardId) -> bool {
+        if !self.evasion_allows_block(blocker, attacker) {
+            return false;
+        }
         // CR 702.16e: nicht von Kreaturen mit der Eigenschaft blockbar
         if self.protected_from(attacker, blocker) {
             return false;

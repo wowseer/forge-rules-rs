@@ -46,6 +46,16 @@ pub enum Keyword {
         mega: bool,
         disguise: bool,
     },
+    /// CR 702.14: Landwalk (Filter auf Länder des Verteidigers, Text des Filters)
+    Landwalk(String),
+    /// CR 702.36 Fear, 702.13 Intimidate, 702.28 Shadow, 702.31 Horsemanship, 702.118 Skulk
+    Fear,
+    Intimidate,
+    Shadow,
+    Horsemanship,
+    Skulk,
+    /// CR 702.83: Exalted (als Trigger übersetzt, siehe `definition.rs`)
+    Exalted,
     /// CR 702.61: Split second – solange auf dem Stapel keine Zauber/Nicht-Mana-Fähigkeiten
     SplitSecond,
     /// CR 702.127: Aftermath (zweite Hälfte nur aus dem Friedhof, danach ins Exil)
@@ -112,6 +122,26 @@ impl Keyword {
             "Convoke" => Keyword::Convoke,
             "Infect" => Keyword::Infect,
             "Aftermath" => Keyword::Aftermath,
+            "Fear" => Keyword::Fear,
+            "Intimidate" => Keyword::Intimidate,
+            "Shadow" => Keyword::Shadow,
+            "Horsemanship" => Keyword::Horsemanship,
+            "Skulk" => Keyword::Skulk,
+            "Exalted" => Keyword::Exalted,
+            t if t.starts_with("Landwalk:")
+                && crate::valid::ValidSpec::parse(
+                    t["Landwalk:".len()..].split(':').next().unwrap_or(""),
+                )
+                .is_ok() =>
+            {
+                Keyword::Landwalk(
+                    t["Landwalk:".len()..]
+                        .split(':')
+                        .next()
+                        .unwrap_or("")
+                        .to_string(),
+                )
+            }
             "Split second" => Keyword::SplitSecond,
             "Wither" => Keyword::Wither,
             t if t.starts_with("Toxic:") && t["Toxic:".len()..].parse::<u32>().is_ok() => {

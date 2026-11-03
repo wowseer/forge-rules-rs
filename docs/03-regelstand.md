@@ -12,7 +12,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 
 | Kategorie | Regeln (ohne n/a) | ja | teilweise | n/a |
 |---|---:|---:|---:|---:|
-| Keyword | 198 | 25 | 13 | 4 |
+| Keyword | 198 | 32 | 13 | 4 |
 | Trigger | 137 | 0 | 24 | 11 |
 | Replacement Effect | 35 | 0 | 4 | 5 |
 | Static Ability | 90 | 1 | 8 | 0 |
@@ -26,7 +26,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Mulligan | 2 | 1 | 0 | 4 |
 | Game Variant | 3 | 0 | 2 | 24 |
 | Game Rule Option | 3 | 0 | 1 | 4 |
-| **Summe** | **789** | **83** | **137** | **81** |
+| **Summe** | **789** | **90** | **137** | **81** |
 
 ## Keyword
 
@@ -47,16 +47,21 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Double Strike | ✅ ja | `combat::double_strike_deals_damage_twice` |  | keyword/Keyword.java (SimpleKeyword) |
 | Enchant | 🟡 teilweise | `auras_equipment::aura_attaches_on_resolution_and_buffs, aura_control::enchant_with_description_and_defined_enchanted, aura_control::control_aura_steals_until_it_leaves, aura_control::enchanted_controller_upkeep_trigger_and_enchanted_filter` | Aura-Zauber mit Ziel, angelegt beim Auflösen, Fizzle | keyword/Keyword.java (KeywordWithType) |
 | Equip | 🟡 teilweise | `auras_equipment::equip_sorcery_speed_own_creature_and_moves` | Kosten, optionaler Filter, Hexerei-Geschwindigkeit | keyword/Keyword.java (Equip) |
+| Exalted | ✅ ja | `evasion::exalted_pumps_lone_attacker` | CR 702.83: je Instanz +1/+1, wenn eine Kreatur allein angreift | keyword/Keyword.java (SimpleKeyword) |
+| Fear | ✅ ja | `evasion::evasion_rules` | CR 702.36: nur von Artefakt- und/oder schwarzen Kreaturen blockbar | keyword/Keyword.java (SimpleKeyword) |
 | First Strike | ✅ ja | `combat::first_strike_kills_before_regular_damage` |  | keyword/Keyword.java (SimpleKeyword) |
 | Flash | ✅ ja | `spells::flash_allows_instant_speed_casting` |  | keyword/Keyword.java (SimpleKeyword) |
 | Flying | ✅ ja | `combat::flying_needs_flying_or_reach_to_block` |  | keyword/Keyword.java (SimpleKeyword) |
 | Haste | ✅ ja | `combat::summoning_sickness_haste_defender` |  | keyword/Keyword.java (SimpleKeyword) |
 | Hexproof | 🟡 teilweise | `spells::hexproof_only_blocks_opponents, player_statics::player_hexproof_only_against_opponents` | auch Spieler (CR 702.11d) | keyword/Keyword.java (Hexproof) |
 | Hidden agenda | ⚪ n/a |  | Conspiracy-Draft | keyword/Keyword.java (SimpleKeyword) |
+| Horsemanship | ✅ ja | `evasion::evasion_rules` | CR 702.31: nur von Kreaturen mit Horsemanship blockbar | keyword/Keyword.java (SimpleKeyword) |
 | Improvise | ✅ ja | `cost_helpers::improvise_taps_artifacts_for_generic_only` | CR 702.126a: getappte Artefakte zahlen je {1}, nur generisch | keyword/Keyword.java (SimpleKeyword) |
 | Indestructible | ✅ ja | `spells::destroy_respects_indestructible` |  | keyword/Keyword.java (SimpleKeyword) |
 | Infect | ✅ ja | `infect::infect_and_wither_damage` | CR 702.90: Giftmarken an Spieler, -1/-1-Marken an Kreaturen | keyword/Keyword.java (SimpleKeyword) |
+| Intimidate | ✅ ja | `evasion::evasion_rules` | CR 702.13: nur von Artefaktkreaturen oder Kreaturen mit gemeinsamer Farbe blockbar | keyword/Keyword.java (SimpleKeyword) |
 | Kicker | 🟡 teilweise | `kicker::kicked_spell_pays_more_and_does_more, kicker::unkicked_spell_and_no_offer_when_unaffordable, kicker::kicked_creature_enters_with_counters_and_triggers, kicker::unkicked_creature_plain` | CR 702.33: ein oder zwei Kicker-Kosten (Mana und Nicht-Mana), Ankündigung 601.2b, gekickt-Status vom Stapel auf die bleibende Karte, Filter kicked/kicked 1/2, Condition Kicked, Count$Kicked, etbCounter mit CheckSVar | keyword/Keyword.java (Kicker) |
+| Landwalk | ✅ ja | `evasion::evasion_rules` | CR 702.14: nicht blockbar, wenn der Verteidiger ein passendes Land kontrolliert (Landwalk:<Filter>) | keyword/Keyword.java (Landwalk) |
 | Lifelink | ✅ ja | `combat::deathtouch_and_lifelink_in_combat` |  | keyword/Keyword.java (SimpleKeyword) |
 | Menace | ✅ ja | `combat::menace_needs_two_blockers` |  | keyword/Keyword.java (SimpleKeyword) |
 | Megamorph | 🟡 teilweise | `morph::megamorph_adds_counter_and_leaving_reveals` | CR 702.37b: wie Morph, beim Umdrehen +1/+1-Marke | keyword/Keyword.java (KeywordWithCost) |
@@ -64,7 +69,9 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Protection | 🟡 teilweise | `protection::cannot_be_targeted_by_black_spell, protection::cannot_be_blocked_by_black_creatures_and_prevents_their_damage, protection::black_aura_falls_off, protection::protection_effect_with_chosen_color` | CR 702.16 DEBT: Schaden verhindert, Auren/Ausrüstung fallen ab, nicht blockbar, nicht Ziel | keyword/Keyword.java (Protection) |
 | Prowess | ✅ ja | `keywords_misc::prowess_pumps_on_noncreature_spell` |  | keyword/Keyword.java (SimpleKeyword) |
 | Reach | ✅ ja | `combat::flying_needs_flying_or_reach_to_block` |  | keyword/Keyword.java (SimpleKeyword) |
+| Shadow | ✅ ja | `evasion::evasion_rules` | CR 702.28: blockt und wird geblockt nur von Shadow | keyword/Keyword.java (SimpleKeyword) |
 | Shroud | ✅ ja | `spells::shroud_blocks_all_targeting` |  | keyword/Keyword.java (SimpleKeyword) |
+| Skulk | ✅ ja | `evasion::evasion_rules` | CR 702.118: nicht von Kreaturen mit größerer Stärke blockbar | keyword/Keyword.java (SimpleKeyword) |
 | Space sculptor | ⚪ n/a |  | Unstable | keyword/Keyword.java (SimpleKeyword) |
 | Split second | ✅ ja | `split::split_second_locks_out_responses` | CR 702.61: solange auf dem Stapel nur Mana-Fähigkeiten | keyword/Keyword.java (SimpleKeyword) |
 | Starting intensity | ⚪ n/a |  | Alchemy | keyword/Keyword.java (KeywordWithAmount) |
@@ -75,7 +82,7 @@ Nicht von Hand bearbeiten – Status in der CSV pflegen.
 | Ward | 🟡 teilweise | `triggers::ward_counters_unless_paid` | Ward:<Kosten> mit Mana/PayLife/Discard/Sac | keyword/Keyword.java (Ward) |
 | Wither | ✅ ja | `infect::infect_and_wither_damage` | CR 702.80: -1/-1-Marken an Kreaturen | keyword/Keyword.java (SimpleKeyword) |
 
-Offen (160): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exalted, Exploit, Extort, Fabricate, Fading, Fear, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Horsemanship, Impending, Increment, Ingest, Intimidate, Job select, Jump-start, Landwalk, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Miracle, Mobilize, Modular, More Than Meets the Eye, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Shadow, Skulk, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
+Offen (153): Absorb, Afflict, Afterlife, Amplify, Annihilator, Ascend, Assist, Aura swap, Awaken, Backup, Banding, Bands with other, Bargain, Battle cry, Beam me up, Bestow, Blitz, Bloodthirst, Bushido, Buyback, Cascade, Casualty, Champion, Choose a Background, Cipher, Companion, Compleated, Conspire, Craft, Cumulative upkeep, Dash, Daybound, Decayed, Demonstrate, Dethrone, Devour, Disturb, Doctor's companion, Double team, Dredge, Echo, Embalm, Emerge, Encore, Enlist, Entwine, Epic, Escape, Escalate, Eternalize, Evoke, Evolve, Exploit, Extort, Fabricate, Fading, Firebending, Flanking, Flashback, For Mirrodin, Foretell, Fortify, Freerunning, Frenzy, Fuse, Gift, Graft, Gravestorm, Harmonize, Haunt, Hideaway, Impending, Increment, Ingest, Job select, Jump-start, Level up, Living metal, Living Weapon, Madness, Mayhem, Melee, Mentor, Miracle, Mobilize, Modular, More Than Meets the Eye, Multikicker, Mutate, Myriad, Nightbound, Ninjutsu, Outlast, Offering, Offspring, Overload, Paradigm, Partner, Partner with, Persist, Phasing, Plot, Poisonous, Prototype, Provoke, Prowl, Rampage, Ravenous, Read ahead, Rebound, Recover, Reconfigure, Reflect, Reinforce, Renown, Replicate, Retrace, Riot, Ripple, Saddle, Scavenge, Sneak, Soulbond, Soulshift, Specialize, Spectacle, Splice, Spree, Squad, Start your engines, Station, Storied, Storm, Strive, Sunburst, Surge, Suspend, Teamwork, Tiered, Training, Transfigure, Transmute, Tribute, Umbra armor, Undaunted, Undying, Unearth, Unleash, Vanishing, Warp, Web-slinging, MayFlashCost, MayFlashSac
 
 ## Trigger
 

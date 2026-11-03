@@ -232,6 +232,26 @@ fn compile_face(face: &CardFace, unsupported: &mut Vec<String>) -> CompiledFace 
             }
             continue;
         }
+        // CR 702.83: Exalted (Java: Attacks-Trigger „allein“, +1/+1 bis Zugende)
+        if k == "Exalted" {
+            let mut f = face.clone();
+            f.svars.push((
+                "ExaltedPump".into(),
+                "DB$ Pump | Defined$ TriggeredAttacker | NumAtt$ +1 | NumDef$ +1".into(),
+            ));
+            let st = forge_script::ScriptTrigger::parse(forge_script::ParamMap::parse(
+                "Mode$ Attacks | ValidCard$ Creature.YouCtrl | Alone$ True | TriggerZones$ Battlefield | Execute$ ExaltedPump | TriggerDescription$ Exalted",
+            ));
+            match st
+                .map_err(|_| ())
+                .and_then(|st| crate::triggers::compile_trigger(&f, &st).map_err(|_| ()))
+            {
+                Ok(t) => out.triggers.push(Arc::new(t)),
+                Err(()) => unsupported.push(format!("Keyword: {k}")),
+            }
+            out.keywords.push(Keyword::Exalted);
+            continue;
+        }
         // CR 702.108: Prowess (Java: SpellCast-Trigger mit Pump)
         if k == "Prowess" {
             let mut f = face.clone();
