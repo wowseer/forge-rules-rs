@@ -302,3 +302,4 @@ Keyword;Megamorph;teilweise;morph::megamorph_adds_counter_and_leaving_reveals;CR
 Keyword;Disguise;teilweise;;CR 702.168: wie Morph, verdeckt mit Ward {2}; ohne eigenen Regeltest
 Trigger;TurnFaceUp;teilweise;morph::cast_face_down_then_turn_up_with_trigger;ValidCard
 Effect (ApiType);Amass;ja;amass::amass_creates_army_then_grows_and_gains_type;CR 701.47: ohne Army zuerst 0/0-Army-Spielstein, +1/+1-Marken auf eine gewählte Army, Typ zusätzlich
+Trigger;TapsForMana;teilweise;taps_for_mana::flare_doubles_land_mana_immediately, taps_for_mana::flare_mana_used_when_auto_paying;CR 605.1b: sofort ohne Stapel nach Mana-Fähigkeiten mit {T} (auch beim automatischen Bezahlen), ValidCard, Activator, Bedingungen; erzeugtes Mana im Trigger-Kontext

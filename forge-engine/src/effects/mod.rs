@@ -461,6 +461,11 @@ pub enum Effect {
         random: bool,
         remember: bool,
     },
+    /// `ManaReflected | ReflectProperty$ Produced`: ein Mana einer Art, die die
+    /// auslösende Quelle erzeugt hat (z. B. Mana Flare).
+    ManaReflectProduced {
+        who: Defined,
+    },
     /// CR 701.47: Amass <Typ> n
     Amass {
         num: Amount,
@@ -891,7 +896,7 @@ impl<'a> Ctx<'a> {
                 "TriggeredCardController" | "TriggeredAttackerController" => {
                     Defined::TriggeredCardController
                 }
-                "TriggeredPlayer" => Defined::TriggeredPlayer,
+                "TriggeredPlayer" | "TriggeredActivator" => Defined::TriggeredPlayer,
                 "TriggeredBlocker" | "TriggeredBlockerLKICopy" => Defined::TriggeredBlocker,
                 "TriggeredCards" | "TriggeredCardsLKICopy" => Defined::TriggeredCards,
                 "TriggeredDefendingPlayer" | "TriggeredSourceSAController" => {
@@ -2279,6 +2284,16 @@ fn compile_depth(
             power: None,
             toughness: None,
         },
+        "ManaReflected" => {
+            match c.get("ReflectProperty") {
+                Some("Produced") => {}
+                v => return Err(c.unsupported("ReflectProperty", v.unwrap_or("fehlt"))),
+            }
+            c.get("ColorOrType");
+            Effect::ManaReflectProduced {
+                who: c.defined(Defined::You)?,
+            }
+        }
         "Amass" => Effect::Amass {
             num: c.amount("Num", Some(1))?,
             kind: c

@@ -263,6 +263,7 @@ pub const SCRIPTS: &[&str] = &[
     "Name:Mega Lite\nManaCost:2 G\nTypes:Creature Bear\nPT:3/3\nK:Megamorph:G\nOracle:\n",
     "Name:Amass Lite\nManaCost:B\nTypes:Sorcery\nA:SP$ Amass | Type$ Orc | Num$ 2 | SpellDescription$ x\nOracle:\n",
     "Name:Amass Zombie Lite\nManaCost:B\nTypes:Sorcery\nA:SP$ Amass | Type$ Zombie | Num$ 1 | SpellDescription$ x\nOracle:\n",
+    "Name:Flare Lite\nManaCost:2 R\nTypes:Enchantment\nT:Mode$ TapsForMana | ValidCard$ Land | Execute$ TrigMana | TriggerZones$ Battlefield | Static$ True | TriggerDescription$ x\nSVar:TrigMana:DB$ ManaReflected | ColorOrType$ Type | ReflectProperty$ Produced | Defined$ TriggeredActivator\nOracle:\n",
     "Name:All Is Dust\nManaCost:7\nTypes:Kindred Sorcery Eldrazi\nA:SP$ SacrificeAll | ValidCards$ Permanent.nonColorless | SpellDescription$ x\nOracle:\n",
     "Name:Thraben Inspector\nManaCost:W\nTypes:Creature Human Soldier\nPT:1/2\nT:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigInvestigate | TriggerDescription$ x\nSVar:TrigInvestigate:DB$ Investigate\nOracle:\n",
     "Name:Proliferate Lite\nManaCost:U\nTypes:Sorcery\nA:SP$ Proliferate | SpellDescription$ Proliferate.\nOracle:\n",

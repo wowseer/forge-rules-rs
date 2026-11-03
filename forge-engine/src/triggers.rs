@@ -141,6 +141,12 @@ pub enum TriggerKind {
         valid_card: Option<ValidSpec>,
         valid_player: Option<ValidSpec>,
     },
+    /// `Mode$ TapsForMana` – getriggerte Mana-Fähigkeit (CR 605.1b), wird sofort
+    /// ohne Stapel ausgeführt (`GameState::tapped_for_mana`).
+    TapsForMana {
+        valid_card: Option<ValidSpec>,
+        activator: Option<ValidSpec>,
+    },
     /// `Mode$ TurnFaceUp` – eine bleibende Karte wird umgedreht (CR 708.8).
     TurnFaceUp { valid_card: Option<ValidSpec> },
     /// `Mode$ Sacrificed` – eine bleibende Karte wurde geopfert (CR 701.21).
@@ -224,6 +230,8 @@ pub struct TriggerInfo {
     pub stack_item: Option<u32>,
     /// Blocker (`TriggeredBlocker`), wenn `card` der Angreifer ist.
     pub blocker: Option<CardId>,
+    /// Erzeugtes Mana (`TapsForMana`, für `ManaReflected | ReflectProperty$ Produced`).
+    pub produced: Vec<Option<forge_types::Color>>,
     /// Menge des Ereignisses (`TriggerCount$DamageAmount`, `…$LifeAmount`).
     pub amount: Option<i32>,
 }
@@ -618,6 +626,13 @@ pub fn compile_trigger(
         "LifeGained" => TriggerKind::LifeGained {
             valid_player: valid("ValidPlayer", &mut used)?,
         },
+        "TapsForMana" => {
+            used.push("Static");
+            TriggerKind::TapsForMana {
+                valid_card: valid("ValidCard", &mut used)?,
+                activator: valid("Activator", &mut used)?,
+            }
+        }
         "TurnFaceUp" => TriggerKind::TurnFaceUp {
             valid_card: valid("ValidCard", &mut used)?,
         },

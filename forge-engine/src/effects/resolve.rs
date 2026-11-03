@@ -1483,6 +1483,33 @@ impl GameState {
                     }
                 }
             }
+            Effect::ManaReflectProduced { who } => {
+                let mut kinds: Vec<Option<forge_types::Color>> = ctx
+                    .trig
+                    .as_ref()
+                    .map(|t| t.produced.clone())
+                    .unwrap_or_default();
+                kinds.sort_by_key(|k| k.map(|c| c as u8));
+                kinds.dedup();
+                let Some(&first) = kinds.first() else {
+                    return Ok(());
+                };
+                let colors: Vec<forge_types::Color> = kinds.iter().filter_map(|k| *k).collect();
+                let pick = if kinds.len() > 1 && !colors.is_empty() {
+                    match ch.ask(Decision::ChooseColor {
+                        player: ctx.controller,
+                        options: colors.clone(),
+                    })? {
+                        Choice::Color(c) if colors.contains(&c) => Some(c),
+                        _ => first,
+                    }
+                } else {
+                    first
+                };
+                for p in Self::players_of(&self.resolve_defined(*who, targets, ctx)) {
+                    self.player_mut(p).mana_pool.add(pick, false);
+                }
+            }
             Effect::Amass { num, kind } => {
                 let p = ctx.controller;
                 let is_army = |g: &GameState, c: CardId| g.chars(c).types.has_subtype("Army");

@@ -1343,7 +1343,79 @@ impl GameState {
             trig: None,
             paid,
         };
-        self.apply_chain(ab, &[], &ctx, ch)
+        let before = self.player(p).mana_pool.units.len();
+        self.apply_chain(ab, &[], &ctx, ch)?;
+        if cost.parts.contains(&CostPart::Tap) {
+            let produced: Vec<_> = self.player(p).mana_pool.units
+                [before.min(self.player(p).mana_pool.units.len())..]
+                .iter()
+                .map(|u| u.color)
+                .collect();
+            self.tapped_for_mana(p, source, produced, ch)?;
+        }
+        Ok(())
+    }
+
+    /// CR 605.1b: getriggerte Mana-Fähigkeiten (`Mode$ TapsForMana`) sofort ausführen.
+    pub(crate) fn tapped_for_mana(
+        &mut self,
+        p: PlayerId,
+        land: CardId,
+        produced: Vec<Option<Color>>,
+        ch: &mut Choices,
+    ) -> Res<()> {
+        let mut hits = Vec::new();
+        for host in self.live_cards().collect::<Vec<_>>() {
+            let h = self.card(host);
+            let Some(zone) = h.zone else { continue };
+            for t in &h.compiled().triggers {
+                let crate::triggers::TriggerKind::TapsForMana {
+                    valid_card,
+                    activator,
+                } = &t.kind
+                else {
+                    continue;
+                };
+                if !t.active_zones.contains(&zone)
+                    || valid_card
+                        .as_ref()
+                        .is_some_and(|v| !self.card_matches(land, v, host, h.controller))
+                    || activator
+                        .as_ref()
+                        .is_some_and(|v| !self.player_matches_src(p, v, h.controller, host))
+                {
+                    continue;
+                }
+                let ctx = crate::expr::EvalCtx {
+                    source: host,
+                    controller: h.controller,
+                    x: 0,
+                    targets: &[],
+                    trig: None,
+                    paid: &[],
+                };
+                if self.check_conditions(&t.conditions, &ctx) {
+                    hits.push((host, h.controller, t.execute.clone()));
+                }
+            }
+        }
+        for (host, ctrl, ab) in hits {
+            let ctx = ResolveCtx {
+                source: host,
+                controller: ctrl,
+                x: 0,
+                trig: Some(crate::triggers::TriggerInfo {
+                    card: Some(land),
+                    card_lki: Some(land),
+                    player: Some(p),
+                    produced: produced.clone(),
+                    ..Default::default()
+                }),
+                paid: Vec::new(),
+            };
+            self.apply_chain(&ab, &[], &ctx, ch)?;
+        }
+        Ok(())
     }
 
     pub(crate) fn pay_nonmana_costs(
@@ -1645,6 +1717,9 @@ impl GameState {
                         self.pay_nonmana_costs(p, c, &cost, ch)?;
                         let snow = self.chars(c).types.has_super(forge_types::Supertype::Snow);
                         self.player_mut(p).mana_pool.add(color, snow);
+                        if cost.parts.contains(&CostPart::Tap) {
+                            self.tapped_for_mana(p, c, vec![color], ch)?;
+                        }
                     }
                 }
                 _ => return Err(Interrupt::Cancelled),
